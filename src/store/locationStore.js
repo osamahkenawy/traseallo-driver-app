@@ -1,0 +1,159 @@
+/**
+ * Trasealla Driver App — Location & Shift Store (Zustand)
+ */
+
+import {create} from 'zustand';
+import {locationApi} from '../api';
+
+const useLocationStore = create((set, get) => ({
+  // ─── State ──────────────────────────────────────
+  currentPosition: {latitude: 24.4539, longitude: 54.3773, accuracy: 100, speed: 0, heading: 0}, // Default: Abu Dhabi
+  isTracking: false,
+  driverStatus: 'offline', // 'available' | 'busy' | 'offline' | 'on_break'
+  trackingIntervalId: null,
+  lastPingTime: null,
+  // Offline GPS buffer
+  locationBuffer: [],
+
+  // ─── Actions ────────────────────────────────────
+
+  /**
+   * Update current position from device GPS
+   */
+  setPosition: (position) => set({currentPosition: position}),
+
+  /**
+   * Set driver status locally
+   */
+  setDriverStatus: (status) => set({driverStatus: status}),
+
+  /**
+   * Go Online — POST /driver-app/go-online
+   */
+  goOnline: async () => {
+    try {
+      const pos = get().currentPosition;
+      const data = pos ? {lat: pos.latitude, lng: pos.longitude} : {};
+      await locationApi.goOnline(data);
+      set({driverStatus: 'available'});
+      return {success: true};
+    } catch (error) {
+      return {success: false, error: error.response?.data?.message || 'Failed to go online'};
+    }
+  },
+
+  /**
+   * Go Offline — POST /driver-app/go-offline
+   */
+  goOffline: async () => {
+    try {
+      await locationApi.goOffline();
+      set({driverStatus: 'offline'});
+      get().stopTracking();
+      return {success: true};
+    } catch (error) {
+      return {success: false, error: error.response?.data?.message || 'Failed to go offline'};
+    }
+  },
+
+  /**
+   * Take a Break — POST /driver-app/on-break
+   */
+  onBreak: async () => {
+    try {
+      await locationApi.onBreak();
+      set({driverStatus: 'on_break'});
+      return {success: true};
+    } catch (error) {
+      return {success: false, error: error.response?.data?.message || 'Failed to set break status'};
+    }
+  },
+
+  /**
+   * Send a single GPS ping to backend
+   * POST /driver-app/location
+   */
+  sendPing: async () => {
+    const position = get().currentPosition;
+    if (!position) return;
+
+    const payload = {
+      lat: position.latitude,
+      lng: position.longitude,
+      accuracy: position.accuracy,
+      speed: position.speed,
+      heading: position.heading,
+    };
+
+    try {
+      await locationApi.sendLocation(payload);
+      set({lastPingTime: new Date().toISOString()});
+    } catch (error) {
+      // Buffer for offline sync
+      get().bufferLocation(payload);
+      if (__DEV__) {
+        console.log('📍 Location ping failed, buffered:', error.message);
+      }
+    }
+  },
+
+  /**
+   * Buffer a GPS point for offline sync
+   */
+  bufferLocation: (payload) => {
+    const buffer = get().locationBuffer;
+    const point = {...payload, recorded_at: new Date().toISOString()};
+    // Max 1000 points (FIFO)
+    const updated = buffer.length >= 1000
+      ? [...buffer.slice(1), point]
+      : [...buffer, point];
+    set({locationBuffer: updated});
+  },
+
+  /**
+   * Flush offline GPS buffer — POST /driver-app/location/batch
+   */
+  flushLocationBuffer: async () => {
+    const buffer = get().locationBuffer;
+    if (buffer.length === 0) return;
+
+    try {
+      await locationApi.sendLocationBatch(buffer);
+      set({locationBuffer: []});
+      if (__DEV__) console.log(`📍 Flushed ${buffer.length} buffered GPS points`);
+    } catch (error) {
+      if (__DEV__) console.log('📍 GPS buffer flush failed:', error.message);
+    }
+  },
+
+  /**
+   * Start periodic location tracking (30s interval)
+   */
+  startTracking: () => {
+    const existing = get().trackingIntervalId;
+    if (existing) clearInterval(existing);
+
+    // Send initial ping
+    get().sendPing();
+
+    // Set interval for every 30 seconds
+    const intervalId = setInterval(() => {
+      get().sendPing();
+    }, 30000);
+
+    set({isTracking: true, trackingIntervalId: intervalId});
+  },
+
+  /**
+   * Stop location tracking
+   */
+  stopTracking: () => {
+    const intervalId = get().trackingIntervalId;
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    set({isTracking: false, trackingIntervalId: null});
+  },
+}));
+
+export default useLocationStore;

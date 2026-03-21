@@ -1,0 +1,1848 @@
+{
+	"info": {
+		"_postman_id": "d8a1f2e3-4b5c-6d7e-8f9a-0b1c2d3e4f5a",
+		"name": "Traseallo Driver App API",
+		"description": "# Traseallo Driver App — Complete API Collection\n\nFull mobile API for the Traseallo delivery driver application.\nAll endpoints under `/api/driver-app/*` — a dedicated, self-contained API for the mobile driver workflow.\n\n## Base URL\n`{{base_url}}` — defaults to `http://localhost:4001`\n\n## Authentication\n- **POST /api/driver-app/login** returns JWT `token`, `user`, `driver` objects\n- All other endpoints require `Authorization: Bearer {{token}}`\n- Token is auto-saved on successful login via the Tests script\n\n## Complete Driver Workflow\n```\nLogin → Dashboard → View Orders → Accept/Reject → Pickup (en-route → arrived → confirm/fail) → Start Delivery → Scan Verify → Stop (arrived → complete/fail/skip) → COD Collect → POD (photo + signature) → Deliver/Fail/Return → Location Updates → Notifications → Earnings → Go Online/Offline/Break → Support → Logout\n```\n\n## Sections (19 Folders, 63 Requests)\nA. Auth & Profile (7) | B. Dashboard (1) | C. Orders & Route (5) | D. Pickup Flow (5) | E. Delivery Stops (7) | F. Barcode Scanning (3) | G. Proof of Delivery (4) | H. COD Handling (3) | I. Order Outcomes (3) | J. Route Progress (1) | K. Live Location (2) | L. Notifications (4) | M. Delivery History (1) | N. Earnings & Wallet (2) | O. Settings (1) | P. Shift & Availability (4) | Q. Support & Help (4) | R. Health & Branding (2) | S. Convenience Queries (3)\n\n## Key Notes\n- Login accepts username, email, or phone\n- Login auto-sets driver status to `available`\n- Logout sets driver `offline` and deactivates push tokens\n- All file uploads use `multipart/form-data` with field name `file`\n- GPS location: call every 10-30 seconds, batch upload when offline",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://api.traseallo.com",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "orderId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "stopId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "notificationId",
+			"value": "1",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "A. Auth & Profile",
+			"description": "Driver authentication, profile management, avatar upload, and password change.",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"login"
+							]
+						},
+						"description": "Authenticate driver using username, email, or phone.\n\nReturns JWT token, user info, driver profile, and tenant branding.\nThe token is automatically saved to the collection variable.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"osama9557\",\n    \"password\": \"Driver@123\"\n}"
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const res = pm.response.json();",
+									"if (res.success && res.token) {",
+									"    pm.collectionVariables.set('token', res.token);",
+									"    pm.test('Login successful', () => pm.expect(res.success).to.be.true);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"profile"
+							]
+						},
+						"description": "Get driver's full profile: vehicle info, stats (total orders, delivered, failed, returned, earnings), zone, and join date."
+					}
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"profile"
+							]
+						},
+						"description": "Update driver profile fields. All fields optional — only provided fields are updated.\n\nFields: vehicle_type, vehicle_plate, vehicle_model, vehicle_color, phone, email",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"vehicle_type\": \"motorcycle\",\n    \"vehicle_plate\": \"B 12345\",\n    \"vehicle_model\": \"Honda PCX\",\n    \"vehicle_color\": \"Black\",\n    \"phone\": \"0522200730\",\n    \"email\": \"driver@example.com\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Upload Avatar",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/profile/avatar",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"profile",
+								"avatar"
+							]
+						},
+						"description": "Upload or update driver avatar/profile photo.\n\nFile: image file (jpg, png, webp). Max 5MB.\nReturns the URL of the uploaded image.",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "",
+									"description": "Image file (jpg/png, max 5MB)"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/change-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"change-password"
+							]
+						},
+						"description": "Change driver's password. Requires current password verification.\nNew password must be at least 6 characters.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"current_password\": \"Driver@123\",\n    \"new_password\": \"NewDriver@456\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/forgot-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"forgot-password"
+							]
+						},
+						"description": "Request password reset. Sends 6-digit OTP to registered phone/email.\n\nBody:\n- identifier — username, email, or phone",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"osama9557\"\n}"
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"reset-password"
+							]
+						},
+						"description": "Reset password using OTP received from forgot-password.\n\nBody:\n- identifier — username/email/phone (same as forgot-password)\n- otp — 6-digit code\n- new_password — min 6 chars",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"osama9557\",\n    \"otp\": \"123456\",\n    \"new_password\": \"NewDriver@456\"\n}"
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "B. Dashboard",
+			"description": "Driver's main dashboard with today's stats, active orders, upcoming stops.",
+			"item": [
+				{
+					"name": "Get Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/dashboard",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"dashboard"
+							]
+						},
+						"description": "Get driver's dashboard summary.\n\nReturns:\n- driver — name, status, rating, photo, vehicle type\n- today — active orders, delivered/failed/returned counts, earnings, COD collected/pending, pending pickups, remaining stops\n- next_stops — upcoming delivery stops"
+					}
+				}
+			]
+		},
+		{
+			"name": "C. Orders & Route",
+			"description": "View assigned orders, order details, and today's optimized delivery route.",
+			"item": [
+				{
+					"name": "List Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders?status=all&page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "all"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "List driver's assigned orders with optional status filter.\n\nQuery params:\n- status — all, assigned, picked_up, in_transit, delivered, failed, returned\n- page, limit — pagination"
+					}
+				},
+				{
+					"name": "Get Order Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}"
+							]
+						},
+						"description": "Get full details of a specific order.\n\nReturns: Order info, recipient details, all packages with barcodes, delivery stops with sequence/status, and order status history logs."
+					}
+				},
+				{
+					"name": "Today's Route",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/route",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"route"
+							]
+						},
+						"description": "Get today's delivery route — ordered list of delivery stops/orders for the day.\n\nReturns:\n- summary — total stops, completed, remaining, next address\n- stops — ordered delivery points with recipient info, coordinates, status"
+					}
+				},
+				{
+					"name": "Accept Order",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/accept",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"accept"
+							]
+						},
+						"description": "Accept an assigned order. Only works on orders in 'assigned' status."
+					}
+				},
+				{
+					"name": "Reject Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/reject",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"reject"
+							]
+						},
+						"description": "Reject an assigned order. Returns it to dispatch pool.\n\nBody:\n- reason — rejection reason (required)",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Too far from my area\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "D. Pickup Flow",
+			"description": "Complete pickup workflow: view assigned pickups → en-route → arrived → confirm/fail.",
+			"item": [
+				{
+					"name": "List Pickups",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/pickups",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"pickups"
+							]
+						},
+						"description": "List all pending pickup assignments for this driver."
+					}
+				},
+				{
+					"name": "Pickup — En Route",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/pickups/{{orderId}}/en-route",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"pickups",
+								"{{orderId}}",
+								"en-route"
+							]
+						},
+						"description": "Mark driver as en-route to pickup location. Sets pickup_status = 'en_route'.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "Pickup — Arrived",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/pickups/{{orderId}}/arrived",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"pickups",
+								"{{orderId}}",
+								"arrived"
+							]
+						},
+						"description": "Mark driver as arrived at pickup location. Sets pickup_status = 'at_pickup'.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "Pickup — Confirm",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/pickups/{{orderId}}/confirm",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"pickups",
+								"{{orderId}}",
+								"confirm"
+							]
+						},
+						"description": "Confirm pickup — packages collected from sender.\n\nBody:\n- barcode_scanned — boolean\n- notes — optional pickup notes\n- lat, lng — GPS coordinates\n- scanned_packages — array of package barcodes scanned during pickup",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"barcode_scanned\": true,\n    \"notes\": \"All packages collected\",\n    \"lat\": 25.2048,\n    \"lng\": 55.2708,\n    \"scanned_packages\": [\n        \"PKG-001\",\n        \"PKG-002\"\n    ]\n}"
+						}
+					}
+				},
+				{
+					"name": "Pickup — Fail",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/pickups/{{orderId}}/fail",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"pickups",
+								"{{orderId}}",
+								"fail"
+							]
+						},
+						"description": "Report pickup failure.\n\nBody:\n- reason — failure reason (required)\n- lat, lng — GPS coordinates",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Sender not available\",\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "E. Delivery Stops",
+			"description": "Multi-stop order management: start delivery, list stops, mark stops as arrived/completed/failed/skipped.",
+			"item": [
+				{
+					"name": "Start Delivery",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/start-delivery",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"start-delivery"
+							]
+						},
+						"description": "Transition order from picked_up/assigned to in_transit (out for delivery). Sets driver status to busy.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "List Stops for Order",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/stops",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"stops"
+							]
+						},
+						"description": "List all delivery stops for a multi-stop order. Ordered by sequence number with contact info, address, GPS, COD, and status."
+					}
+				},
+				{
+					"name": "Stop — Arrived",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/stops/{{stopId}}/arrived",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"stops",
+								"{{stopId}}",
+								"arrived"
+							]
+						},
+						"description": "Mark arrival at a delivery stop. Sets status to 'arrived' with timestamp and GPS.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "Stop — Complete",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/stops/{{stopId}}/complete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"stops",
+								"{{stopId}}",
+								"complete"
+							]
+						},
+						"description": "Mark a delivery stop as completed.\n\nBody:\n- cod_collected — boolean\n- signature_url, proof_photo_url — pre-uploaded URLs\n- notes — delivery notes\n- lat, lng — GPS\n\nIf all stops completed, marks entire order as delivered.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cod_collected\": true,\n    \"signature_url\": \"/uploads/signatures/sig_123.png\",\n    \"proof_photo_url\": \"/uploads/proofs/proof_123.jpg\",\n    \"notes\": \"Delivered to reception\",\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "Stop — Fail",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/stops/{{stopId}}/fail",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"stops",
+								"{{stopId}}",
+								"fail"
+							]
+						},
+						"description": "Mark a delivery stop as failed.\n\nBody:\n- reason — failure reason (required)\n- lat, lng — GPS",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Recipient not available\",\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "Stop — Skip",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/stops/{{stopId}}/skip",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"stops",
+								"{{stopId}}",
+								"skip"
+							]
+						},
+						"description": "Skip a delivery stop to revisit later.\n\nBody:\n- reason — optional reason for skipping",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Will revisit later\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "F. Barcode Scanning",
+			"description": "Scan barcodes to identify packages/orders, batch scan during pickup, verify at delivery.",
+			"item": [
+				{
+					"name": "Scan Barcode",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/scan",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"scan"
+							]
+						},
+						"description": "Scan a barcode to identify a package or order.\n\nAccepts package barcodes, order numbers, or tracking tokens.\n\nReturns:\n- type — 'package' or 'order'\n- is_assigned — whether assigned to this driver\n- data — full details",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"barcode\": \"TRS-20260307-9491\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Batch Scan",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/scan/batch",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"scan",
+								"batch"
+							]
+						},
+						"description": "Scan multiple barcodes at once (during pickup).\n\nBody:\n- barcodes — array of barcode strings\n\nReturns per-barcode results + summary (total, found, not_found, assigned, unassigned).",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"barcodes\": [\n        \"PKG-001\",\n        \"PKG-002\",\n        \"PKG-003\"\n    ]\n}"
+						}
+					}
+				},
+				{
+					"name": "Verify Delivery Scan",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/scan/verify-delivery",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"scan",
+								"verify-delivery"
+							]
+						},
+						"description": "Scan barcode at delivery point to verify correct package.\n\nBody:\n- barcode — package barcode (required)\n- stop_id — optional stop ID\n\nReturns: verified, is_correct_driver, is_correct_stop.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"barcode\": \"PKG-001\",\n    \"stop_id\": 1\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "G. Proof of Delivery (POD)",
+			"description": "Upload proof photos and recipient signatures for orders and individual stops.",
+			"item": [
+				{
+					"name": "Order — Proof Photo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/proof-photo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"proof-photo"
+							]
+						},
+						"description": "Upload proof of delivery photo for an order. Returns the URL.",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "",
+									"description": "Delivery proof photo (jpg/png, max 5MB)"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Order — Signature",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/signature",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"signature"
+							]
+						},
+						"description": "Upload recipient's signature for an order. Returns the URL.",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "",
+									"description": "Recipient signature (png, max 5MB)"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Stop — Proof Photo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/stops/{{stopId}}/proof-photo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"stops",
+								"{{stopId}}",
+								"proof-photo"
+							]
+						},
+						"description": "Upload proof photo for a specific multi-stop delivery point. Returns the URL.",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "",
+									"description": "Stop proof photo (jpg/png, max 5MB)"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Stop — Signature",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/stops/{{stopId}}/signature",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"stops",
+								"{{stopId}}",
+								"signature"
+							]
+						},
+						"description": "Upload recipient's signature for a specific delivery stop. Returns the URL.",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": "",
+									"description": "Stop signature (png, max 5MB)"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "H. COD Handling",
+			"description": "Cash-on-Delivery: view pending COD orders, collect payment, daily summary.",
+			"item": [
+				{
+					"name": "COD — Pending Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/cod/pending",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"cod",
+								"pending"
+							]
+						},
+						"description": "List all pending COD orders for this driver. Returns orders + total_pending amount."
+					}
+				},
+				{
+					"name": "COD — Collect Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/cod/{{orderId}}/collect",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"cod",
+								"{{orderId}}",
+								"collect"
+							]
+						},
+						"description": "Mark COD as collected from recipient.\n\nBody:\n- amount_collected — amount (defaults to cod_amount)\n- payment_method_detail — 'cash' or 'card'\n- notes — optional\n\nCOD states: 0=not collected, 1=collected, 2=settled with admin.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount_collected\": 500,\n    \"payment_method_detail\": \"cash\",\n    \"notes\": \"Exact amount received\"\n}"
+						}
+					}
+				},
+				{
+					"name": "COD — Daily Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/cod/summary?date=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"cod",
+								"summary"
+							],
+							"query": [
+								{
+									"key": "date",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get daily COD summary.\n\nQuery: date (YYYY-MM-DD, defaults to today).\n\nReturns: total_cod_orders, collected, pending, settled, unsettled_carry_over."
+					}
+				}
+			]
+		},
+		{
+			"name": "I. Order Outcomes",
+			"description": "Final order outcomes: deliver, fail, or return. For single-delivery orders (non-multi-stop).",
+			"item": [
+				{
+					"name": "Deliver Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/deliver",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"deliver"
+							]
+						},
+						"description": "Mark order as delivered.\n\nBody (all optional):\n- signature_url, proof_photo_url — pre-uploaded URLs\n- cod_collected — boolean (auto-true for COD)\n- notes, lat, lng\n\nIncrements total_deliveries and releases driver if no more active orders.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"signature_url\": \"/uploads/signatures/sig_123.png\",\n    \"proof_photo_url\": \"/uploads/proofs/proof_123.jpg\",\n    \"cod_collected\": true,\n    \"notes\": \"Delivered to doorstep\",\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "Fail Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/fail",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"fail"
+							]
+						},
+						"description": "Mark order as failed.\n\nBody:\n- reason — failure reason (required)\n- lat, lng — GPS\n\nCommon reasons: Customer refused, Wrong address, Customer not available, Damaged package.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Customer refused delivery\",\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "Return Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders/{{orderId}}/return",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders",
+								"{{orderId}}",
+								"return"
+							]
+						},
+						"description": "Mark order for return to sender.\n\nBody:\n- reason — optional (defaults to 'Returned by driver')\n- lat, lng",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reason\": \"Customer requested return\",\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "J. Route Progress",
+			"description": "Overall delivery progress stats for today.",
+			"item": [
+				{
+					"name": "Get Route Progress",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/progress",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"progress"
+							]
+						},
+						"description": "Get overall route progress for the current day.\n\nReturns: total_orders, delivered, failed, returned, remaining, total_stops_all, completed_stops_all, earned, cod_collected, completion_pct."
+					}
+				}
+			]
+		},
+		{
+			"name": "K. Live Location",
+			"description": "GPS location tracking — single updates (every 10-30s) and batch uploads.",
+			"item": [
+				{
+					"name": "Update Location",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/location",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"location"
+							]
+						},
+						"description": "Update driver GPS location. Called every 10-30 seconds.\n\nBody:\n- lat, lng — required\n- speed (km/h), heading (0-360), accuracy (meters) — optional\n- order_id — active order (optional)",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"lat\": 25.2048,\n    \"lng\": 55.2708,\n    \"speed\": 30,\n    \"heading\": 90,\n    \"accuracy\": 10,\n    \"order_id\": 1\n}"
+						}
+					}
+				},
+				{
+					"name": "Batch Location Upload",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/location/batch",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"location",
+								"batch"
+							]
+						},
+						"description": "Submit multiple GPS points (offline buffer flush).\n\nBody:\n- points — array of {lat, lng, speed, heading, accuracy, recorded_at}\n\nReturns count of inserted points.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"points\": [\n        {\n            \"lat\": 25.2048,\n            \"lng\": 55.2708,\n            \"speed\": 25,\n            \"heading\": 90,\n            \"accuracy\": 10,\n            \"recorded_at\": \"2026-03-12T10:00:00Z\"\n        },\n        {\n            \"lat\": 25.205,\n            \"lng\": 55.2712,\n            \"speed\": 30,\n            \"heading\": 92,\n            \"accuracy\": 8,\n            \"recorded_at\": \"2026-03-12T10:00:15Z\"\n        },\n        {\n            \"lat\": 25.2053,\n            \"lng\": 55.272,\n            \"speed\": 35,\n            \"heading\": 95,\n            \"accuracy\": 5,\n            \"recorded_at\": \"2026-03-12T10:00:30Z\"\n        }\n    ]\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "L. Notifications",
+			"description": "Push notification management: list, mark read, register device token.",
+			"item": [
+				{
+					"name": "List Notifications",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/notifications?page=1&limit=30&unread_only=false",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"notifications"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "30"
+								},
+								{
+									"key": "unread_only",
+									"value": "false"
+								}
+							]
+						},
+						"description": "Get driver's notifications with pagination.\n\nQuery: page, limit, unread_only (true/false).\n\nReturns: notifications with title, body, type, icon, order_id, is_read + unread count."
+					}
+				},
+				{
+					"name": "Mark Notification Read",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/notifications/{{notificationId}}/read",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"notifications",
+								"{{notificationId}}",
+								"read"
+							]
+						},
+						"description": "Mark a specific notification as read."
+					}
+				},
+				{
+					"name": "Mark All Read",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/notifications/read-all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"notifications",
+								"read-all"
+							]
+						},
+						"description": "Mark all unread notifications as read."
+					}
+				},
+				{
+					"name": "Register Device Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/device-token",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"device-token"
+							]
+						},
+						"description": "Register push notification device token (Firebase FCM / Apple APNS).\n\nBody:\n- device_token — required\n- platform — 'ios' or 'android' (default)\n- device_info — optional\n\nAuto-deactivates old tokens.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"device_token\": \"fMfK3G7xTt2...\",\n    \"platform\": \"android\",\n    \"device_info\": \"Samsung Galaxy S24 - Android 14\"\n}"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "M. Delivery History",
+			"description": "Completed deliveries archive with date and status filters.",
+			"item": [
+				{
+					"name": "Get Delivery History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/history?page=1&limit=30&status=&date_from=&date_to=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"history"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "30"
+								},
+								{
+									"key": "status",
+									"value": ""
+								},
+								{
+									"key": "date_from",
+									"value": ""
+								},
+								{
+									"key": "date_to",
+									"value": ""
+								}
+							]
+						},
+						"description": "Get completed deliveries history.\n\nQuery: status (delivered/failed/returned), date_from, date_to (YYYY-MM-DD), page, limit."
+					}
+				}
+			]
+		},
+		{
+			"name": "N. Earnings & Wallet",
+			"description": "Driver earnings tracking: summary with totals, and daily breakdown.",
+			"item": [
+				{
+					"name": "Earnings Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/earnings?page=1&limit=30",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"earnings"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "30"
+								}
+							]
+						},
+						"description": "Get earnings list and summary.\n\nReturns: data (earning records), summary (total_earned, total_paid, total_pending), pagination."
+					}
+				},
+				{
+					"name": "Daily Earnings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/earnings/daily?days=7",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"earnings",
+								"daily"
+							],
+							"query": [
+								{
+									"key": "days",
+									"value": "7"
+								}
+							]
+						},
+						"description": "Daily earnings breakdown.\n\nQuery: days (default 7, max 30).\n\nReturns: array of {date, deliveries, earned, cod_collected}."
+					}
+				}
+			]
+		},
+		{
+			"name": "O. Settings",
+			"description": "Tenant configuration and driver app settings.",
+			"item": [
+				{
+					"name": "Get Settings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/settings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"settings"
+							]
+						},
+						"description": "Get tenant and app settings.\n\nReturns:\n- tenant — name, slug, logo URLs\n- settings — require_signature, require_photo_proof, require_barcode_scan, auto_cod_collect, navigation_provider (google_maps/waze), language (en/ar), currency (AED)"
+					}
+				}
+			]
+		},
+		{
+			"name": "P. Shift & Availability",
+			"description": "Driver online/offline status management, break toggle, and logout.",
+			"item": [
+				{
+					"name": "Go Online",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/go-online",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"go-online"
+							]
+						},
+						"description": "Set driver status to 'available' (online, ready for assignments).",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "Go Offline",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/go-offline",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"go-offline"
+							]
+						},
+						"description": "Set driver status to 'offline'.\n\nNote: Cannot go offline with active in_transit/picked_up orders."
+					}
+				},
+				{
+					"name": "On Break",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/on-break",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"on-break"
+							]
+						},
+						"description": "Set driver status to 'on_break'. Pauses new assignments, keeps current orders active."
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"logout"
+							]
+						},
+						"description": "Logout driver.\n\n- Sets status to offline\n- Deactivates push notification tokens\n- Client should clear stored JWT token"
+					}
+				}
+			]
+		},
+		{
+			"name": "Q. Support & Help",
+			"description": "Support tickets, issue reporting, and FAQ/help content.",
+			"item": [
+				{
+					"name": "Create Support Ticket",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/support/ticket",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"support",
+								"ticket"
+							]
+						},
+						"description": "Create a support ticket.\n\nBody:\n- subject — required\n- description — optional\n- category — bug, feature_request, billing, account, technical, other\n- priority — low, medium, high, critical\n- order_id — optional related order",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"subject\": \"App crashing on scan\",\n    \"description\": \"Batch scan freezes the app\",\n    \"category\": \"bug\",\n    \"priority\": \"high\"\n}"
+						}
+					}
+				},
+				{
+					"name": "Report Issue",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/support/report-issue",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"support",
+								"report-issue"
+							]
+						},
+						"description": "Quick issue report (vehicle breakdown, accident, wrong package, etc.)\n\nBody:\n- issue_type — vehicle_breakdown, accident, wrong_package, app_bug, safety_concern, other\n- description, order_id, lat, lng",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"issue_type\": \"vehicle_breakdown\",\n    \"description\": \"Flat tire on delivery route\",\n    \"order_id\": 1,\n    \"lat\": 25.2048,\n    \"lng\": 55.2708\n}"
+						}
+					}
+				},
+				{
+					"name": "List My Tickets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/support/tickets?page=1&limit=20&status=",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"support",
+								"tickets"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "status",
+									"value": ""
+								}
+							]
+						},
+						"description": "List driver's own support tickets with pagination and status filter."
+					}
+				},
+				{
+					"name": "Help / FAQ",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/help",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"help"
+							]
+						},
+						"description": "Get FAQ and help content organized by category: Getting Started, Pickup, Delivery, COD, Account & Support."
+					}
+				}
+			]
+		},
+		{
+			"name": "R. Health & Branding",
+			"description": "Public health check and tenant branding endpoints (no authentication required).",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"health"
+							]
+						},
+						"description": "Public health check — verify the API server is running. No auth required.",
+						"auth": {
+							"type": "noauth"
+						}
+					}
+				},
+				{
+					"name": "Get Tenant Branding",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/auth/branding?slug=traseallo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"branding"
+							],
+							"query": [
+								{
+									"key": "slug",
+									"value": "traseallo"
+								}
+							]
+						},
+						"description": "Get tenant branding for login screen (public, no auth).\n\nQuery: slug — the tenant subdomain slug.\n\nReturns: tenant name, logo_url, logo_url_white for branding the login screen.",
+						"auth": {
+							"type": "noauth"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "S. Convenience Queries",
+			"description": "Pre-configured queries for common order list views: active, completed, by date.",
+			"item": [
+				{
+					"name": "List Active Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders?status=active&page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "active"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Convenience: List only active orders (assigned + picked_up + in_transit)."
+					}
+				},
+				{
+					"name": "List Completed Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders?status=completed&page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "completed"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Convenience: List only completed orders (delivered + failed + returned)."
+					}
+				},
+				{
+					"name": "List Today Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/driver-app/orders?status=all&date=2026-03-18&page=1&limit=50",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"driver-app",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "all"
+								},
+								{
+									"key": "date",
+									"value": "2026-03-18"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Convenience: List all orders for a specific date. Change date param as needed (YYYY-MM-DD)."
+					}
+				}
+			]
+		}
+	]
+}

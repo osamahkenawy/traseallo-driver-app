@@ -1,0 +1,132 @@
+/**
+ * Road-following route utility using OSRM (free, no API key)
+ *
+ * Fetches actual road geometry between an ordered list of waypoints
+ * and returns decoded coordinates ready for react-native-maps <Polyline>.
+ */
+
+const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
+
+/**
+ * Decode Google-encoded polyline string into array of {latitude, longitude}.
+ * OSRM returns geometry in this format by default (polyline precision 5).
+ */
+function decodePolyline(encoded) {
+  const coords = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+
+    coords.push({latitude: lat / 1e5, longitude: lng / 1e5});
+  }
+  return coords;
+}
+
+/**
+ * Fetch a road-following route between ordered waypoints.
+ *
+ * @param {Array<{latitude: number, longitude: number}>} waypoints
+ *   At least 2 points. First is typically the driver position.
+ * @param {Object} [options]
+ * @param {number} [options.timeout=8000]  Fetch timeout in ms.
+ * @returns {Promise<{coordinates: Array, distance: number, duration: number} | null>}
+ *   coordinates: decoded polyline for <Polyline>,
+ *   distance: total in meters,
+ *   duration: total in seconds,
+ *   or null if the request fails (caller should fall back to straight lines).
+ */
+export async function fetchRoadRoute(waypoints, options = {}) {
+  if (!waypoints || waypoints.length < 2) return null;
+
+  // OSRM expects "lng,lat;lng,lat;..." format
+  const coordStr = waypoints
+    .map((w) => `${w.longitude},${w.latitude}`)
+    .join(';');
+
+  const url = `${OSRM_BASE}/${coordStr}?overview=full&geometries=polyline`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeout || 8000);
+
+  try {
+    const res = await fetch(url, {signal: controller.signal});
+    clearTimeout(timeout);
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    if (json.code !== 'Ok' || !json.routes || json.routes.length === 0) {
+      return null;
+    }
+
+    const route = json.routes[0];
+    const coordinates = decodePolyline(route.geometry);
+
+    return {
+      coordinates,
+      distance: route.distance, // meters
+      duration: route.duration, // seconds
+    };
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
+/**
+ * For many waypoints (>25, OSRM limit per request), chunk the request
+ * and stitch the resulting polylines together.
+ */
+export async function fetchRoadRouteChunked(waypoints, options = {}) {
+  if (!waypoints || waypoints.length < 2) return null;
+
+  const MAX_PER_REQUEST = 25;
+
+  // If within limit, single request
+  if (waypoints.length <= MAX_PER_REQUEST) {
+    return fetchRoadRoute(waypoints, options);
+  }
+
+  // Chunk with overlap so segments connect
+  const allCoords = [];
+  let totalDist = 0;
+  let totalDur = 0;
+
+  for (let i = 0; i < waypoints.length - 1; i += MAX_PER_REQUEST - 1) {
+    const chunk = waypoints.slice(i, i + MAX_PER_REQUEST);
+    if (chunk.length < 2) break;
+
+    const result = await fetchRoadRoute(chunk, options);
+    if (!result) return null; // fail → caller falls back to straight lines
+
+    // Skip first point of subsequent chunks to avoid duplicate
+    const coords = i === 0 ? result.coordinates : result.coordinates.slice(1);
+    allCoords.push(...coords);
+    totalDist += result.distance;
+    totalDur += result.duration;
+  }
+
+  return allCoords.length >= 2
+    ? {coordinates: allCoords, distance: totalDist, duration: totalDur}
+    : null;
+}

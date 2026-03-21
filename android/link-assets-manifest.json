@@ -1,0 +1,65 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/fonts/Mulish-Black.ttf",
+      "sha1": "8c5c605bfff703cbe2e6aff6d6766c133d4af72c"
+    },
+    {
+      "path": "src/fonts/Mulish-Bold.ttf",
+      "sha1": "45b463c88a2598011c1749c96484171b8180a9f1"
+    },
+    {
+      "path": "src/fonts/Mulish-ExtraBold.ttf",
+      "sha1": "3e9e100b5e2531189cbc434ac2eb5204bf4bf55b"
+    },
+    {
+      "path": "src/fonts/Mulish-ExtraLight.ttf",
+      "sha1": "bcb5cba96ff5b796904e4181bcd3657b38059288"
+    },
+    {
+      "path": "src/fonts/Mulish-Light.ttf",
+      "sha1": "e0b04926cf8ee6c67b46346545b2d4698ecceaea"
+    },
+    {
+      "path": "src/fonts/Mulish-Medium.ttf",
+      "sha1": "17ec4e040d45f8b51027c244e182179e8d211a05"
+    },
+    {
+      "path": "src/fonts/Mulish-Regular.ttf",
+      "sha1": "ed8d9819ad0e79a38e203d2bef5cfd565a57c10c"
+    },
+    {
+      "path": "src/fonts/Mulish-SemiBold.ttf",
+      "sha1": "93fc16d0c3d8c42e6a1c733b83319aba7100ae0f"
+    },
+    {
+      "path": "src/fonts/Poppins-Black.ttf",
+      "sha1": "425d6efbe4709a1c641d4345a7dbff8a9f8ceb2f"
+    },
+    {
+      "path": "src/fonts/Poppins-Bold.ttf",
+      "sha1": "45e4d582cbb4dab2bbad3f624fad9ae567c66547"
+    },
+    {
+      "path": "src/fonts/Poppins-ExtraBold.ttf",
+      "sha1": "dd3b4a7629e386f2562ba90622e4ed6de545c12b"
+    },
+    {
+      "path": "src/fonts/Poppins-Light.ttf",
+      "sha1": "942f703a54d603f65bb2f2eb587431406dc1ae3f"
+    },
+    {
+      "path": "src/fonts/Poppins-Medium.ttf",
+      "sha1": "e837165aedb031ea74872c5983a3217d1c190a1a"
+    },
+    {
+      "path": "src/fonts/Poppins-Regular.ttf",
+      "sha1": "86a425be5a919d86729b85b2bc1d07da5ce413d4"
+    },
+    {
+      "path": "src/fonts/Poppins-SemiBold.ttf",
+      "sha1": "622ca6ccbe2f22c5611dffa016b745bd26be154c"
+    }
+  ]
+}

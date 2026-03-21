@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "349685122114",
+    "project_id": "traseallo",
+    "storage_bucket": "traseallo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:349685122114:android:911ea0ba8dd02c394959db",
+        "android_client_info": {
+          "package_name": "com.traseallo.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDBbGm9gK71MUUe5RGwZI-_ogQPwW5PhOs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

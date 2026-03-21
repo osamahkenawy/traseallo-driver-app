@@ -1,0 +1,850 @@
+{
+  "info": {
+    "name": "Traseallo Driver App API",
+    "description": "Complete API collection for the Traseallo Driver Mobile App.\n\nBase URL: {{base_url}}\nAuth: Bearer token from login endpoint.\n\nFlow: Login → Get driver_id from session → Use across all endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://delivery.traseallo.com/api", "type": "string" },
+    { "key": "base_url_local", "value": "http://localhost:4001/api", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "driver_id", "value": "", "type": "string" },
+    { "key": "tenant_slug", "value": "", "type": "string" },
+    { "key": "tracking_token", "value": "", "type": "string" },
+    { "key": "order_id", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "description": "Authentication endpoints for driver login, session, logout, and password management.",
+      "item": [
+        {
+          "name": "Get Tenant Branding",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/branding?slug={{tenant_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "branding"],
+              "query": [{ "key": "slug", "value": "{{tenant_slug}}" }]
+            },
+            "description": "Get tenant logo and name for login screen. No auth required."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data) {",
+                  "  pm.collectionVariables.set('token', res.data.token);",
+                  "  // Driver ID must be resolved from /tracking/my-orders",
+                  "  pm.collectionVariables.set('tenant_slug', res.data.tenant?.slug || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"ahmed.alfalasi@yopmail.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login with driver credentials. Returns JWT token + user info.\nThe token is auto-saved to collection variable."
+          }
+        },
+        {
+          "name": "Get Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data) {",
+                  "  // Store user_id for resolving driver_id later",
+                  "  pm.collectionVariables.set('user_id', res.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/session",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "session"]
+            },
+            "description": "Validate current session. Returns user info including role, tenant, permitted_modules."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Clears auth_token cookie and invalidates session."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ahmed.alfalasi@yopmail.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "forgot-password"]
+            },
+            "description": "Sends password reset email with token link."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"RESET_TOKEN_FROM_EMAIL\",\n  \"new_password\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "reset-password"]
+            },
+            "description": "Reset password using token from email. Min 6 chars."
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"oldPassword123\",\n  \"new_password\": \"newPassword456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "change-password"]
+            },
+            "description": "Change password for authenticated user."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Dashboard",
+      "description": "Dashboard data: driver info, status toggle, today's stats.",
+      "item": [
+        {
+          "name": "Get Dashboard Data (My Orders + Stats)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.success && res.data && res.data.driver) {",
+                  "  pm.collectionVariables.set('driver_id', res.data.driver.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/my-orders?status=all",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "my-orders"],
+              "query": [{ "key": "status", "value": "all" }]
+            },
+            "description": "PRIMARY DASHBOARD ENDPOINT.\nReturns: driver info, orders list, stats (active/delivered/failed/revenue), tabCounts, allTimeStats.\nAuto-saves driver_id to collection variable."
+          }
+        },
+        {
+          "name": "Toggle Driver Status (Online/Offline)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"available\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}", "status"]
+            },
+            "description": "Toggle driver status.\nValues: 'available' (online), 'offline', 'busy'.\nThis is the ONLINE/OFFLINE toggle on the dashboard."
+          }
+        },
+        {
+          "name": "Get Driver Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}"]
+            },
+            "description": "Full driver profile with stats: active_orders, total_orders, delivered_orders, orders_today, total_earned, recent_orders[]."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. My Orders",
+      "description": "Order list with status tabs, order details, status updates.",
+      "item": [
+        {
+          "name": "Get My Orders (All)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/my-orders?status=all",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "my-orders"],
+              "query": [{ "key": "status", "value": "all" }]
+            },
+            "description": "All orders for the logged-in driver.\nstatus param: 'all', 'active' (default), 'completed', 'failed'.\nReturns tabCounts for badge numbers."
+          }
+        },
+        {
+          "name": "Get My Orders (Active Only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/my-orders",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "my-orders"]
+            },
+            "description": "Active orders only (assigned, picked_up, in_transit). Default when no status param."
+          }
+        },
+        {
+          "name": "Get My Orders (Completed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/my-orders?status=completed",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "my-orders"],
+              "query": [{ "key": "status", "value": "completed" }]
+            },
+            "description": "Delivered orders only."
+          }
+        },
+        {
+          "name": "Get Order Details (by tracking token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_token}}/order",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_token}}", "order"]
+            },
+            "description": "Full order details including items[], status_logs[], scan_logs[]."
+          }
+        },
+        {
+          "name": "Get Order Details (by ID)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}"]
+            },
+            "description": "Full order details by order ID, including items[] and status_logs[]."
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"picked_up\",\n  \"note\": \"Package collected from sender\",\n  \"lat\": 25.2048,\n  \"lng\": 55.2708\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_token}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_token}}", "status"]
+            },
+            "description": "PRIMARY STATUS UPDATE for drivers.\nValid transitions:\n- assigned → picked_up\n- picked_up → in_transit\n- in_transit → delivered / failed / returned\n\nOn 'delivered' with COD: auto-records cod_collected_amount.\nSend lat/lng for GPS stamp on status change."
+          }
+        },
+        {
+          "name": "Start Trip (Batch)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lat\": 25.2048,\n  \"lng\": 55.2708\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking/start-trip",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "start-trip"]
+            },
+            "description": "Batch start trip: moves ALL assigned orders to in_transit at once.\nUse for 'Start Delivering' button."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Live Map",
+      "description": "GPS location updates (send/receive) for live map tracking.",
+      "item": [
+        {
+          "name": "Send GPS Location (POST)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 25.2048,\n  \"longitude\": 55.2708,\n  \"accuracy\": 15.5,\n  \"speed\": 45.2,\n  \"heading\": 180,\n  \"order_id\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}/location",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}", "location"]
+            },
+            "description": "Send GPS ping. Accepts 'latitude'/'longitude' OR 'lat'/'lng'.\nEmits Socket.IO event 'driver:location' to tenant room.\nCall every 10-30 seconds when driver is online."
+          }
+        },
+        {
+          "name": "Send GPS Location (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lat\": 25.2048,\n  \"lng\": 55.2708,\n  \"speed\": 45.2,\n  \"heading\": 180\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}/location",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}", "location"]
+            },
+            "description": "PATCH alias for GPS ping. Same functionality."
+          }
+        },
+        {
+          "name": "Get My Last Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}/location",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}", "location"]
+            },
+            "description": "Get driver's last recorded GPS location."
+          }
+        },
+        {
+          "name": "Get Location History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}/location-history?limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}", "location-history"],
+              "query": [
+                { "key": "limit", "value": "100" },
+                { "key": "from", "value": "", "disabled": true },
+                { "key": "to", "value": "", "disabled": true }
+              ]
+            },
+            "description": "GPS trail for path replay on map. Max 2000 points."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Notifications",
+      "description": "In-app notifications: list, read, delete, push registration.",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user-notifications?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["user-notifications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "unread_only", "value": "false", "disabled": true }
+              ]
+            },
+            "description": "Paginated in-app notifications. Returns unread count and total."
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user-notifications/unread-count",
+              "host": ["{{base_url}}"],
+              "path": ["user-notifications", "unread-count"]
+            },
+            "description": "Returns just the unread count for badge icon. Poll this periodically."
+          }
+        },
+        {
+          "name": "Mark Single as Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user-notifications/1/read",
+              "host": ["{{base_url}}"],
+              "path": ["user-notifications", "1", "read"]
+            },
+            "description": "Mark a single notification as read by notification ID."
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user-notifications/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["user-notifications", "read-all"]
+            },
+            "description": "Mark ALL notifications as read."
+          }
+        },
+        {
+          "name": "Delete Single Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user-notifications/1",
+              "host": ["{{base_url}}"],
+              "path": ["user-notifications", "1"]
+            },
+            "description": "Delete a single notification."
+          }
+        },
+        {
+          "name": "Clear All Notifications",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user-notifications",
+              "host": ["{{base_url}}"],
+              "path": ["user-notifications"]
+            },
+            "description": "Delete all notifications for current user."
+          }
+        },
+        {
+          "name": "Register Push (FCM/APNs Token)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscription\": {\n    \"endpoint\": \"FCM_OR_APNS_TOKEN_HERE\",\n    \"keys\": {\n      \"p256dh\": \"KEY\",\n      \"auth\": \"AUTH\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notifications/push/subscribe",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "push", "subscribe"]
+            },
+            "description": "Register for push notifications. For mobile, you'll need to adapt this to send FCM/APNs device token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Profile",
+      "description": "Driver profile: view, edit, upload photo.",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}"]
+            },
+            "description": "Full driver profile: name, phone, email, vehicle info, zone, status, rating, stats, recent_orders."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Ahmed Al-Falasi\",\n  \"phone\": \"+971501234567\",\n  \"email\": \"ahmed.alfalasi@yopmail.com\",\n  \"vehicle_type\": \"bike\",\n  \"vehicle_plate\": \"D 12345\",\n  \"vehicle_model\": \"Honda PCX\",\n  \"vehicle_color\": \"Black\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}"]
+            },
+            "description": "Update driver profile fields. Only send fields you want to change."
+          }
+        },
+        {
+          "name": "Upload Profile Photo",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "", "description": "Profile photo (JPEG/PNG, max 5MB)" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/uploads/drivers/{{driver_id}}/photo",
+              "host": ["{{base_url}}"],
+              "path": ["uploads", "drivers", "{{driver_id}}", "photo"]
+            },
+            "description": "Upload driver profile photo. Multipart form-data."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Earnings",
+      "description": "Earnings overview, COD collected, wallet transactions.",
+      "item": [
+        {
+          "name": "Get My Earnings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/driver-earnings?driver_id={{driver_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["driver-earnings"],
+              "query": [
+                { "key": "driver_id", "value": "{{driver_id}}" },
+                { "key": "date_from", "value": "", "disabled": true },
+                { "key": "date_to", "value": "", "disabled": true },
+                { "key": "status", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Earnings list for this driver. Filter by date range and status (pending/paid)."
+          }
+        },
+        {
+          "name": "Get Earnings Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/driver-earnings/summary",
+              "host": ["{{base_url}}"],
+              "path": ["driver-earnings", "summary"]
+            },
+            "description": "Summary: total_base, total_bonus, total_deductions, total_net, total_paid, total_pending per driver."
+          }
+        },
+        {
+          "name": "Get Wallet Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/wallet",
+              "host": ["{{base_url}}"],
+              "path": ["wallet"]
+            },
+            "description": "Wallet balance, COD pending, held balance, total credited/debited."
+          }
+        },
+        {
+          "name": "Get Wallet Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/wallet/transactions?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["wallet", "transactions"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "type", "value": "", "disabled": true }
+              ]
+            },
+            "description": "Wallet transaction history. Filter by type."
+          }
+        },
+        {
+          "name": "Get COD Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/wallet/cod-orders",
+              "host": ["{{base_url}}"],
+              "path": ["wallet", "cod-orders"]
+            },
+            "description": "List of delivered COD orders (collected/uncollected)."
+          }
+        },
+        {
+          "name": "Record COD Collection",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": 1,\n  \"amount\": 150.00,\n  \"note\": \"Cash collected from recipient\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/wallet/collect-cod",
+              "host": ["{{base_url}}"],
+              "path": ["wallet", "collect-cod"]
+            },
+            "description": "Record COD cash collection for an order."
+          }
+        },
+        {
+          "name": "Get COD Summary by Driver",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cod/summary",
+              "host": ["{{base_url}}"],
+              "path": ["cod", "summary"]
+            },
+            "description": "COD summary per driver: total_cod, collected, pending amounts."
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Ratings",
+      "description": "Driver ratings and reviews.",
+      "item": [
+        {
+          "name": "Get My Ratings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}/ratings",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}", "ratings"]
+            },
+            "description": "All ratings for this driver.\nReturns: driver info (id, name, avg rating), total_ratings, and individual ratings with order details."
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Scanner",
+      "description": "Barcode scanning for pickup confirmation and delivery.",
+      "item": [
+        {
+          "name": "Scan Barcode",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scan_type\": \"pickup_scan\",\n  \"lat\": 25.2048,\n  \"lng\": 55.2708,\n  \"note\": \"Scanned at warehouse\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_token}}/scan",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_token}}", "scan"]
+            },
+            "description": "Log barcode scan.\nscan_type values:\n- 'pickup_scan' → auto-transitions to picked_up\n- 'delivery_scan' → auto-transitions to delivered\n- 'driver_scan' → general scan log\n- 'warehouse_in' / 'warehouse_out'\n\nThe tracking_token is the barcode value."
+          }
+        },
+        {
+          "name": "Validate Pre-Generated Barcode",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tracking_token\": \"TRS-20260225-3365\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/validate-pregenerated",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "validate-pregenerated"]
+            },
+            "description": "Validate a pre-printed barcode token before using it."
+          }
+        },
+        {
+          "name": "Get Order by Tracking Token (Public)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/{{tracking_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{tracking_token}}"]
+            },
+            "description": "Public tracking endpoint. Returns order status, recipient info, driver info, status_logs."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Pickups",
+      "description": "Pickup workflow: view assigned pickups, confirm, arrive, fail.",
+      "item": [
+        {
+          "name": "Get My Pickups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/pickup/driver/my-pickups",
+              "host": ["{{base_url}}"],
+              "path": ["pickup", "driver", "my-pickups"]
+            },
+            "description": "All pickups assigned to this driver.\nReturns: order details, sender info, pickup_status, pickup_scheduled_at, client info."
+          }
+        },
+        {
+          "name": "Arrived at Pickup",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lat\": 25.2048,\n  \"lng\": 55.2708\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pickup/{{order_id}}/arrived",
+              "host": ["{{base_url}}"],
+              "path": ["pickup", "{{order_id}}", "arrived"]
+            },
+            "description": "Mark arrival at pickup location."
+          }
+        },
+        {
+          "name": "Confirm Pickup Collected",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode_scanned\": true,\n  \"notes\": \"Package collected\",\n  \"lat\": 25.2048,\n  \"lng\": 55.2708\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pickup/{{order_id}}/confirm",
+              "host": ["{{base_url}}"],
+              "path": ["pickup", "{{order_id}}", "confirm"]
+            },
+            "description": "Confirm pickup collected. Auto-advances order to 'picked_up' status."
+          }
+        },
+        {
+          "name": "Fail Pickup",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Sender not available\",\n  \"lat\": 25.2048,\n  \"lng\": 55.2708\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/pickup/{{order_id}}/fail",
+              "host": ["{{base_url}}"],
+              "path": ["pickup", "{{order_id}}", "fail"]
+            },
+            "description": "Mark pickup as failed with reason."
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. File Uploads",
+      "description": "Upload proof of delivery and other files.",
+      "item": [
+        {
+          "name": "Upload Proof of Delivery",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "", "description": "Photo proof (JPEG/PNG, max 5MB)" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/uploads/orders/{{order_id}}/proof",
+              "host": ["{{base_url}}"],
+              "path": ["uploads", "orders", "{{order_id}}", "proof"]
+            },
+            "description": "Upload proof of delivery photo for an order."
+          }
+        }
+      ]
+    }
+  ]
+}
