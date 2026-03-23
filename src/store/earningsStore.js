@@ -29,10 +29,10 @@ const useEarningsStore = create((set, get) => ({
     set(isRefresh ? {isRefreshing: true} : {isLoading: true, error: null});
     try {
       const res = await walletApi.getEarnings({page, limit, ...params});
-      const data = res.data?.data || res.data;
-      const items = data?.earnings || data?.items || [];
-      const summary = data?.summary || null;
-      const total = data?.total || data?.pagination?.total || 0;
+      const body = res.data;
+      const items = Array.isArray(body?.data) ? body.data : (body?.data?.earnings || body?.data?.items || []);
+      const summary = body?.summary || body?.data?.summary || null;
+      const total = body?.pagination?.total || body?.data?.total || 0;
 
       set(state => ({
         earnings: isRefresh || page === 1 ? items : [...state.earnings, ...items],

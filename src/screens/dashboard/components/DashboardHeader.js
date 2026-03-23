@@ -9,6 +9,7 @@ import {Bell, User, Clock} from 'lucide-react-native';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
 import {useTranslation} from 'react-i18next';
+import {uploadsApi} from '../../../api';
 
 const HEADER_BG = '#244066';
 
@@ -32,14 +33,14 @@ const DashboardHeader = ({
 
   const statusLabel = t('status.' + (driverStatus || 'offline')).toUpperCase();
   const statusColor =
-    driverStatus === 'available' || driverStatus === 'busy'
+    driverStatus === 'available'
       ? '#15C7AE'
-      : driverStatus === 'on_break'
+      : driverStatus === 'busy' || driverStatus === 'on_break'
       ? '#F9AD28'
       : '#EB466D';
 
   const vehicleCode = vehicleType
-    ? 'PO ' + vehicleType.slice(0, 5).toUpperCase()
+    ? vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1)
     : null;
 
   const loginTimeFmt = useMemo(() => {
@@ -57,12 +58,16 @@ const DashboardHeader = ({
     return () => clearInterval(id);
   }, []);
 
-  const elapsed = (() => {
-    const h = now.getHours();
-    const m = now.getMinutes();
-    const s = now.getSeconds();
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  })();
+  const elapsed = useMemo(() => {
+    if (!loginTime) return '00:00:00';
+    const start = new Date(loginTime);
+    if (isNaN(start.getTime())) return '00:00:00';
+    const diff = Math.max(0, Math.floor((now - start) / 1000));
+    const h = Math.floor(diff / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    const sec = diff % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }, [loginTime, now]);
 
   return (
     <View>
@@ -90,7 +95,7 @@ const DashboardHeader = ({
           <View style={$.driverRow}>
             <TouchableOpacity onPress={onProfilePress} activeOpacity={0.8}>
               {photo ? (
-                <Image source={{uri: photo}} style={$.avatar} />
+                <Image source={{uri: photo.startsWith('http') || photo.startsWith('file') ? photo : uploadsApi.getFileUrl(photo)}} style={$.avatar} />
               ) : (
                 <View style={[$.avatar, $.avatarPlaceholder]}>
                   <User size={26} color={colors.primary} strokeWidth={2} />

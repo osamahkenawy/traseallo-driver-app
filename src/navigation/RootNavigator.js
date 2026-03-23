@@ -24,7 +24,6 @@ import MainTabs from './MainTabs';
 
 // ─── Modal / Detail Screens ──────────────────────────
 import SplashScreen from '../screens/SplashScreen';
-import OnboardingScreen from '../screens/OnboardingScreen';
 import OrderDetailScreen from '../screens/orders/OrderDetailScreen';
 import DeliveryConfirmScreen from '../screens/orders/DeliveryConfirmScreen';
 import FailureReportScreen from '../screens/orders/FailureReportScreen';

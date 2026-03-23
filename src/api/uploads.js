@@ -6,7 +6,6 @@
  */
 
 import apiClient from './client';
-import {Platform} from 'react-native';
 
 /**
  * Create a FormData object from a local file URI
@@ -18,10 +17,11 @@ const createFormData = (uri, fieldName = 'file') => {
   const formData = new FormData();
   const filename = uri.split('/').pop() || 'photo.jpg';
   const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : 'image/jpeg';
+  const ext = match ? match[1].toLowerCase() : 'jpeg';
+  const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
 
   formData.append(fieldName, {
-    uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+    uri,
     name: filename,
     type,
   });
@@ -41,7 +41,6 @@ const uploadsApi = {
   uploadOrderProofPhoto: (orderId, uri, onProgress) => {
     const formData = createFormData(uri);
     return apiClient.post(`/driver-app/orders/${orderId}/proof-photo`, formData, {
-      headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
@@ -62,7 +61,6 @@ const uploadsApi = {
       type: 'image/png',
     });
     return apiClient.post(`/driver-app/orders/${orderId}/signature`, formData, {
-      headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
@@ -80,7 +78,6 @@ const uploadsApi = {
   uploadStopProofPhoto: (stopId, uri, onProgress) => {
     const formData = createFormData(uri);
     return apiClient.post(`/driver-app/stops/${stopId}/proof-photo`, formData, {
-      headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
@@ -101,7 +98,6 @@ const uploadsApi = {
       type: 'image/png',
     });
     return apiClient.post(`/driver-app/stops/${stopId}/signature`, formData, {
-      headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
@@ -118,7 +114,6 @@ const uploadsApi = {
   uploadAvatar: (uri, onProgress) => {
     const formData = createFormData(uri);
     return apiClient.post('/driver-app/profile/avatar', formData, {
-      headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
@@ -131,8 +126,13 @@ const uploadsApi = {
    * @returns {string}
    */
   getFileUrl: (path) => {
-    const baseURL = apiClient.defaults.baseURL.replace('/api', '');
-    return `${baseURL}/api/file?path=${encodeURIComponent(path)}`;
+    const baseURL = apiClient.defaults.baseURL.replace(/\/api$/, '');
+    // path from backend is like "/uploads/drivers/xxx.jpg" — serve directly
+    if (path.startsWith('/uploads/')) {
+      return `${baseURL}${path}`;
+    }
+    // Fallback for paths without /uploads/ prefix
+    return `${baseURL}/uploads/${path}`;
   },
 };
 

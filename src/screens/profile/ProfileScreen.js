@@ -53,10 +53,15 @@ const ProfileScreen = ({navigation}) => {
   }, []);
 
   const profile = driverProfile || user;
-  const photoUrl = profile?.photo || profile?.avatar;
+  const photoUrl = profile?.photo_url || profile?.avatar_url || profile?.photo || profile?.avatar;
   const avatarSource = photoUrl
     ? {uri: photoUrl.startsWith('http') ? photoUrl : uploadsApi.getFileUrl(photoUrl)}
     : images.avatarPlaceholder;
+
+  const driverStatus = profile?.status || 'offline';
+  const statusDotColor = driverStatus === 'available' ? colors.success
+    : driverStatus === 'busy' || driverStatus === 'on_break' ? colors.warning
+    : colors.textMuted;
 
   const handleSupport = () => {
     navigation.navigate(routeNames.Support);
@@ -75,7 +80,7 @@ const ProfileScreen = ({navigation}) => {
           <View style={s.avatarRow}>
             <View style={s.avatarWrap}>
               <Image source={avatarSource} style={s.avatar} resizeMode="cover" />
-              <View style={s.onlineDot} />
+              <View style={[s.onlineDot, {backgroundColor: statusDotColor}]} />
             </View>
             <View style={{flex: 1}}>
               <Text style={s.name}>{profile?.full_name || displayName}</Text>
@@ -97,7 +102,7 @@ const ProfileScreen = ({navigation}) => {
           {driverProfile && (
             <View style={s.statsRow}>
               <View style={s.statItem}>
-                <Text style={s.statVal}>{driverProfile.delivered_orders || 0}</Text>
+                <Text style={s.statVal}>{driverProfile.stats?.delivered || driverProfile.stats?.total_orders || 0}</Text>
                 <Text style={s.statLabel}>{t('profile.delivered')}</Text>
               </View>
               <View style={s.statDiv} />
@@ -190,7 +195,6 @@ const s = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: colors.success,
     borderWidth: 2,
     borderColor: '#FFF',
   },

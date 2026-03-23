@@ -33,31 +33,74 @@ const {width: SCREEN_W} = Dimensions.get('window');
 // ─── Status Configuration ────────────────────────────
 const STATUS_OPTIONS = [
   {key: 'available', labelKey: 'editProfile.available', icon: 'check-circle', color: colors.success, bg: colors.successBg},
-  {key: 'busy', labelKey: 'editProfile.busy', icon: 'clock-outline', color: colors.warning, bg: colors.warningBg},
+  {key: 'on_break', labelKey: 'editProfile.busy', icon: 'clock-outline', color: colors.warning, bg: colors.warningBg},
   {key: 'offline', labelKey: 'editProfile.offline', icon: 'power-sleep', color: colors.danger, bg: colors.dangerBg},
 ];
 
 // ─── Reusable Input Field ────────────────────────────
-const Field = ({label, icon, value, onChangeText, placeholder, editable = true, keyboardType = 'default', multiline = false}) => (
+const Field = ({label, icon, value, onChangeText, placeholder, editable = true, keyboardType = 'default', multiline = false, children}) => (
   <View style={s.fieldGroup}>
     <Text style={s.fieldLabel}>{label}</Text>
-    <View style={[s.fieldRow, !editable && s.fieldRowDisabled, multiline && {height: 80, alignItems: 'flex-start'}]}>
-      <Icon name={icon} size={16} color={editable ? colors.primary : colors.textMuted} style={{marginStart: 14, marginEnd: 10, marginTop: multiline ? 14 : 0}} />
-      <TextInput
-        style={[s.fieldInput, multiline && {textAlignVertical: 'top', paddingTop: 12}]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
-        editable={editable}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        numberOfLines={multiline ? 3 : 1}
-      />
-      {!editable && <Icon name="lock-outline" size={14} color={colors.textMuted} style={{marginEnd: 14}} />}
+    {children ? children : (
+      <View style={[s.fieldRow, !editable && s.fieldRowDisabled, multiline && {height: 80, alignItems: 'flex-start'}]}>
+        <Icon name={icon} size={16} color={editable ? colors.primary : colors.textMuted} style={{marginStart: 14, marginEnd: 10, marginTop: multiline ? 14 : 0}} />
+        <TextInput
+          style={[s.fieldInput, multiline && {textAlignVertical: 'top', paddingTop: 12}]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textMuted}
+          editable={editable}
+          keyboardType={keyboardType}
+          multiline={multiline}
+          numberOfLines={multiline ? 3 : 1}
+        />
+        {!editable && <Icon name="lock-outline" size={14} color={colors.textMuted} style={{marginEnd: 14}} />}
+      </View>
+    )}
+  </View>
+);
+
+// ─── Phone Field with Country Code ───────────────────
+const PhoneField = ({label, icon, countryCode, onCountryCodeChange, phone, onPhoneChange, codeLabel}) => (
+  <View style={s.fieldGroup}>
+    <Text style={s.fieldLabel}>{label}</Text>
+    <View style={s.phoneRow}>
+      <View style={s.codeBox}>
+        <Icon name={icon} size={16} color={colors.primary} style={{marginStart: 10, marginEnd: 6}} />
+        <TextInput
+          style={s.codeInput}
+          value={countryCode}
+          onChangeText={onCountryCodeChange}
+          placeholder="+971"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="phone-pad"
+          maxLength={5}
+        />
+      </View>
+      <View style={s.phoneBox}>
+        <TextInput
+          style={s.phoneInput}
+          value={phone}
+          onChangeText={onPhoneChange}
+          placeholder="5XX XXX XXXX"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="phone-pad"
+        />
+      </View>
     </View>
   </View>
 );
+
+// ─── Helper: split phone into country code + number ──
+const splitPhone = (fullPhone) => {
+  if (!fullPhone) return {code: '+971', number: ''};
+  const cleaned = fullPhone.replace(/\s+/g, '');
+  // Match common country codes: +XXX, +XX, +X
+  const match = cleaned.match(/^(\+\d{1,4})(.*)$/);
+  if (match) return {code: match[1], number: match[2]};
+  return {code: '+971', number: cleaned};
+};
 
 // ─── Section Header ──────────────────────────────────
 const SectionHeader = ({icon, title, subtitle}) => (
@@ -124,7 +167,9 @@ const EditProfileScreen = ({navigation}) => {
 
   // ─── Form State ────────────────────────────────────
   const [name, setName] = useState(user?.full_name || user?.name || '');
-  const [phone, setPhone] = useState(user?.phone || user?.mobile || '');
+  const initialPhone = splitPhone(user?.phone || user?.mobile || '');
+  const [countryCode, setCountryCode] = useState(initialPhone.code);
+  const [phone, setPhone] = useState(initialPhone.number);
   const [email] = useState(user?.email || '');
   const [vehicleType, setVehicleType] = useState(user?.vehicle_type || '');
   const [vehiclePlate, setVehiclePlate] = useState(user?.vehicle_plate || user?.license_plate || '');
@@ -163,13 +208,18 @@ const EditProfileScreen = ({navigation}) => {
         const d = res.data?.data || res.data;
         if (d) {
           if (d.full_name) setName(d.full_name);
-          if (d.phone || d.mobile) setPhone(d.phone || d.mobile);
+          if (d.phone || d.mobile) {
+            const parsed = splitPhone(d.phone || d.mobile);
+            setCountryCode(parsed.code);
+            setPhone(parsed.number);
+          }
           if (d.vehicle_type) setVehicleType(d.vehicle_type);
           if (d.vehicle_plate || d.license_plate) setVehiclePlate(d.vehicle_plate || d.license_plate);
           if (d.vehicle_model) setVehicleModel(d.vehicle_model);
           if (d.vehicle_color) setVehicleColor(d.vehicle_color);
           if (d.status) setDriverStatus(d.status);
-          if (d.avatar || d.photo) setAvatarUri(d.avatar || d.photo);
+          if (d.photo_url || d.avatar_url || d.avatar || d.photo)
+            setAvatarUri(d.photo_url || d.avatar_url || d.avatar || d.photo);
         }
       } catch {
         // Fallback — use existing user data
@@ -212,7 +262,7 @@ const EditProfileScreen = ({navigation}) => {
         await goOnline();
       } else if (newStatus === 'offline') {
         await goOffline();
-      } else if (newStatus === 'busy' || newStatus === 'on_break') {
+      } else if (newStatus === 'on_break') {
         await onBreak();
       }
       // Also update authStore user object
@@ -220,15 +270,15 @@ const EditProfileScreen = ({navigation}) => {
       const opt = STATUS_OPTIONS.find(o => o.key === newStatus);
       showMessage({
         message: `${t('editProfile.nowStatus')} ${opt ? t(opt.labelKey) : newStatus}`,
-        type: newStatus === 'available' ? 'success' : newStatus === 'busy' ? 'warning' : 'info',
+        type: newStatus === 'available' ? 'success' : newStatus === 'on_break' ? 'warning' : 'info',
         icon: 'auto',
         duration: 2000,
       });
     } catch (e) {
       setDriverStatus(prev);
       showMessage({
-        message: t('editProfile.failedStatus'),
-        description: e?.response?.data?.message || t('editProfile.pleaseTryAgain'),
+        message: e?.response?.data?.message || t('editProfile.failedStatus'),
+        description: t('editProfile.pleaseTryAgain'),
         type: 'danger',
         icon: 'auto',
       });
@@ -244,17 +294,19 @@ const EditProfileScreen = ({navigation}) => {
     }
     setLoading(true);
     try {
-      // Upload avatar if changed
+      // Upload avatar if changed (local file URIs indicate a newly picked photo)
       let avatarUrl = user?.avatar || user?.photo || null;
-      if (avatarUri && avatarUri !== avatarUrl) {
+      const isLocalFile = avatarUri && (avatarUri.startsWith('file://') || avatarUri.startsWith('/var') || avatarUri.startsWith('/private') || avatarUri.startsWith('content://'));
+      if (isLocalFile) {
         const uploadRes = await uploadsApi.uploadAvatar(avatarUri);
         avatarUrl = uploadRes.data?.data?.url || uploadRes.data?.url || avatarUrl;
       }
 
       // Persist profile changes to server
+      const fullPhone = `${countryCode.trim()}${phone.trim()}`;
       const profileData = {
         full_name: name.trim(),
-        phone: phone.trim(),
+        phone: fullPhone,
         vehicle_type: vehicleType.trim(),
         vehicle_plate: vehiclePlate.trim(),
         vehicle_model: vehicleModel.trim(),
@@ -268,8 +320,9 @@ const EditProfileScreen = ({navigation}) => {
         user: {
           ...user,
           full_name: name.trim(),
-          phone: phone.trim(),
+          phone: fullPhone,
           avatar: avatarUrl,
+          photo: avatarUrl,
           vehicle_type: vehicleType.trim(),
           vehicle_plate: vehiclePlate.trim(),
           vehicle_model: vehicleModel.trim(),
@@ -329,7 +382,10 @@ const EditProfileScreen = ({navigation}) => {
             <View style={[s.avatarRing, {borderColor: activeStatus.color}]}>
               <View style={s.avatar}>
                 {avatarUri ? (
-                  <Image source={{uri: avatarUri}} style={s.avatarImg} />
+                  <Image
+                    source={{uri: avatarUri.startsWith('/') ? uploadsApi.getFileUrl(avatarUri) : avatarUri}}
+                    style={s.avatarImg}
+                  />
                 ) : (
                   <Icon name="account" size={40} color={colors.primary} />
                 )}
@@ -373,7 +429,15 @@ const EditProfileScreen = ({navigation}) => {
         <View style={s.card}>
           <SectionHeader icon="account-circle-outline" title={t('editProfile.personalInfo')} subtitle={t('editProfile.personalInfoSub')} />
           <Field label={t('editProfile.fullName')} icon="account-outline" value={name} onChangeText={setName} placeholder={t('editProfile.enterFullName')} />
-          <Field label={t('editProfile.phoneNumber')} icon="phone-outline" value={phone} onChangeText={setPhone} placeholder="+971 XX XXX XXXX" keyboardType="phone-pad" />
+          <PhoneField
+            label={t('editProfile.phoneNumber')}
+            icon="phone-outline"
+            countryCode={countryCode}
+            onCountryCodeChange={setCountryCode}
+            phone={phone}
+            onPhoneChange={setPhone}
+            codeLabel={t('editProfile.countryCode')}
+          />
           <Field label={t('editProfile.emailAddress')} icon="email-outline" value={email} placeholder="you@example.com" editable={false} />
         </View>
 
@@ -558,6 +622,49 @@ const s = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: 14,
     color: colors.textPrimary,
+    paddingEnd: 14,
+  },
+
+  // ─── Phone Split Field ─────────────────────────────
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  codeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    backgroundColor: '#F8F9FB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEF1F5',
+    width: 95,
+  },
+  codeInput: {
+    flex: 1,
+    height: '100%',
+    fontFamily: fontFamily.semiBold,
+    fontSize: 14,
+    color: colors.textPrimary,
+    paddingEnd: 8,
+  },
+  phoneBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    backgroundColor: '#F8F9FB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEF1F5',
+  },
+  phoneInput: {
+    flex: 1,
+    height: '100%',
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    color: colors.textPrimary,
+    paddingStart: 14,
     paddingEnd: 14,
   },
 

@@ -21,13 +21,12 @@ const ALLOWED_DOMAINS = [
 ];
 
 const isAllowedUrl = (urlString) => {
-  if (!urlString) return false;
-  try {
-    const parsed = new URL(urlString);
-    return ALLOWED_DOMAINS.some(d => parsed.hostname === d || parsed.hostname.endsWith('.' + d));
-  } catch {
-    return false;
-  }
+  if (!urlString || typeof urlString !== 'string') return false;
+  // RN's URL class doesn't support .hostname — parse with regex instead
+  const match = urlString.match(/^https?:\/\/([^/?#]+)/i);
+  if (!match) return false;
+  const hostname = match[1].toLowerCase();
+  return ALLOWED_DOMAINS.some(d => hostname === d || hostname.endsWith('.' + d));
 };
 
 const WebViewScreen = ({navigation, route}) => {

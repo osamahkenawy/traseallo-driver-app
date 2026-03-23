@@ -9,7 +9,9 @@ import {
   clearToken,
   getToken,
   setTenantSlug,
+  getTenantSlug,
   setTenantId,
+  getTenantId,
   setOnAuthExpired,
 } from '../api/client';
 
@@ -115,6 +117,10 @@ const useAuthStore = create((set, get) => ({
       // Profile API returns { success, data: { id, full_name, email, status, vehicle_type, ... } }
       const profile = res.data?.data || res.data;
 
+      // Restore tenant info from AsyncStorage
+      const slug = await getTenantSlug();
+      const tenantId = await getTenantId();
+
       const user = {
         id: profile.user_id || profile.id,
         full_name: profile.full_name,
@@ -136,6 +142,8 @@ const useAuthStore = create((set, get) => ({
         user,
         token: storedToken,
         driverId: profile.id || null,
+        tenantId: tenantId ? Number(tenantId) : null,
+        tenantSlug: slug || null,
         isAuthenticated: true,
         isLoading: false,
       });

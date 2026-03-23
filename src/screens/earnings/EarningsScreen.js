@@ -29,7 +29,7 @@ const EarningsScreen = ({navigation}) => {
 
   const PERIODS = [t('earnings.today'), t('earnings.thisWeek'), t('earnings.thisMonth'), t('earnings.allTime')];
 
-  const {earnings: earningsData, summary: earningSummary, isLoading, isRefreshing, fetchEarnings} = useEarningsStore();
+  const {earnings: earningsData, summary: earningSummary, dailyBreakdown, isLoading, isRefreshing, fetchEarnings, fetchDailyBreakdown} = useEarningsStore();
   const {pendingOrders: transactions, summary: codSummary, fetchPending, fetchSummary} = useCodStore();
   const [selectedPeriod, setSelectedPeriod] = useState(0);
 
@@ -40,9 +40,10 @@ const EarningsScreen = ({navigation}) => {
     await Promise.allSettled([
       fetchSummary(),
       fetchEarnings({}, isRefresh),
+      fetchDailyBreakdown(30),
       fetchPending(isRefresh),
     ]);
-  }, [fetchSummary, fetchEarnings, fetchPending]);
+  }, [fetchSummary, fetchEarnings, fetchDailyBreakdown, fetchPending]);
 
   useEffect(() => {
     fetchData();
@@ -53,10 +54,24 @@ const EarningsScreen = ({navigation}) => {
   };
 
   const getEarningsForPeriod = () => {
-    if (!earningSummary) return '0.00';
-    const keys = ['today', 'week', 'month', 'total'];
-    const val = earningSummary[keys[selectedPeriod]] ?? earningSummary.total_earned ?? earningSummary.total ?? 0;
-    return Number(val).toFixed(2);
+    const total = Number(earningSummary?.total_earned ?? 0);
+    if (selectedPeriod === 3) return total.toFixed(2); // All Time
+    // Compute from daily breakdown
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const monthAgo = new Date(now);
+    monthAgo.setDate(monthAgo.getDate() - 30);
+
+    let sum = 0;
+    for (const day of dailyBreakdown) {
+      const d = day.date;
+      if (selectedPeriod === 0 && d === todayStr) sum += Number(day.earned || 0);
+      else if (selectedPeriod === 1 && d >= weekAgo.toISOString().slice(0, 10)) sum += Number(day.earned || 0);
+      else if (selectedPeriod === 2 && d >= monthAgo.toISOString().slice(0, 10)) sum += Number(day.earned || 0);
+    }
+    return sum.toFixed(2);
   };
 
   const formatAmount = (v) => Number(v || 0).toFixed(2);

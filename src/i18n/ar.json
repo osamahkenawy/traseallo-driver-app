@@ -752,6 +752,7 @@
     "emailAddress": "عنوان البريد الإلكتروني",
     "phone": "الهاتف",
     "phoneNumber": "رقم الهاتف",
+    "countryCode": "الرمز",
     "save": "حفظ",
     "saveChanges": "حفظ التغييرات",
     "saving": "جاري الحفظ...",

@@ -34,6 +34,7 @@ const RatingsScreen = ({navigation}) => {
       const res = await authApi.getProfile();
       const data = res.data?.data || res.data;
       setRatingsData(data);
+      // Reviews may not exist in the profile response
       const reviewsArr = Array.isArray(data?.reviews) ? data.reviews
         : Array.isArray(data?.ratings) ? data.ratings
         : [];
@@ -55,9 +56,9 @@ const RatingsScreen = ({navigation}) => {
     fetchRatings(true);
   };
 
-  // Compute star distribution
-  const avg = Number(ratingsData?.average_rating || ratingsData?.averageRating || 0);
-  const total = Number(ratingsData?.total_ratings || ratingsData?.totalRatings || reviews.length || 0);
+  // Use the rating field from profile (e.g. "3.92")
+  const avg = Number(ratingsData?.rating || ratingsData?.average_rating || 0);
+  const total = Number(ratingsData?.stats?.total_orders || ratingsData?.total_ratings || reviews.length || 0);
   const dist = ratingsData?.distribution || {};
 
   const bars = [5, 4, 3, 2, 1].map(star => {
@@ -113,8 +114,8 @@ const RatingsScreen = ({navigation}) => {
   );
 
   // Determine delivery stats from ratingsData or fallback
-  const deliveries = ratingsData?.total_deliveries || ratingsData?.totalDeliveries || 0;
-  const onTimeRate = ratingsData?.on_time_rate || ratingsData?.onTimeRate || null;
+  const deliveries = ratingsData?.stats?.delivered || ratingsData?.stats?.total_orders || ratingsData?.total_deliveries || 0;
+  const onTimeRate = ratingsData?.stats?.on_time_rate || ratingsData?.on_time_rate || null;
   const positiveRate = total > 0
     ? Math.round(((Number(dist[4] || 0) + Number(dist[5] || 0)) / total) * 100)
     : 0;

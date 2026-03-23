@@ -44,7 +44,7 @@ const ChangePasswordScreen = ({navigation}) => {
   const [focused, setFocused] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const valid = current.length >= 1 && newPwd.length >= 6 && newPwd === confirm;
+  const valid = current.length >= 6 && newPwd.length >= 6 && newPwd === confirm;
 
   const handleUpdate = async () => {
     if (!valid) return;

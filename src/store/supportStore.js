@@ -71,9 +71,9 @@ const useSupportStore = create((set, get) => ({
     set({isLoadingTickets: true});
     try {
       const res = await supportApi.getTickets({page, limit, ...params});
-      const data = res.data?.data || res.data;
-      const items = data?.items || data?.tickets || [];
-      const total = data?.total || 0;
+      const body = res.data;
+      const items = Array.isArray(body?.data) ? body.data : (body?.data?.tickets || body?.data?.items || []);
+      const total = body?.pagination?.total || body?.data?.total || 0;
 
       set(state => ({
         tickets: page === 1 ? items : [...state.tickets, ...items],

@@ -7,7 +7,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Configuration ──────────────────────────────────
-const API_BASE_URL = 'https://api.traseallo.com/api';
+const API_BASE_URL = 'http://localhost:4001/api';
 
 const TIMEOUT = 30000; // 30 seconds
 
@@ -119,6 +119,11 @@ apiClient.interceptors.request.use(
     const tenantId = await getTenantId();
     if (tenantId) {
       config.headers['x-tenant-id'] = tenantId;
+    }
+
+    // For FormData uploads, remove Content-Type so the boundary is auto-generated
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
 
     // Dev logging
