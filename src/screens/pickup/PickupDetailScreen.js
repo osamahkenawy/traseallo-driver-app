@@ -19,6 +19,7 @@ import Icon from '../../utils/LucideIcon';
 import {colors, getStatusColor, getStatusBgColor} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import usePickupStore from '../../store/pickupStore';
+import {useTranslation} from 'react-i18next';
 
 const InfoRow = ({icon, label, value}) => (
   <View style={s.infoRow}>
@@ -32,6 +33,7 @@ const InfoRow = ({icon, label, value}) => (
 
 const PickupDetailScreen = ({navigation, route}) => {
   const ins = useSafeAreaInsets();
+  const {t, i18n} = useTranslation();
   const pickup = route.params?.pickup || {};
   const {enRoute, markArrived, confirmPickup, failPickup, isActing} = usePickupStore();
 
@@ -43,16 +45,16 @@ const PickupDetailScreen = ({navigation, route}) => {
   const orderId = pickup.id || pickup.order_id;
   const statusColor = getStatusColor(status);
   const formatLabel = (st) =>
-    (st || 'pending').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    t('status.' + (st || 'pending'), (st || 'pending'));
 
   const handleEnRoute = async () => {
     setActionLoading(true);
     try {
       await enRoute(orderId);
       setStatus('en_route');
-      Alert.alert('Success', 'You are now en route to pickup');
+      Alert.alert(t('pickup.success'), t('pickup.enRouteMsg'));
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to update status');
+      Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedUpdate'));
     } finally {
       setActionLoading(false);
     }
@@ -63,27 +65,27 @@ const PickupDetailScreen = ({navigation, route}) => {
     try {
       await markArrived(orderId);
       setStatus('arrived');
-      Alert.alert('Success', 'Arrival confirmed');
+      Alert.alert(t('pickup.success'), t('pickup.arrivalConfirmed'));
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to mark arrival');
+      Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedArrival'));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleConfirm = async () => {
-    Alert.alert('Confirm Pickup', 'Mark this pickup as completed?', [
-      {text: 'Cancel', style: 'cancel'},
+    Alert.alert(t('pickup.confirmPickup'), t('pickup.confirmPickupMsg'), [
+      {text: t('common.cancel'), style: 'cancel'},
       {
-        text: 'Confirm',
+        text: t('common.confirm'),
         onPress: async () => {
           setActionLoading(true);
           try {
             await confirmPickup(orderId);
             setStatus('picked_up');
-            Alert.alert('Success', 'Pickup confirmed!');
+            Alert.alert(t('pickup.success'), t('pickup.pickupConfirmed'));
           } catch (err) {
-            Alert.alert('Error', err.response?.data?.message || 'Failed to confirm pickup');
+            Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedConfirm'));
           } finally {
             setActionLoading(false);
           }
@@ -94,7 +96,7 @@ const PickupDetailScreen = ({navigation, route}) => {
 
   const handleFail = async () => {
     if (!failReason.trim()) {
-      Alert.alert('Required', 'Please enter a failure reason.');
+      Alert.alert(t('pickup.required'), t('pickup.enterFailReason'));
       return;
     }
     setActionLoading(true);
@@ -102,9 +104,9 @@ const PickupDetailScreen = ({navigation, route}) => {
       await failPickup(orderId, {reason: failReason.trim()});
       setStatus('failed');
       setShowFail(false);
-      Alert.alert('Reported', 'Pickup marked as failed.');
+      Alert.alert(t('pickup.reported'), t('pickup.pickupFailed'));
     } catch (err) {
-      Alert.alert('Error', err.response?.data?.message || 'Failed to report');
+      Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedReport'));
     } finally {
       setActionLoading(false);
     }
@@ -119,7 +121,7 @@ const PickupDetailScreen = ({navigation, route}) => {
     } else if (addr) {
       Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(addr)}`);
     } else {
-      Alert.alert('No Address', 'No location available for navigation.');
+      Alert.alert(t('pickup.noAddress'), t('pickup.noLocationAvailable'));
     }
   };
 
@@ -131,7 +133,7 @@ const PickupDetailScreen = ({navigation, route}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Pickup Detail</Text>
+        <Text style={s.hdrTitle}>{t('pickup.detail')}</Text>
         <View style={{width: 20}} />
       </View>
 
@@ -146,25 +148,25 @@ const PickupDetailScreen = ({navigation, route}) => {
 
         {/* Pickup Info Card */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>Pickup Information</Text>
+          <Text style={s.cardTitle}>{t('pickup.pickupInfo')}</Text>
           <InfoRow
             icon="store-outline"
-            label="Merchant"
+            label={t('pickup.merchant')}
             value={pickup.merchant_name || pickup.store_name}
           />
           <View style={s.sep} />
           <InfoRow
             icon="map-marker-outline"
-            label="Address"
+            label={t('pickup.address')}
             value={pickup.pickup_address || pickup.address}
           />
           <View style={s.sep} />
           <InfoRow
             icon="clock-outline"
-            label="Scheduled"
+            label={t('pickup.scheduled')}
             value={
               pickup.scheduled_at
-                ? new Date(pickup.scheduled_at).toLocaleString('en-AE', {
+                ? new Date(pickup.scheduled_at).toLocaleString(i18n.language === 'ar' ? 'ar-AE' : 'en-AE', {
                     day: 'numeric',
                     month: 'short',
                     hour: '2-digit',
@@ -176,17 +178,17 @@ const PickupDetailScreen = ({navigation, route}) => {
           <View style={s.sep} />
           <InfoRow
             icon="package-variant"
-            label="Packages"
-            value={`${pickup.package_count || pickup.order_count || pickup.items?.length || 0} items`}
+            label={t('pickup.packages')}
+            value={`${pickup.package_count || pickup.order_count || pickup.items?.length || 0} ${t('pickup.items')}`}
           />
         </View>
 
         {/* Contact Card */}
         {(pickup.contact_name || pickup.contact_phone) ? (
           <View style={s.card}>
-            <Text style={s.cardTitle}>Contact</Text>
+            <Text style={s.cardTitle}>{t('pickup.contact')}</Text>
             {pickup.contact_name && (
-              <InfoRow icon="account-outline" label="Name" value={pickup.contact_name} />
+              <InfoRow icon="account-outline" label={t('pickup.name')} value={pickup.contact_name} />
             )}
             {pickup.contact_phone && (
               <>
@@ -196,7 +198,7 @@ const PickupDetailScreen = ({navigation, route}) => {
                   onPress={() => Linking.openURL(`tel:${pickup.contact_phone}`)}>
                   <Icon name="phone-outline" size={16} color={colors.info} />
                   <View style={{flex: 1}}>
-                    <Text style={s.infoLabel}>Phone</Text>
+                    <Text style={s.infoLabel}>{t('pickup.phone')}</Text>
                     <Text style={[s.infoValue, {color: colors.info}]}>{pickup.contact_phone}</Text>
                   </View>
                 </TouchableOpacity>
@@ -208,7 +210,7 @@ const PickupDetailScreen = ({navigation, route}) => {
         {/* Notes */}
         {pickup.notes ? (
           <View style={s.card}>
-            <Text style={s.cardTitle}>Notes</Text>
+            <Text style={s.cardTitle}>{t('pickup.notes')}</Text>
             <Text style={s.notesTxt}>{pickup.notes}</Text>
           </View>
         ) : null}
@@ -216,10 +218,10 @@ const PickupDetailScreen = ({navigation, route}) => {
         {/* Fail Reason Input */}
         {showFail && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>Failure Reason</Text>
+            <Text style={s.cardTitle}>{t('pickup.failureReason')}</Text>
             <TextInput
               style={s.failInput}
-              placeholder="Why can't you complete this pickup?"
+              placeholder={t('pickup.failReasonPlaceholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
@@ -230,7 +232,7 @@ const PickupDetailScreen = ({navigation, route}) => {
               <TouchableOpacity
                 style={[s.actionBtn, {flex: 1, backgroundColor: colors.bgMuted}]}
                 onPress={() => setShowFail(false)}>
-                <Text style={[s.actionTxt, {color: colors.textSecondary}]}>Cancel</Text>
+                <Text style={[s.actionTxt, {color: colors.textSecondary}]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.actionBtn, {flex: 1, backgroundColor: colors.danger}]}
@@ -239,7 +241,7 @@ const PickupDetailScreen = ({navigation, route}) => {
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={s.actionTxt}>Submit</Text>
+                  <Text style={s.actionTxt}>{t('pickup.submit')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -255,7 +257,7 @@ const PickupDetailScreen = ({navigation, route}) => {
             <View style={{gap: 10}}>
               <TouchableOpacity style={s.navBtn} onPress={handleNavigate} activeOpacity={0.8}>
                 <Icon name="navigation-outline" size={16} color={colors.primary} />
-                <Text style={s.navTxt}>Navigate to Pickup</Text>
+                <Text style={s.navTxt}>{t('pickup.navigateToPickup')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.btn}
@@ -267,7 +269,7 @@ const PickupDetailScreen = ({navigation, route}) => {
                 ) : (
                   <>
                     <Icon name="truck-fast-outline" size={16} color="#FFF" />
-                    <Text style={s.btnTxt}>En Route to Pickup</Text>
+                    <Text style={s.btnTxt}>{t('pickup.enRoute')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -277,7 +279,7 @@ const PickupDetailScreen = ({navigation, route}) => {
             <View style={{gap: 10}}>
               <TouchableOpacity style={s.navBtn} onPress={handleNavigate} activeOpacity={0.8}>
                 <Icon name="navigation-outline" size={16} color={colors.primary} />
-                <Text style={s.navTxt}>Navigate to Pickup</Text>
+                <Text style={s.navTxt}>{t('pickup.navigateToPickup')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.btn}
@@ -289,7 +291,7 @@ const PickupDetailScreen = ({navigation, route}) => {
                 ) : (
                   <>
                     <Icon name="map-marker-check-outline" size={16} color="#FFF" />
-                    <Text style={s.btnTxt}>I've Arrived</Text>
+                    <Text style={s.btnTxt}>{t('pickup.arrived')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -307,7 +309,7 @@ const PickupDetailScreen = ({navigation, route}) => {
                 ) : (
                   <>
                     <Icon name="check-circle-outline" size={16} color="#FFF" />
-                    <Text style={s.btnTxt}>Confirm Pickup</Text>
+                    <Text style={s.btnTxt}>{t('pickup.confirmPickup')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -316,7 +318,7 @@ const PickupDetailScreen = ({navigation, route}) => {
                 onPress={() => setShowFail(true)}
                 activeOpacity={0.8}>
                 <Icon name="alert-circle-outline" size={16} color={colors.danger} />
-                <Text style={s.dangerTxt}>Report Problem</Text>
+                <Text style={s.dangerTxt}>{t('pickup.reportProblem')}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -330,9 +332,9 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52,
+    paddingHorizontal: 20, height: 52, gap: 8,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 160},
 
   statusRow: {alignItems: 'flex-start', marginBottom: 14},

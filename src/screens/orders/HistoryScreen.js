@@ -15,7 +15,9 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import useRouteStore from '../../store/routeStore';
+import useSettingsStore from '../../store/settingsStore';
 import {routeNames} from '../../constants/routeNames';
+import {useTranslation} from 'react-i18next';
 
 const STATUS_COLORS = {
   delivered: '#27AE60',
@@ -25,6 +27,8 @@ const STATUS_COLORS = {
 };
 
 const HistoryScreen = () => {
+  const {t} = useTranslation();
+  const currency = useSettingsStore(s => s.currency);
   const navigation = useNavigation();
   const {
     history,
@@ -65,7 +69,7 @@ const HistoryScreen = () => {
             <Text style={styles.orderNumber}>#{item.order_number || item.id}</Text>
             <View style={[styles.statusBadge, {backgroundColor: statusColor + '20'}]}>
               <Text style={[styles.statusText, {color: statusColor}]}>
-                {(item.status || '').replace(/_/g, ' ').toUpperCase()}
+                {t('status.' + (item.status || 'pending'), (item.status || '')).toUpperCase()}
               </Text>
             </View>
           </View>
@@ -81,15 +85,16 @@ const HistoryScreen = () => {
                 : '—'}
             </Text>
             {item.cod_amount ? (
-              <Text style={styles.cod}>COD: AED {item.cod_amount}</Text>
+              <Text style={styles.cod}>COD: {currency} {item.cod_amount}</Text>
             ) : null}
           </View>
         </TouchableOpacity>
       );
     },
-    [navigation],
+    [navigation, t],
   );
 
+  const FILTER_LABELS = {all: t('history.filterAll'), delivered: t('history.filterDelivered'), failed: t('history.filterFailed'), returned: t('status.returned')};
   const filters = ['all', 'delivered', 'failed', 'returned'];
 
   return (
@@ -102,7 +107,7 @@ const HistoryScreen = () => {
             style={[styles.filterPill, filter === f && styles.filterPillActive]}
             onPress={() => setFilter(f)}>
             <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {FILTER_LABELS[f] || f}
             </Text>
           </TouchableOpacity>
         ))}
@@ -110,7 +115,7 @@ const HistoryScreen = () => {
 
       <FlatList
         data={history}
-        keyExtractor={(item, idx) => String(item.id || idx)}
+        keyExtractor={(item, idx) => `hist-${item.id || idx}`}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         refreshControl={
@@ -126,7 +131,7 @@ const HistoryScreen = () => {
         ListEmptyComponent={
           !isLoadingHistory ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No delivery history found</Text>
+              <Text style={styles.emptyText}>{t('history.noHistory')}</Text>
             </View>
           ) : null
         }

@@ -8,6 +8,7 @@ import {useEffect, useRef, useCallback} from 'react';
 import {Platform, Alert, Linking, AppState} from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import useLocationStore from '../store/locationStore';
+import i18n from '../i18n';
 
 /**
  * @param {boolean} [enabled=true] - Whether tracking should be active
@@ -54,7 +55,7 @@ const useLocation = (enabled = true) => {
       const auth = await Geolocation.requestAuthorization('whenInUse');
       return auth === 'granted' || auth === 'whenInUse';
     } catch (error) {
-      console.error('Location permission error:', error);
+      if (__DEV__) console.error('Location permission error:', error);
       return false;
     }
   }, []);
@@ -144,9 +145,9 @@ const useLocation = (enabled = true) => {
       const hasPermission = await requestPermission();
       if (!hasPermission) {
         Alert.alert(
-          'Location Required',
-          'Enable location access in Settings to use tracking.',
-          [{text: 'Open Settings', onPress: () => Linking.openSettings()}, {text: 'Cancel'}],
+          i18n.t('location.required', 'Location Required'),
+          i18n.t('location.enableMessage', 'Enable location access in Settings to use tracking.'),
+          [{text: i18n.t('location.openSettings', 'Open Settings'), onPress: () => Linking.openSettings()}, {text: i18n.t('common.cancel', 'Cancel')}],
         );
         return;
       }

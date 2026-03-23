@@ -6,7 +6,9 @@
 
 import React from 'react';
 import {View, StyleSheet, Text, TouchableOpacity, Linking, Platform} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
+import useSettingsStore from '../../../store/settingsStore';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
 
@@ -16,16 +18,19 @@ const NextStopCard = ({
   onOpenOrder,
   onNavigate,
 }) => {
+  const {t} = useTranslation();
+  const currency = useSettingsStore(s => s.currency);
+
   if (!stop) {
     return (
       <View style={$.root}>
-        <Text style={$.sectionTitle}>Next Stop</Text>
+        <Text style={$.sectionTitle}>{t('dashboard.nextStop')}</Text>
         <View style={$.emptyCard}>
           <View style={$.emptyIcon}>
             <Icon name="map-marker-check-outline" size={28} color={colors.textLight} />
           </View>
-          <Text style={$.emptyTitle}>No upcoming stops</Text>
-          <Text style={$.emptySub}>You're all caught up! Waiting for new assignments.</Text>
+          <Text style={$.emptyTitle}>{t('dashboard.noUpcomingStops')}</Text>
+          <Text style={$.emptySub}>{t('dashboard.allCaughtUp')}</Text>
         </View>
       </View>
     );
@@ -34,7 +39,7 @@ const NextStopCard = ({
   const orderNumber = stop.order_number || stop.order_id
     ? `#${stop.order_number || stop.order_id}`
     : '';
-  const recipientName = stop.recipient_name || stop.recipient || stop.merchant || 'Recipient';
+  const recipientName = stop.recipient_name || stop.recipient || stop.merchant || t('dashboard.recipientFallback');
   const address = stop.address || stop.recipient_address || '---';
   const codAmount = parseFloat(stop.cod_amount) || 0;
   const isPickup = stop.type === 'pickup';
@@ -66,7 +71,7 @@ const NextStopCard = ({
 
   return (
     <View style={$.root}>
-      <Text style={$.sectionTitle}>Next Stop</Text>
+      <Text style={$.sectionTitle}>{t('dashboard.nextStop')}</Text>
       <View style={$.card}>
         {/* Type tag + order number */}
         <View style={$.topRow}>
@@ -77,7 +82,7 @@ const NextStopCard = ({
               color={isPickup ? '#4E7AB5' : '#15C7AE'}
             />
             <Text style={[$.typeTxt, {color: isPickup ? '#4E7AB5' : '#15C7AE'}]}>
-              {isPickup ? 'Pickup' : 'Delivery'}
+              {isPickup ? t('dashboard.pickupType') : t('dashboard.deliveryType')}
             </Text>
           </View>
           {orderNumber ? (
@@ -99,13 +104,13 @@ const NextStopCard = ({
           {codAmount > 0 && (
             <View style={$.codBadge}>
               <Icon name="cash" size={13} color="#F9AD28" />
-              <Text style={$.codTxt}>AED {codAmount}</Text>
+              <Text style={$.codTxt}>{currency} {codAmount}</Text>
             </View>
           )}
           {sequence && totalStops > 0 && (
             <View style={$.seqBadge}>
               <Icon name="format-list-numbered" size={12} color={colors.textMuted} />
-              <Text style={$.seqTxt}>Stop {sequence} of {totalStops}</Text>
+              <Text style={$.seqTxt}>{t('dashboard.stopOf', {seq: sequence, total: totalStops})}</Text>
             </View>
           )}
         </View>
@@ -117,7 +122,7 @@ const NextStopCard = ({
             onPress={() => onOpenOrder?.(stop)}
             activeOpacity={0.7}>
             <Icon name="eye-outline" size={15} color="#FFF" />
-            <Text style={$.btnPrimaryTxt}>Open Order</Text>
+            <Text style={$.btnPrimaryTxt}>{t('dashboard.openOrder')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -215,7 +220,7 @@ const $ = StyleSheet.create({
   codBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 8,
@@ -229,7 +234,7 @@ const $ = StyleSheet.create({
   seqBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 8,

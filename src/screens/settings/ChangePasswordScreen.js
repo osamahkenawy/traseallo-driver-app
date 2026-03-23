@@ -9,12 +9,13 @@ import Icon from '../../utils/LucideIcon';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {authApi} from '../../api';
+import {useTranslation} from 'react-i18next';
 
 const PasswordField = ({label, icon, value, onChangeText, placeholder, show, onToggle, focused, onFocus, onBlur}) => (
   <View style={s.fieldGroup}>
     <Text style={s.fieldLabel}>{label}</Text>
     <View style={[s.fieldRow, focused && s.fieldRowFocused]}>
-      <Icon name={icon} size={16} color={focused ? colors.primary : colors.textMuted} style={{marginLeft: 14, marginRight: 8}} />
+      <Icon name={icon} size={16} color={focused ? colors.primary : colors.textMuted} style={{marginStart: 14, marginEnd: 8}} />
       <TextInput
         style={s.fieldInput}
         value={value}
@@ -35,6 +36,7 @@ const PasswordField = ({label, icon, value, onChangeText, placeholder, show, onT
 
 const ChangePasswordScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
   const [current, setCurrent] = useState('');
   const [newPwd, setNewPwd] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -47,19 +49,19 @@ const ChangePasswordScreen = ({navigation}) => {
   const handleUpdate = async () => {
     if (!valid) return;
     if (newPwd !== confirm) {
-      Alert.alert('Mismatch', 'New password and confirmation do not match.');
+      Alert.alert(t('changePassword.mismatch'), t('changePassword.mismatchDesc'));
       return;
     }
     setLoading(true);
     try {
       await authApi.changePassword(current, newPwd);
-      Alert.alert('Success', 'Password updated successfully.', [
-        {text: 'OK', onPress: () => navigation.goBack()},
+      Alert.alert(t('changePassword.success'), t('changePassword.successDesc'), [
+        {text: t('common.done'), onPress: () => navigation.goBack()},
       ]);
     } catch (e) {
       Alert.alert(
-        'Update Failed',
-        e?.response?.data?.message || 'Failed to update password. Please check your current password.',
+        t('changePassword.updateFailed'),
+        e?.response?.data?.message || t('changePassword.updateFailedDesc'),
       );
     } finally {
       setLoading(false);
@@ -72,7 +74,7 @@ const ChangePasswordScreen = ({navigation}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Change Password</Text>
+        <Text style={s.hdrTitle}>{t('changePassword.title')}</Text>
         <View style={{width: 20}} />
       </View>
 
@@ -80,15 +82,15 @@ const ChangePasswordScreen = ({navigation}) => {
         <View style={s.card}>
           <View style={s.infoRow}>
             <Icon name="information-outline" size={15} color={colors.info} />
-            <Text style={s.infoText}>Password must be at least 6 characters.</Text>
+            <Text style={s.infoText}>{t('changePassword.passwordMin')}</Text>
           </View>
 
           <PasswordField
-            label="Current Password"
+            label={t('changePassword.currentPassword')}
             icon="lock-outline"
             value={current}
             onChangeText={setCurrent}
-            placeholder="Enter current password"
+            placeholder={t('changePassword.enterCurrent')}
             show={show.c}
             onToggle={() => setShow(p => ({...p, c: !p.c}))}
             focused={focused === 'c'}
@@ -96,11 +98,11 @@ const ChangePasswordScreen = ({navigation}) => {
             onBlur={() => setFocused(null)}
           />
           <PasswordField
-            label="New Password"
+            label={t('changePassword.newPassword')}
             icon="lock-plus-outline"
             value={newPwd}
             onChangeText={setNewPwd}
-            placeholder="Min 6 characters"
+            placeholder={t('changePassword.minChars')}
             show={show.n}
             onToggle={() => setShow(p => ({...p, n: !p.n}))}
             focused={focused === 'n'}
@@ -108,11 +110,11 @@ const ChangePasswordScreen = ({navigation}) => {
             onBlur={() => setFocused(null)}
           />
           <PasswordField
-            label="Confirm New Password"
+            label={t('changePassword.confirmPassword')}
             icon="lock-check-outline"
             value={confirm}
             onChangeText={setConfirm}
-            placeholder="Repeat new password"
+            placeholder={t('changePassword.repeatNew')}
             show={show.cf}
             onToggle={() => setShow(p => ({...p, cf: !p.cf}))}
             focused={focused === 'cf'}
@@ -127,7 +129,7 @@ const ChangePasswordScreen = ({navigation}) => {
           {loading ? (
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
-            <Text style={s.btnTxt}>Update Password</Text>
+            <Text style={s.btnTxt}>{t('changePassword.updatePassword')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -139,9 +141,9 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52,
+    paddingHorizontal: 20, height: 52, gap: 8,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 100},
 
   card: {
@@ -163,7 +165,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#EEF1F5',
   },
   fieldRowFocused: {borderColor: colors.primary, backgroundColor: '#FFF'},
-  fieldInput: {flex: 1, height: '100%', fontFamily: fontFamily.regular, fontSize: 14, color: colors.textPrimary, paddingRight: 14},
+  fieldInput: {flex: 1, height: '100%', fontFamily: fontFamily.regular, fontSize: 14, color: colors.textPrimary, paddingEnd: 14},
   eyeBtn: {paddingHorizontal: 14, height: '100%', justifyContent: 'center'},
 
   bottom: {

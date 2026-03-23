@@ -3,15 +3,17 @@
  */
 
 import React, {useState} from 'react';
-import {View, StyleSheet, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert} from 'react-native';
+import {View, StyleSheet, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from '../../utils/LucideIcon';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import authApi from '../../api/auth';
+import {useTranslation} from 'react-i18next';
 
 const ResetPasswordScreen = ({navigation, route}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
   const identifier = route.params?.identifier || route.params?.email || '';
   const [otp, setOtp] = useState(route.params?.otp || '');
   const [password, setPassword] = useState('');
@@ -26,19 +28,19 @@ const ResetPasswordScreen = ({navigation, route}) => {
   const handleReset = async () => {
     if (!valid) return;
     if (!identifier) {
-      Alert.alert('Error', 'Identifier is missing. Please go back and try again.');
+      Alert.alert(t('common.error'), t('auth.identifierMissing'));
       return;
     }
     setLoading(true);
     try {
       await authApi.resetPassword(identifier, otp, password);
-      Alert.alert('Password Reset', 'Your password has been reset successfully. Please log in.', [
-        {text: 'OK', onPress: () => navigation.popToTop()},
+      Alert.alert(t('auth.passwordResetTitle'), t('auth.passwordResetSuccess'), [
+        {text: t('common.confirm'), onPress: () => navigation.popToTop()},
       ]);
     } catch (e) {
       Alert.alert(
-        'Reset Failed',
-        e?.response?.data?.message || 'Failed to reset password. The link may have expired.',
+        t('auth.resetFailed'),
+        e?.response?.data?.message || t('auth.resetFailedMsg'),
       );
     } finally {
       setLoading(false);
@@ -46,7 +48,8 @@ const ResetPasswordScreen = ({navigation, route}) => {
   };
 
   return (
-    <View style={[s.root, {paddingTop: ins.top}]}>
+    <KeyboardAvoidingView style={{flex: 1}} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <ScrollView style={[s.root, {paddingTop: ins.top}]} contentContainerStyle={{flexGrow: 1}} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       {/* ─── Back ──────────────────────────── */}
       <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
         <View style={s.backCircle}>
@@ -57,18 +60,18 @@ const ResetPasswordScreen = ({navigation, route}) => {
       <View style={s.iconWrap}>
         <Icon name="shield-lock-outline" size={28} color={colors.primary} />
       </View>
-      <Text style={s.title}>Reset Password</Text>
-      <Text style={s.subtitle}>Enter the OTP code sent to your email/phone and create a new password.</Text>
+      <Text style={s.title}>{t('auth.resetPasswordTitle')}</Text>
+      <Text style={s.subtitle}>{t('auth.resetPasswordSubtitle')}</Text>
 
       <View style={s.card}>
-        <Text style={s.label}>OTP Code</Text>
+        <Text style={s.label}>{t('auth.otpCode')}</Text>
         <View style={[s.inputRow, focused === 'o' && s.inputRowFocused]}>
           <Icon name="numeric" size={18} color={focused === 'o' ? colors.primary : colors.textMuted} style={s.inputIc} />
           <TextInput
             style={s.input}
             value={otp}
             onChangeText={setOtp}
-            placeholder="Enter 6-digit OTP"
+            placeholder={t('auth.otpPlaceholder')}
             placeholderTextColor={colors.textMuted}
             keyboardType="number-pad"
             maxLength={6}
@@ -78,14 +81,14 @@ const ResetPasswordScreen = ({navigation, route}) => {
           />
         </View>
 
-        <Text style={s.label}>New Password</Text>
+        <Text style={s.label}>{t('auth.newPassword')}</Text>
         <View style={[s.inputRow, focused === 'p' && s.inputRowFocused]}>
           <Icon name="lock-outline" size={18} color={focused === 'p' ? colors.primary : colors.textMuted} style={s.inputIc} />
           <TextInput
             style={s.input}
             value={password}
             onChangeText={setPassword}
-            placeholder="Min 6 characters"
+            placeholder={t('auth.minCharsPlaceholder')}
             placeholderTextColor={colors.textMuted}
             secureTextEntry={!show1}
             autoCapitalize="none"
@@ -97,14 +100,14 @@ const ResetPasswordScreen = ({navigation, route}) => {
           </TouchableOpacity>
         </View>
 
-        <Text style={s.label}>Confirm Password</Text>
+        <Text style={s.label}>{t('auth.confirmPassword')}</Text>
         <View style={[s.inputRow, focused === 'c' && s.inputRowFocused]}>
           <Icon name="lock-check-outline" size={18} color={focused === 'c' ? colors.primary : colors.textMuted} style={s.inputIc} />
           <TextInput
             style={s.input}
             value={confirm}
             onChangeText={setConfirm}
-            placeholder="Repeat your password"
+            placeholder={t('auth.repeatPasswordPlaceholder')}
             placeholderTextColor={colors.textMuted}
             secureTextEntry={!show2}
             autoCapitalize="none"
@@ -120,11 +123,12 @@ const ResetPasswordScreen = ({navigation, route}) => {
           {loading ? (
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
-            <Text style={s.btnText}>Reset Password</Text>
+            <Text style={s.btnText}>{t('auth.resetPassword')}</Text>
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -156,8 +160,8 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#EEF1F5', marginBottom: 16,
   },
   inputRowFocused: {borderColor: colors.primary, backgroundColor: '#FFF'},
-  inputIc: {marginLeft: 14, marginRight: 8},
-  input: {flex: 1, height: '100%', fontFamily: fontFamily.regular, fontSize: 14, color: colors.textPrimary, paddingRight: 14},
+  inputIc: {marginStart: 14, marginEnd: 8},
+  input: {flex: 1, height: '100%', fontFamily: fontFamily.regular, fontSize: 14, color: colors.textPrimary, paddingEnd: 14},
   eyeBtn: {paddingHorizontal: 14, height: '100%', justifyContent: 'center'},
 
   btn: {

@@ -18,6 +18,7 @@ import {colors, getStatusColor, getStatusBgColor} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import usePickupStore from '../../store/pickupStore';
 import {routeNames} from '../../constants/routeNames';
+import {useTranslation} from 'react-i18next';
 
 const STATUS_ICONS = {
   pending: 'clock-outline',
@@ -30,6 +31,7 @@ const STATUS_ICONS = {
 
 const MyPickupsScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t, i18n} = useTranslation();
 
   const {pickups, isLoading: loading, isRefreshing: refreshing, fetchPickups} = usePickupStore();
 
@@ -42,7 +44,7 @@ const MyPickupsScreen = ({navigation}) => {
   };
 
   const formatLabel = (status) =>
-    (status || 'pending').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    t('status.' + (status || 'pending'), (status || 'pending'));
 
   const renderItem = ({item}) => {
     const status = item.status || 'pending';
@@ -65,7 +67,7 @@ const MyPickupsScreen = ({navigation}) => {
         <View style={s.infoRow}>
           <Icon name="store-outline" size={15} color={colors.textMuted} />
           <Text style={s.infoVal} numberOfLines={1}>
-            {item.merchant_name || item.store_name || 'Merchant'}
+            {item.merchant_name || item.store_name || t('pickup.merchant')}
           </Text>
         </View>
 
@@ -80,8 +82,7 @@ const MyPickupsScreen = ({navigation}) => {
           <View style={s.infoRow}>
             <Icon name="package-variant" size={15} color={colors.textMuted} />
             <Text style={s.infoVal}>
-              {item.package_count || item.order_count || item.items?.length || 0} package
-              {(item.package_count || item.order_count || 0) !== 1 ? 's' : ''}
+              {t('pickup.packageCount', {count: item.package_count || item.order_count || item.items?.length || 0})}
             </Text>
           </View>
           {item.scheduled_at && (
@@ -103,7 +104,7 @@ const MyPickupsScreen = ({navigation}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>My Pickups</Text>
+        <Text style={s.hdrTitle}>{t('pickup.title')}</Text>
         <View style={{width: 20}} />
       </View>
 
@@ -116,8 +117,8 @@ const MyPickupsScreen = ({navigation}) => {
           <View style={s.emptyIc}>
             <Icon name="truck-fast-outline" size={26} color={colors.textLight} />
           </View>
-          <Text style={s.emptyH}>No pickups assigned</Text>
-          <Text style={s.emptyP}>Pickup assignments will appear here.</Text>
+          <Text style={s.emptyH}>{t('pickup.noPickups')}</Text>
+          <Text style={s.emptyP}>{t('pickup.noPickupsDesc')}</Text>
         </View>
       ) : (
         <FlatList
@@ -141,8 +142,9 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     height: 52,
+    gap: 8,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   list: {paddingHorizontal: 20, paddingBottom: 30, gap: 10},
 
   /* Card */

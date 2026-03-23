@@ -17,9 +17,11 @@ import Icon from '../../utils/LucideIcon';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {authApi} from '../../api';
+import {useTranslation} from 'react-i18next';
 
 const RatingsScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t, i18n} = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -89,7 +91,7 @@ const RatingsScreen = ({navigation}) => {
         <View style={{flex: 1}}>
           <View style={s.reviewTop}>
             <Text style={s.reviewName} numberOfLines={1}>
-              {item.customer_name || item.reviewer_name || 'Customer'}
+              {item.customer_name || item.reviewer_name || t('ratings.customer')}
             </Text>
             <StarIcons rating={item.rating} />
           </View>
@@ -98,7 +100,7 @@ const RatingsScreen = ({navigation}) => {
           ) : null}
           <Text style={s.reviewDate}>
             {item.created_at
-              ? new Date(item.created_at).toLocaleDateString('en-AE', {
+              ? new Date(item.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-AE' : 'en-AE', {
                   day: 'numeric',
                   month: 'short',
                   year: 'numeric',
@@ -124,7 +126,7 @@ const RatingsScreen = ({navigation}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Ratings</Text>
+        <Text style={s.hdrTitle}>{t('ratings.title')}</Text>
         <View style={{width: 20}} />
       </View>
 
@@ -154,7 +156,7 @@ const RatingsScreen = ({navigation}) => {
                       />
                     ))}
                   </View>
-                  <Text style={s.ratingCount}>{total} rating{total !== 1 ? 's' : ''}</Text>
+                  <Text style={s.ratingCount}>{total} {t('ratings.ratingLabel', {count: total})}</Text>
                 </View>
                 <View style={s.barsCol}>
                   {bars.map(b => (
@@ -172,7 +174,7 @@ const RatingsScreen = ({navigation}) => {
             </View>
 
             {/* Performance Badges */}
-            <Text style={s.secTitle}>Performance</Text>
+            <Text style={s.secTitle}>{t('ratings.performance')}</Text>
             <View style={s.badgesRow}>
               <View style={s.badge}>
                 <View style={[s.badgeIcon, {backgroundColor: colors.success + '12'}]}>
@@ -181,7 +183,7 @@ const RatingsScreen = ({navigation}) => {
                 <Text style={s.badgeValue}>
                   {onTimeRate != null ? `${Math.round(onTimeRate)}%` : '—'}
                 </Text>
-                <Text style={s.badgeLabel}>On Time</Text>
+                <Text style={s.badgeLabel}>{t('ratings.onTime')}</Text>
               </View>
               <View style={s.badge}>
                 <View style={[s.badgeIcon, {backgroundColor: colors.info + '12'}]}>
@@ -190,27 +192,27 @@ const RatingsScreen = ({navigation}) => {
                 <Text style={s.badgeValue}>
                   {total > 0 ? `${positiveRate}%` : '—'}
                 </Text>
-                <Text style={s.badgeLabel}>Positive</Text>
+                <Text style={s.badgeLabel}>{t('ratings.positive')}</Text>
               </View>
               <View style={s.badge}>
                 <View style={[s.badgeIcon, {backgroundColor: colors.primary + '12'}]}>
                   <Icon name="package-variant" size={18} color={colors.primary} />
                 </View>
                 <Text style={s.badgeValue}>{deliveries}</Text>
-                <Text style={s.badgeLabel}>Deliveries</Text>
+                <Text style={s.badgeLabel}>{t('ratings.deliveries')}</Text>
               </View>
             </View>
 
             {/* Reviews */}
-            <Text style={s.secTitle}>Recent Reviews</Text>
+            <Text style={s.secTitle}>{t('ratings.recentReviews')}</Text>
             {reviews.length === 0 ? (
               <View style={s.emptyCard}>
                 <View style={s.emptyIcWrap}>
                   <Icon name="star-check-outline" size={28} color={colors.textMuted} />
                 </View>
-                <Text style={s.emptyTitle}>No reviews yet</Text>
+                <Text style={s.emptyTitle}>{t('ratings.noReviews')}</Text>
                 <Text style={s.emptySub}>
-                  Customer reviews will appear here once{'\n'}you complete deliveries.
+                  {t('ratings.noReviewsDesc')}
                 </Text>
               </View>
             ) : (
@@ -229,9 +231,9 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52,
+    paddingHorizontal: 20, height: 52, gap: 8,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 40},
 
   /* Overall Card */
@@ -241,7 +243,7 @@ const s = StyleSheet.create({
     padding: 20, marginBottom: 10,
   },
   cardTop: {flexDirection: 'row'},
-  scoreCol: {alignItems: 'center', marginRight: 24},
+  scoreCol: {alignItems: 'center', marginEnd: 24},
   bigScore: {fontFamily: fontFamily.bold, fontSize: 44, color: colors.textPrimary, lineHeight: 50},
   starsRow: {flexDirection: 'row', gap: 3, marginTop: 4},
   ratingCount: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, marginTop: 4},
@@ -280,7 +282,7 @@ const s = StyleSheet.create({
   },
   reviewAvatarTxt: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.primary},
   reviewTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
-  reviewName: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, flex: 1, marginRight: 8},
+  reviewName: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, flex: 1, marginEnd: 8},
   reviewComment: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textSecondary, marginTop: 4, lineHeight: 17},
   reviewDate: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginTop: 4},
   reviewSep: {height: 1, backgroundColor: '#EEF1F5', marginVertical: 4},

@@ -19,6 +19,7 @@ import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import Icon from '../../utils/LucideIcon';
 import useOrderStore from '../../store/orderStore';
+import {useTranslation} from 'react-i18next';
 import {uploadsApi} from '../../api';
 import {packagesApi} from '../../api';
 import {launchCamera} from 'react-native-image-picker';
@@ -27,6 +28,7 @@ import useSettingsStore from '../../store/settingsStore';
 import {routeNames} from '../../constants/routeNames';
 
 const DeliveryConfirmScreen = ({navigation, route}) => {
+  const {t} = useTranslation();
   const ins = useSafeAreaInsets();
   const {token, orderId, codAmount = 0} = route.params || {};
   const hasCod = Number(codAmount) > 0;
@@ -39,17 +41,20 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
   const currentPosition = useLocationStore(s => s.currentPosition);
   const requireSignature = useSettingsStore(s => s.requireSignature);
   const requirePhoto = useSettingsStore(s => s.requirePhoto);
+  const currency = useSettingsStore(s => s.currency);
   const deliverOrder = useOrderStore(s => s.deliverOrder);
 
   // Check if order has packages — if so redirect to per-package flow
   React.useEffect(() => {
+    let cancelled = false;
     const checkAndRedirect = async () => {
       if (!orderId) {
-        setCheckingPackages(false);
+        if (!cancelled) setCheckingPackages(false);
         return;
       }
       try {
         const res = await packagesApi.getOrderPackages(orderId);
+        if (cancelled) return;
         const data = res.data?.data || res.data;
         const pkgs = data?.packages || data || [];
         const undelivered = pkgs.find(
@@ -71,9 +76,10 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
       } catch {
         // No packages or API error — continue with order-level flow
       }
-      setCheckingPackages(false);
+      if (!cancelled) setCheckingPackages(false);
     };
     checkAndRedirect();
+    return () => { cancelled = true; };
   }, [orderId]);
 
   const handleTakePhoto = () => {
@@ -89,16 +95,16 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
 
   const handleConfirm = async () => {
     if (!orderId) {
-      Alert.alert('Error', 'No order ID provided.');
+      Alert.alert(t('deliveryConfirm.error'), t('deliveryConfirm.noOrderId'));
       return;
     }
     // Enforce settings-driven requirements
     if (requirePhoto && !photoUri) {
-      Alert.alert('Photo Required', 'Please take a proof of delivery photo before confirming.');
+      Alert.alert(t('deliveryConfirm.photoRequired'), t('deliveryConfirm.photoRequiredDesc'));
       return;
     }
     if (requireSignature && !signatureUri) {
-      Alert.alert('Signature Required', 'Please collect a recipient signature before confirming.');
+      Alert.alert(t('deliveryConfirm.signatureRequired'), t('deliveryConfirm.photoRequiredDesc'));
       return;
     }
     setLoading(true);
@@ -134,19 +140,19 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
       const result = await deliverOrder(orderId, deliverData);
 
       if (result.success) {
-        Alert.alert('Success', 'Delivery confirmed successfully.', [
-          {text: 'OK', onPress: () => navigation.goBack()},
+        Alert.alert(t('deliveryConfirm.deliverySuccess'), t('deliveryConfirm.deliverySuccessDesc'), [
+          {text: t('common.done'), onPress: () => navigation.goBack()},
         ]);
       } else {
         Alert.alert(
-          'Confirmation Failed',
-          result.error || 'Something went wrong. Please try again.',
+          t('deliveryConfirm.error'),
+          result.error || t('deliveryConfirm.failedToConfirm'),
         );
       }
     } catch (e) {
       Alert.alert(
-        'Confirmation Failed',
-        e?.response?.data?.message || e?.message || 'Something went wrong. Please try again.',
+        t('deliveryConfirm.error'),
+        e?.response?.data?.message || e?.message || t('deliveryConfirm.failedToConfirm'),
       );
     } finally {
       setLoading(false);
@@ -159,7 +165,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{fontFamily: fontFamily.medium, fontSize: 12, color: colors.textMuted, marginTop: 8}}>
-            Checking packages...
+            {t('deliveryConfirm.checkingPackages')}
           </Text>
         </View>
       ) : (
@@ -168,12 +174,12 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Confirm Delivery</Text>
+        <Text style={s.hdrTitle}>{t('deliveryConfirm.title')}</Text>
         <View style={{width: 20}} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.secTitle}>Proof Photo {requirePhoto ? '(Required)' : ''}</Text>
+        <Text style={s.secTitle}>{t('deliveryConfirm.takePhoto')} {requirePhoto ? t('common.required') : ''}</Text>
         <TouchableOpacity style={s.photoBox} onPress={handleTakePhoto} activeOpacity={0.7}>
           {photoUri ? (
             <Image source={{uri: photoUri}} style={s.photoImg} resizeMode="cover" />
@@ -182,7 +188,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
               <View style={s.photoIc}>
                 <Icon name="camera-outline" size={24} color={colors.textMuted} />
               </View>
-              <Text style={s.photoLabel}>Tap to take a photo</Text>
+              <Text style={s.photoLabel}>{t('deliveryConfirm.takePhoto')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -190,7 +196,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
         {/* Signature — shown if tenant requires it */}
         {requireSignature && (
           <>
-            <Text style={s.secTitle}>Recipient Signature {requireSignature ? '(Required)' : '(Optional)'}</Text>
+            <Text style={s.secTitle}>{t('deliveryConfirm.addSignature')} {requireSignature ? t('common.required') : t('common.optional')}</Text>
             <TouchableOpacity
               style={s.photoBox}
               onPress={() => navigation.navigate(routeNames.Signature, {
@@ -204,19 +210,19 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
                   <View style={s.photoIc}>
                     <Icon name="draw" size={24} color={colors.textMuted} />
                   </View>
-                  <Text style={s.photoLabel}>Tap to collect signature</Text>
+                  <Text style={s.photoLabel}>{t('deliveryConfirm.addSignature')}</Text>
                 </>
               )}
             </TouchableOpacity>
           </>
         )}
 
-        <Text style={s.secTitle}>Delivery Notes (Optional)</Text>
+        <Text style={s.secTitle}>{t('deliveryConfirm.notes')}</Text>
         <TextInput
           style={s.input}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Left with receptionist, etc."
+          placeholder={t('deliveryConfirm.notesPlaceholder')}
           placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={4}
@@ -226,15 +232,15 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
         {/* COD Collection */}
         {hasCod && (
           <>
-            <Text style={s.secTitle}>COD Collection</Text>
+            <Text style={s.secTitle}>{t('deliveryConfirm.codCollection')}</Text>
             <View style={s.codCard}>
               <View style={s.codRow}>
                 <Icon name="cash" size={18} color={colors.orange} />
-                <Text style={s.codLabel}>Amount to Collect</Text>
-                <Text style={s.codExpected}>AED {Number(codAmount).toFixed(2)}</Text>
+                <Text style={s.codLabel}>{t('deliveryConfirm.codAmount')}</Text>
+                <Text style={s.codExpected}>{currency} {Number(codAmount).toFixed(2)}</Text>
               </View>
               <View style={s.codInputRow}>
-                <Text style={s.codPrefix}>AED</Text>
+                <Text style={s.codPrefix}>{currency}</Text>
                 <TextInput
                   style={s.codInput}
                   value={codCollected}
@@ -256,7 +262,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
           ) : (
             <Icon name="check-circle-outline" size={17} color="#FFF" />
           )}
-          <Text style={s.confirmTxt}>{loading ? 'Confirming...' : 'Confirm Delivery'}</Text>
+          <Text style={s.confirmTxt}>{loading ? t('deliveryConfirm.delivering') : t('deliveryConfirm.confirmDelivery')}</Text>
         </TouchableOpacity>
       </View>
       </>
@@ -269,9 +275,9 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52,
+    paddingHorizontal: 20, height: 52, gap: 8,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 120},
   secTitle: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginBottom: 8, marginTop: 14},
   photoBox: {
@@ -329,12 +335,12 @@ const s = StyleSheet.create({
   codLabel: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, flex: 1},
   codExpected: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.orange},
   codInputRow: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#F8F9FA', borderRadius: 10,
     borderWidth: 1, borderColor: '#EEF1F5',
     height: 44, paddingHorizontal: 12,
   },
-  codPrefix: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textMuted, marginRight: 8},
+  codPrefix: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textMuted, marginEnd: 8},
   codInput: {
     flex: 1, fontFamily: fontFamily.medium, fontSize: 15, color: colors.textPrimary,
     paddingVertical: 0,

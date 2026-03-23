@@ -3,7 +3,7 @@
  * Shows details of a single delivery stop with actions
  */
 
-import React, {useState, useCallback} from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import useStopsStore from '../../store/stopsStore';
 import useSettingsStore from '../../store/settingsStore';
 import {routeNames} from '../../constants/routeNames';
+import {useTranslation} from 'react-i18next';
 
 const STATUS_COLORS = {
   pending: '#F39C12',
@@ -28,14 +29,14 @@ const STATUS_COLORS = {
 };
 
 const StopDetailScreen = () => {
+  const {t} = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
   const {stop, orderId} = route.params || {};
 
   const {arrivedAtStop, completeStop, failStop, skipStop, isActing} = useStopsStore();
   const {requireSignature, requirePhoto} = useSettingsStore();
-
-  const [failReason, setFailReason] = useState('');
+  const currency = useSettingsStore(s => s.currency);
 
   const status = stop?.status || 'pending';
   const statusColor = STATUS_COLORS[status] || '#95A5A6';
@@ -59,9 +60,9 @@ const StopDetailScreen = () => {
   const handleArrived = async () => {
     try {
       await arrivedAtStop(stop.id);
-      Alert.alert('Success', 'Marked as arrived at stop.');
+      Alert.alert(t('stopDetail.success'), t('stopDetail.markedArrived'));
     } catch (error) {
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to mark arrived.');
+      Alert.alert(t('orderDetail.error'), error?.response?.data?.message || t('orderDetail.failedToUpdate'));
     }
   };
 
@@ -80,41 +81,41 @@ const StopDetailScreen = () => {
 
     try {
       await completeStop(stop.id);
-      Alert.alert('Success', 'Stop completed.', [
-        {text: 'OK', onPress: () => navigation.goBack()},
+      Alert.alert(t('stopDetail.success'), t('stopDetail.stopCompleted'), [
+        {text: t('common.done'), onPress: () => navigation.goBack()},
       ]);
     } catch (error) {
-      Alert.alert('Error', error?.response?.data?.message || 'Failed to complete stop.');
+      Alert.alert(t('orderDetail.error'), error?.response?.data?.message || t('orderDetail.failedToUpdate'));
     }
   };
 
   const handleFail = () => {
     Alert.prompt
-      ? Alert.prompt('Fail Stop', 'Enter a reason for failure:', [
-          {text: 'Cancel', style: 'cancel'},
+      ? Alert.prompt(t('stopDetail.reportFailure'), t('stopDetail.enterFailureReason'), [
+          {text: t('common.cancel'), style: 'cancel'},
           {
-            text: 'Submit',
+            text: t('common.confirm'),
             style: 'destructive',
             onPress: async reason => {
               try {
                 await failStop(stop.id, {reason});
-                Alert.alert('Done', 'Stop marked as failed.', [
-                  {text: 'OK', onPress: () => navigation.goBack()},
+                Alert.alert(t('common.done'), t('stopDetail.stopFailed'), [
+                  {text: t('common.done'), onPress: () => navigation.goBack()},
                 ]);
               } catch (error) {
-                Alert.alert('Error', error?.response?.data?.message || 'Failed to fail stop.');
+                Alert.alert(t('orderDetail.error'), error?.response?.data?.message || t('orderDetail.failedToUpdate'));
               }
             },
           },
         ])
-      : Alert.alert('Fail Stop', 'Mark this stop as failed?', [
-          {text: 'Cancel', style: 'cancel'},
+      : Alert.alert(t('stopDetail.reportFailure'), t('stopDetail.failConfirm'), [
+          {text: t('common.cancel'), style: 'cancel'},
           {
-            text: 'Fail',
+            text: t('orderDetail.fail'),
             style: 'destructive',
             onPress: async () => {
               try {
-                await failStop(stop.id, {reason: 'Driver reported failure'});
+                await failStop(stop.id, {reason: t('stopDetail.driverReportedFailure')});
                 navigation.goBack();
               } catch {}
             },
@@ -123,16 +124,16 @@ const StopDetailScreen = () => {
   };
 
   const handleSkip = () => {
-    Alert.alert('Skip Stop', 'Are you sure you want to skip this stop?', [
-      {text: 'Cancel', style: 'cancel'},
+    Alert.alert(t('stopDetail.skip'), t('stopDetail.skipConfirm'), [
+      {text: t('common.cancel'), style: 'cancel'},
       {
-        text: 'Skip',
+        text: t('common.confirm'),
         onPress: async () => {
           try {
-            await skipStop(stop.id, {reason: 'Skipped by driver'});
+            await skipStop(stop.id, {reason: t('stopDetail.skippedByDriver')});
             navigation.goBack();
           } catch (error) {
-            Alert.alert('Error', error?.response?.data?.message || 'Failed to skip stop.');
+            Alert.alert(t('orderDetail.error'), error?.response?.data?.message || t('orderDetail.failedToUpdate'));
           }
         },
       },
@@ -142,7 +143,7 @@ const StopDetailScreen = () => {
   if (!stop) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>No stop data</Text>
+        <Text style={styles.emptyText}>{t('stopDetail.noStopData')}</Text>
       </View>
     );
   }
@@ -153,36 +154,36 @@ const StopDetailScreen = () => {
         {/* Status Badge */}
         <View style={[styles.statusBadge, {backgroundColor: statusColor + '20'}]}>
           <Text style={[styles.statusText, {color: statusColor}]}>
-            {status.toUpperCase()}
+          {t('status.' + status, status).toUpperCase()}
           </Text>
         </View>
 
         {/* Stop Info */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Stop #{stop.sequence || stop.stop_number || '—'}</Text>
+          <Text style={styles.cardTitle}>{t('stopDetail.stopNumber', {num: stop.sequence || stop.stop_number || '—'})}</Text>
           {stop.recipient_name && (
-            <InfoRow label="Recipient" value={stop.recipient_name} />
+            <InfoRow label={t('stopDetail.recipientName')} value={stop.recipient_name} />
           )}
-          {stop.address && <InfoRow label="Address" value={stop.address} />}
-          {stop.phone && <InfoRow label="Phone" value={stop.phone} />}
-          {stop.emirate && <InfoRow label="Emirate" value={stop.emirate} />}
-          {stop.notes && <InfoRow label="Notes" value={stop.notes} />}
+          {stop.address && <InfoRow label={t('stopDetail.address')} value={stop.address} />}
+          {stop.phone && <InfoRow label={t('stopDetail.phone')} value={stop.phone} />}
+          {stop.emirate && <InfoRow label={t('stopDetail.emirate')} value={stop.emirate} />}
+          {stop.notes && <InfoRow label={t('stopDetail.specialInstructions')} value={stop.notes} />}
           {stop.cod_amount ? (
-            <InfoRow label="COD Amount" value={`AED ${stop.cod_amount}`} />
+            <InfoRow label={t('stopDetail.codAmount')} value={`${currency} ${stop.cod_amount}`} />
           ) : null}
           {stop.packages_count ? (
-            <InfoRow label="Packages" value={String(stop.packages_count)} />
+            <InfoRow label={t('stopDetail.packages')} value={String(stop.packages_count)} />
           ) : null}
         </View>
 
         {/* Quick Actions */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleNavigate}>
-            <Text style={styles.actionBtnText}>Navigate</Text>
+            <Text style={styles.actionBtnText}>{t('stopDetail.navigate')}</Text>
           </TouchableOpacity>
           {stop.phone && (
             <TouchableOpacity style={styles.actionBtn} onPress={handleCall}>
-              <Text style={styles.actionBtnText}>Call</Text>
+              <Text style={styles.actionBtnText}>{t('stopDetail.call')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -198,10 +199,10 @@ const StopDetailScreen = () => {
               <TouchableOpacity
                 style={[styles.ctaBtn, {backgroundColor: '#3498DB'}]}
                 onPress={handleArrived}>
-                <Text style={styles.ctaBtnText}>I've Arrived</Text>
+                <Text style={styles.ctaBtnText}>{t('pickup.arrived')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-                <Text style={styles.skipBtnText}>Skip</Text>
+                <Text style={styles.skipBtnText}>{t('stopDetail.skip')}</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -209,12 +210,12 @@ const StopDetailScreen = () => {
               <TouchableOpacity
                 style={[styles.ctaBtn, {backgroundColor: '#27AE60', flex: 1}]}
                 onPress={handleComplete}>
-                <Text style={styles.ctaBtnText}>Complete</Text>
+                <Text style={styles.ctaBtnText}>{t('stopDetail.complete')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.ctaBtn, {backgroundColor: '#E74C3C', flex: 1, marginLeft: 8}]}
+                style={[styles.ctaBtn, {backgroundColor: '#E74C3C', flex: 1, marginStart: 8}]}
                 onPress={handleFail}>
-                <Text style={styles.ctaBtnText}>Fail</Text>
+                <Text style={styles.ctaBtnText}>{t('stopDetail.fail')}</Text>
               </TouchableOpacity>
             </>
           )}

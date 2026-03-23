@@ -37,7 +37,7 @@ export const setToken = async (token) => {
   try {
     await AsyncStorage.setItem(TOKEN_KEY, token);
   } catch (error) {
-    console.error('Failed to save token:', error);
+    if (__DEV__) console.error('Failed to save token:', error);
   }
 };
 
@@ -48,7 +48,7 @@ export const clearToken = async () => {
   try {
     await AsyncStorage.multiRemove([TOKEN_KEY, TENANT_SLUG_KEY, TENANT_ID_KEY]);
   } catch (error) {
-    console.error('Failed to clear token:', error);
+    if (__DEV__) console.error('Failed to clear token:', error);
   }
 };
 
@@ -67,7 +67,7 @@ export const setTenantSlug = async (slug) => {
   try {
     await AsyncStorage.setItem(TENANT_SLUG_KEY, slug);
   } catch (error) {
-    console.error('Failed to save tenant slug:', error);
+    if (__DEV__) console.error('Failed to save tenant slug:', error);
   }
 };
 
@@ -76,7 +76,7 @@ export const setTenantId = async (id) => {
   try {
     await AsyncStorage.setItem(TENANT_ID_KEY, String(id));
   } catch (error) {
-    console.error('Failed to save tenant id:', error);
+    if (__DEV__) console.error('Failed to save tenant id:', error);
   }
 };
 

@@ -9,13 +9,23 @@ import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {routeNames} from '../../constants/routeNames';
 import useDashboard from '../../hooks/useDashboard';
+import {useTranslation} from 'react-i18next';
 
 import {DashboardHeader} from './components';
 import TaskCard from './components/TaskCard';
 
 const FILTERS = ['All', 'Confirmed', 'Assigned', 'On Delivery', 'Delivered'];
 
+const FILTER_KEYS = {
+  All: 'dashboard.filterAll',
+  Confirmed: 'dashboard.filterConfirmed',
+  Assigned: 'dashboard.filterAssigned',
+  'On Delivery': 'dashboard.filterOnDelivery',
+  Delivered: 'dashboard.filterDelivered',
+};
+
 const DashboardScreen = ({navigation}) => {
+  const {t} = useTranslation();
   const {
     driverInfo, greeting, displayName, driverStatus,
     goOnline, goOffline, onBreak,
@@ -65,9 +75,9 @@ const DashboardScreen = ({navigation}) => {
       <DashboardHeader
         greeting={greeting}
         driverName={displayName}
-        vehicleType={driverInfo.vehicleType}
-        photo={driverInfo.photo}
-        rating={driverInfo.rating}
+        vehicleType={driverInfo?.vehicleType}
+        photo={driverInfo?.photo}
+        rating={driverInfo?.rating}
         unreadCount={unreadCount}
         driverStatus={driverStatus}
         onNotificationPress={() => nav('Notifications')}
@@ -87,7 +97,7 @@ const DashboardScreen = ({navigation}) => {
 
         {/* ═══ My Task Section ═══ */}
         <View style={$.sectionHeader}>
-          <Text style={$.sectionTitle}>My Task</Text>
+          <Text style={$.sectionTitle}>{t('dashboard.filterMyTask')}</Text>
         </View>
 
         {/* Filter chips */}
@@ -104,7 +114,7 @@ const DashboardScreen = ({navigation}) => {
                 style={[$.chip, active && $.chipActive]}
                 onPress={() => setActiveFilter(f)}
                 activeOpacity={0.7}>
-                <Text style={[$.chipTxt, active && $.chipTxtActive]}>{f}</Text>
+                <Text style={[$.chipTxt, active && $.chipTxtActive]}>{t(FILTER_KEYS[f])}</Text>
               </TouchableOpacity>
             );
           })}
@@ -113,11 +123,11 @@ const DashboardScreen = ({navigation}) => {
         {/* Task list */}
         {filteredOrders.length === 0 ? (
           <View style={$.emptyState}>
-            <Text style={$.emptyTitle}>No tasks found</Text>
+            <Text style={$.emptyTitle}>{t('dashboard.noTasks')}</Text>
             <Text style={$.emptySub}>
               {activeFilter === 'All'
-                ? 'Go online to receive delivery tasks'
-                : `No ${activeFilter.toLowerCase()} tasks right now`}
+                ? t('dashboard.goOnlineMsg')
+                : t('dashboard.noFilteredTasks', {filter: t(FILTER_KEYS[activeFilter]).toLowerCase()})}
             </Text>
           </View>
         ) : (

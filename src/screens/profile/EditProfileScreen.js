@@ -26,14 +26,15 @@ import useLocationStore from '../../store/locationStore';
 import {uploadsApi, authApi} from '../../api';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import {showMessage} from 'react-native-flash-message';
+import {useTranslation} from 'react-i18next';
 
 const {width: SCREEN_W} = Dimensions.get('window');
 
 // ─── Status Configuration ────────────────────────────
 const STATUS_OPTIONS = [
-  {key: 'available', label: 'Available', icon: 'check-circle', color: colors.success, bg: colors.successBg},
-  {key: 'busy', label: 'Busy', icon: 'clock-outline', color: colors.warning, bg: colors.warningBg},
-  {key: 'offline', label: 'Offline', icon: 'power-sleep', color: colors.danger, bg: colors.dangerBg},
+  {key: 'available', labelKey: 'editProfile.available', icon: 'check-circle', color: colors.success, bg: colors.successBg},
+  {key: 'busy', labelKey: 'editProfile.busy', icon: 'clock-outline', color: colors.warning, bg: colors.warningBg},
+  {key: 'offline', labelKey: 'editProfile.offline', icon: 'power-sleep', color: colors.danger, bg: colors.dangerBg},
 ];
 
 // ─── Reusable Input Field ────────────────────────────
@@ -41,7 +42,7 @@ const Field = ({label, icon, value, onChangeText, placeholder, editable = true, 
   <View style={s.fieldGroup}>
     <Text style={s.fieldLabel}>{label}</Text>
     <View style={[s.fieldRow, !editable && s.fieldRowDisabled, multiline && {height: 80, alignItems: 'flex-start'}]}>
-      <Icon name={icon} size={16} color={editable ? colors.primary : colors.textMuted} style={{marginLeft: 14, marginRight: 10, marginTop: multiline ? 14 : 0}} />
+      <Icon name={icon} size={16} color={editable ? colors.primary : colors.textMuted} style={{marginStart: 14, marginEnd: 10, marginTop: multiline ? 14 : 0}} />
       <TextInput
         style={[s.fieldInput, multiline && {textAlignVertical: 'top', paddingTop: 12}]}
         value={value}
@@ -53,7 +54,7 @@ const Field = ({label, icon, value, onChangeText, placeholder, editable = true, 
         multiline={multiline}
         numberOfLines={multiline ? 3 : 1}
       />
-      {!editable && <Icon name="lock-outline" size={14} color={colors.textMuted} style={{marginRight: 14}} />}
+      {!editable && <Icon name="lock-outline" size={14} color={colors.textMuted} style={{marginEnd: 14}} />}
     </View>
   </View>
 );
@@ -73,6 +74,7 @@ const SectionHeader = ({icon, title, subtitle}) => (
 
 // ─── Status Pill ─────────────────────────────────────
 const StatusPill = ({option, isActive, onPress, animValue}) => {
+  const {t: tPill} = useTranslation();
   const scale = animValue.interpolate({
     inputRange: [0, 1],
     outputRange: [0.95, 1],
@@ -98,7 +100,7 @@ const StatusPill = ({option, isActive, onPress, animValue}) => {
             {color: isActive ? option.color : colors.textMuted},
             isActive && {fontFamily: fontFamily.bold},
           ]}>
-          {option.label}
+          {tPill(option.labelKey)}
         </Text>
         {isActive && (
           <View style={[s.statusDot, {backgroundColor: option.color}]} />
@@ -113,6 +115,7 @@ const StatusPill = ({option, isActive, onPress, animValue}) => {
 // ═══════════════════════════════════════════════════════
 const EditProfileScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
   const user = useAuthStore(s => s.user);
   const locationStoreStatus = useLocationStore(s => s.driverStatus);
   const goOnline = useLocationStore(s => s.goOnline);
@@ -179,22 +182,22 @@ const EditProfileScreen = ({navigation}) => {
 
   // ─── Handlers ──────────────────────────────────────
   const handlePickAvatar = () => {
-    Alert.alert('Update Photo', 'Choose an option', [
+    Alert.alert(t('editProfile.updatePhoto'), t('editProfile.chooseOption'), [
       {
-        text: 'Camera',
+        text: t('editProfile.camera'),
         onPress: () =>
           launchCamera({mediaType: 'photo', quality: 0.7, maxWidth: 600, maxHeight: 600}, r => {
             if (!r.didCancel && !r.errorCode && r.assets?.[0]?.uri) setAvatarUri(r.assets[0].uri);
           }),
       },
       {
-        text: 'Gallery',
+        text: t('editProfile.gallery'),
         onPress: () =>
           launchImageLibrary({mediaType: 'photo', quality: 0.7, maxWidth: 600, maxHeight: 600}, r => {
             if (!r.didCancel && !r.errorCode && r.assets?.[0]?.uri) setAvatarUri(r.assets[0].uri);
           }),
       },
-      {text: 'Cancel', style: 'cancel'},
+      {text: t('common.cancel'), style: 'cancel'},
     ]);
   };
 
@@ -216,7 +219,7 @@ const EditProfileScreen = ({navigation}) => {
       useAuthStore.setState({user: {...useAuthStore.getState().user, status: newStatus}});
       const opt = STATUS_OPTIONS.find(o => o.key === newStatus);
       showMessage({
-        message: `You're now ${opt?.label || newStatus}`,
+        message: `${t('editProfile.nowStatus')} ${opt ? t(opt.labelKey) : newStatus}`,
         type: newStatus === 'available' ? 'success' : newStatus === 'busy' ? 'warning' : 'info',
         icon: 'auto',
         duration: 2000,
@@ -224,8 +227,8 @@ const EditProfileScreen = ({navigation}) => {
     } catch (e) {
       setDriverStatus(prev);
       showMessage({
-        message: 'Failed to update status',
-        description: e?.response?.data?.message || 'Please try again.',
+        message: t('editProfile.failedStatus'),
+        description: e?.response?.data?.message || t('editProfile.pleaseTryAgain'),
         type: 'danger',
         icon: 'auto',
       });
@@ -236,7 +239,7 @@ const EditProfileScreen = ({navigation}) => {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      showMessage({message: 'Please enter your name', type: 'warning', icon: 'auto'});
+      showMessage({message: t('editProfile.enterName'), type: 'warning', icon: 'auto'});
       return;
     }
     setLoading(true);
@@ -274,12 +277,12 @@ const EditProfileScreen = ({navigation}) => {
         },
       });
 
-      showMessage({message: 'Profile updated successfully!', type: 'success', icon: 'auto', duration: 2500});
+      showMessage({message: t('editProfile.profileUpdated'), type: 'success', icon: 'auto', duration: 2500});
       setTimeout(() => navigation.goBack(), 600);
     } catch (e) {
       showMessage({
-        message: 'Update Failed',
-        description: e?.response?.data?.message || 'Something went wrong.',
+        message: t('editProfile.updateFailed'),
+        description: e?.response?.data?.message || t('editProfile.somethingWrong'),
         type: 'danger',
         icon: 'auto',
       });
@@ -302,7 +305,7 @@ const EditProfileScreen = ({navigation}) => {
           hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Edit Profile</Text>
+        <Text style={s.hdrTitle}>{t('editProfile.title')}</Text>
         <TouchableOpacity
           onPress={handleSave}
           disabled={loading}
@@ -310,7 +313,7 @@ const EditProfileScreen = ({navigation}) => {
           {loading ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <Text style={s.hdrSave}>Save</Text>
+            <Text style={s.hdrSave}>{t('editProfile.save')}</Text>
           )}
         </TouchableOpacity>
       </Animated.View>
@@ -336,17 +339,17 @@ const EditProfileScreen = ({navigation}) => {
               <Icon name="camera" size={14} color="#FFF" />
             </TouchableOpacity>
           </View>
-          <Text style={s.heroName}>{name || 'Driver'}</Text>
+          <Text style={s.heroName}>{name || t('editProfile.driverFallback')}</Text>
           <Text style={s.heroEmail}>{email}</Text>
           <View style={[s.heroBadge, {backgroundColor: activeStatus.bg}]}>
             <View style={[s.heroBadgeDot, {backgroundColor: activeStatus.color}]} />
-            <Text style={[s.heroBadgeTxt, {color: activeStatus.color}]}>{activeStatus.label}</Text>
+            <Text style={[s.heroBadgeTxt, {color: activeStatus.color}]}>{t(activeStatus.labelKey)}</Text>
           </View>
         </View>
 
         {/* ─── Driver Status Card ─────────────────── */}
         <View style={s.card}>
-          <SectionHeader icon="signal-variant" title="Availability Status" subtitle="Set your availability for new orders" />
+          <SectionHeader icon="signal-variant" title={t('editProfile.availabilityStatus')} subtitle={t('editProfile.setAvailability')} />
           <View style={s.statusRow}>
             {STATUS_OPTIONS.map(opt => (
               <StatusPill
@@ -361,26 +364,26 @@ const EditProfileScreen = ({navigation}) => {
           {statusLoading && (
             <View style={s.statusLoadingRow}>
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={s.statusLoadingTxt}>Updating status...</Text>
+              <Text style={s.statusLoadingTxt}>{t('editProfile.updatingStatus')}</Text>
             </View>
           )}
         </View>
 
         {/* ─── Personal Info Card ─────────────────── */}
         <View style={s.card}>
-          <SectionHeader icon="account-circle-outline" title="Personal Information" subtitle="Your basic contact details" />
-          <Field label="Full Name" icon="account-outline" value={name} onChangeText={setName} placeholder="Enter your full name" />
-          <Field label="Phone Number" icon="phone-outline" value={phone} onChangeText={setPhone} placeholder="+971 XX XXX XXXX" keyboardType="phone-pad" />
-          <Field label="Email Address" icon="email-outline" value={email} placeholder="you@example.com" editable={false} />
+          <SectionHeader icon="account-circle-outline" title={t('editProfile.personalInfo')} subtitle={t('editProfile.personalInfoSub')} />
+          <Field label={t('editProfile.fullName')} icon="account-outline" value={name} onChangeText={setName} placeholder={t('editProfile.enterFullName')} />
+          <Field label={t('editProfile.phoneNumber')} icon="phone-outline" value={phone} onChangeText={setPhone} placeholder="+971 XX XXX XXXX" keyboardType="phone-pad" />
+          <Field label={t('editProfile.emailAddress')} icon="email-outline" value={email} placeholder="you@example.com" editable={false} />
         </View>
 
         {/* ─── Vehicle Info Card ──────────────────── */}
         <View style={s.card}>
-          <SectionHeader icon="truck-outline" title="Vehicle Information" subtitle="Keep your vehicle details up to date" />
-          <Field label="Vehicle Type" icon="car-outline" value={vehicleType} onChangeText={setVehicleType} placeholder="e.g. Van, Motorcycle, Truck" />
-          <Field label="License Plate" icon="card-text-outline" value={vehiclePlate} onChangeText={setVehiclePlate} placeholder="e.g. ABC 12345" />
-          <Field label="Vehicle Model" icon="car-info" value={vehicleModel} onChangeText={setVehicleModel} placeholder="e.g. Toyota Hiace 2024" />
-          <Field label="Vehicle Color" icon="palette-outline" value={vehicleColor} onChangeText={setVehicleColor} placeholder="e.g. White" />
+          <SectionHeader icon="truck-outline" title={t('editProfile.vehicleInfo')} subtitle={t('editProfile.vehicleInfoSub')} />
+          <Field label={t('editProfile.vehicleType')} icon="car-outline" value={vehicleType} onChangeText={setVehicleType} placeholder={t('editProfile.vehicleTypePlaceholder')} />
+          <Field label={t('editProfile.licensePlate')} icon="card-text-outline" value={vehiclePlate} onChangeText={setVehiclePlate} placeholder={t('editProfile.licensePlatePlaceholder')} />
+          <Field label={t('editProfile.vehicleModel')} icon="car-info" value={vehicleModel} onChangeText={setVehicleModel} placeholder={t('editProfile.vehicleModelPlaceholder')} />
+          <Field label={t('editProfile.vehicleColor')} icon="palette-outline" value={vehicleColor} onChangeText={setVehicleColor} placeholder={t('editProfile.vehicleColorPlaceholder')} />
         </View>
       </ScrollView>
 
@@ -395,8 +398,8 @@ const EditProfileScreen = ({navigation}) => {
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
             <View style={s.saveBtnInner}>
-              <Icon name="content-save-outline" size={18} color="#FFF" style={{marginRight: 8}} />
-              <Text style={s.saveTxt}>Save Changes</Text>
+              <Icon name="content-save-outline" size={18} color="#FFF" style={{marginEnd: 8}} />
+              <Text style={s.saveTxt}>{t('editProfile.saveChanges')}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -438,7 +441,7 @@ const s = StyleSheet.create({
       android: {elevation: 2},
     }),
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 17, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 17, color: colors.textPrimary, textAlign: 'auto'},
   hdrSave: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.primary},
   scroll: {paddingHorizontal: 20},
 
@@ -490,7 +493,7 @@ const s = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
   },
-  heroBadgeDot: {width: 7, height: 7, borderRadius: 4, marginRight: 6},
+  heroBadgeDot: {width: 7, height: 7, borderRadius: 4, marginEnd: 6},
   heroBadgeTxt: {fontFamily: fontFamily.semiBold, fontSize: 12},
 
   // ─── Cards ─────────────────────────────────────────
@@ -504,7 +507,7 @@ const s = StyleSheet.create({
       android: {elevation: 2},
     }),
   },
-  sectionHdr: {flexDirection: 'row', alignItems: 'center', marginBottom: 18},
+  sectionHdr: {flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 12},
   sectionIconWrap: {
     width: 32,
     height: 32,
@@ -512,7 +515,6 @@ const s = StyleSheet.create({
     backgroundColor: colors.primary + '12',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   sectionTitle: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.textPrimary},
   sectionSubtitle: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 1},
@@ -535,11 +537,11 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 12,
   },
-  statusLoadingTxt: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, marginLeft: 8},
+  statusLoadingTxt: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, marginStart: 8},
 
   // ─── Fields ────────────────────────────────────────
   fieldGroup: {marginBottom: 16},
-  fieldLabel: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textSecondary, marginBottom: 6, marginLeft: 2},
+  fieldLabel: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textSecondary, marginBottom: 6, marginStart: 2},
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -556,7 +558,7 @@ const s = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: 14,
     color: colors.textPrimary,
-    paddingRight: 14,
+    paddingEnd: 14,
   },
 
   // ─── Bottom Bar ────────────────────────────────────
@@ -586,7 +588,7 @@ const s = StyleSheet.create({
       android: {elevation: 4},
     }),
   },
-  saveBtnInner: {flexDirection: 'row', alignItems: 'center'},
+  saveBtnInner: {flexDirection: 'row', alignItems: 'center', gap: 8},
   saveTxt: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF'},
 
   // ─── Fetch Overlay ─────────────────────────────────

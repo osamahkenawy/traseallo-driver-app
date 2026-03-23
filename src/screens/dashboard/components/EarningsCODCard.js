@@ -5,7 +5,9 @@
 
 import React from 'react';
 import {View, StyleSheet, Text, TouchableOpacity} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
+import useSettingsStore from '../../../store/settingsStore';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
 
@@ -14,18 +16,19 @@ const EarningsCODCard = ({
   codCollected = 0,
   codPending = 0,
   deliveredCount = 0,
-  currency = 'AED',
   onPress,
 }) => {
+  const {t} = useTranslation();
+  const currency = useSettingsStore(s => s.currency);
   const hasData = earnings > 0 || codCollected > 0 || codPending > 0 || deliveredCount > 0;
 
   if (!hasData) {
     return (
       <View style={$.root}>
-        <Text style={$.sectionTitle}>Earnings & COD</Text>
+        <Text style={$.sectionTitle}>{t('dashboard.earningsCOD')}</Text>
         <View style={$.emptyCard}>
           <Icon name="wallet-outline" size={24} color={colors.textLight} />
-          <Text style={$.emptyTxt}>Today's earnings will appear here after your first completed order</Text>
+          <Text style={$.emptyTxt}>{t('dashboard.earningsEmptyText')}</Text>
         </View>
       </View>
     );
@@ -35,10 +38,10 @@ const EarningsCODCard = ({
     <View style={$.root}>
       {/* Section header */}
       <View style={$.headerRow}>
-        <Text style={$.sectionTitle}>Earnings & COD</Text>
+        <Text style={$.sectionTitle}>{t('dashboard.earningsCOD')}</Text>
         {onPress && (
           <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-            <Text style={$.viewAll}>Details</Text>
+            <Text style={$.viewAll}>{t('dashboard.details')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -61,7 +64,7 @@ const EarningsCODCard = ({
               <Icon name="trending-up" size={18} color="#FFF" />
             </View>
             <View>
-              <Text style={$.earningsLabel}>Today's Earnings</Text>
+              <Text style={$.earningsLabel}>{t('dashboard.todaysEarnings')}</Text>
               <Text style={$.earningsVal}>{currency} {earnings}</Text>
             </View>
           </View>
@@ -73,7 +76,7 @@ const EarningsCODCard = ({
                 <Icon name="cash-check" size={14} color="#15C7AE" />
               </View>
               <Text style={$.statVal}>{currency} {codCollected}</Text>
-              <Text style={$.statLbl}>COD Collected</Text>
+              <Text style={$.statLbl}>{t('dashboard.codCollected')}</Text>
             </View>
 
             <View style={$.statDivider} />
@@ -83,7 +86,7 @@ const EarningsCODCard = ({
                 <Icon name="clock-outline" size={14} color="#F9AD28" />
               </View>
               <Text style={$.statVal}>{currency} {codPending}</Text>
-              <Text style={$.statLbl}>COD Pending</Text>
+              <Text style={$.statLbl}>{t('dashboard.codPending')}</Text>
             </View>
 
             <View style={$.statDivider} />
@@ -93,7 +96,7 @@ const EarningsCODCard = ({
                 <Icon name="check-all" size={14} color={colors.primary} />
               </View>
               <Text style={$.statVal}>{deliveredCount}</Text>
-              <Text style={$.statLbl}>Completed</Text>
+              <Text style={$.statLbl}>{t('dashboard.completedLabel')}</Text>
             </View>
           </View>
         </View>
@@ -143,7 +146,7 @@ const $ = StyleSheet.create({
     borderRadius: 90,
     backgroundColor: 'rgba(255,255,255,0.05)',
     top: -60,
-    right: -40,
+    end: -40,
   },
   bgCircle2: {
     position: 'absolute',
@@ -152,7 +155,7 @@ const $ = StyleSheet.create({
     borderRadius: 40,
     backgroundColor: 'rgba(255,255,255,0.04)',
     bottom: -20,
-    left: 20,
+    start: 20,
   },
   content: {
     padding: 22,

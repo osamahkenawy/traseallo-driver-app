@@ -42,7 +42,17 @@ const useNotificationStore = create((set, get) => ({
 
       const notifications = isRefresh
         ? newNotifications
-        : [...get().notifications, ...newNotifications];
+        : (() => {
+            const merged = [...get().notifications, ...newNotifications];
+            const seen = new Set();
+            return merged.filter(n => {
+              const key = n.id ?? n._id;
+              if (key == null) return true;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+          })();
 
       set({
         notifications,

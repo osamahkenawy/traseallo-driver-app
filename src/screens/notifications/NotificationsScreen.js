@@ -21,64 +21,69 @@ import {fontFamily} from '../../theme/fonts';
 import {routeNames} from '../../constants/routeNames';
 import useNotificationStore from '../../store/notificationStore';
 import useOrders from '../../hooks/useOrders';
+import {useTranslation} from 'react-i18next';
 
 /* ── Helpers ── */
-const timeAgo = (dateStr) => {
+const timeAgo = (dateStr, t) => {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
-  if (diff < 0) return 'Just now';
+  if (diff < 0) return t('notifications.justNow');
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('notifications.justNow');
+  if (mins < 60) return t('notifications.minutesAgo', {count: mins});
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t('notifications.hoursAgo', {count: hrs});
   const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString('en-GB', {day: '2-digit', month: 'short'});
+  if (days < 7) return t('notifications.daysAgo', {count: days});
+  return new Date(dateStr).toLocaleDateString(undefined, {day: '2-digit', month: 'short'});
 };
 
-const notifMeta = {
-  assigned: {
-    icon: 'clipboard-text-clock-outline',
-    color: colors.primary,
-    bg: '#E8EDF4',
-    title: 'New Order Assigned',
-    template: (o) => `Order #${o.order_number} has been assigned to you. Deliver to ${o.recipient_name || 'customer'} in ${o.recipient_emirate || 'the area'}.`,
-  },
-  picked_up: {
-    icon: 'package-variant',
-    color: '#10A6BA',
-    bg: '#E0F5F7',
-    title: 'Order Picked Up',
-    template: (o) => `You picked up order #${o.order_number}. Head to ${o.recipient_emirate || 'the delivery address'}.`,
-  },
-  in_transit: {
-    icon: 'truck-fast-outline',
-    color: '#15C7AE',
-    bg: '#E0F8F3',
-    title: 'In Transit',
-    template: (o) => `Order #${o.order_number} is on its way to ${o.recipient_name || 'customer'}.`,
-  },
-  delivered: {
-    icon: 'check-decagram',
-    color: '#15C7AE',
-    bg: '#E0F8F3',
-    title: 'Delivery Completed',
-    template: (o) => `Order #${o.order_number} delivered successfully to ${o.recipient_name || 'customer'}.`,
-  },
-  failed: {
-    icon: 'close-circle-outline',
-    color: colors.danger,
-    bg: '#FDE8EE',
-    title: 'Delivery Failed',
-    template: (o) => `Order #${o.order_number} delivery attempt failed.`,
-  },
+const getNotifMeta = (status, t) => {
+  const meta = {
+    assigned: {
+      icon: 'clipboard-text-clock-outline',
+      color: colors.primary,
+      bg: '#E8EDF4',
+      title: t('notifications.newOrderAssigned'),
+      template: (o) => t('notifications.orderAssignedFullBody', {orderNumber: o.order_number, recipient: o.recipient_name || t('orders.customer'), area: o.recipient_emirate || ''}),
+    },
+    picked_up: {
+      icon: 'package-variant',
+      color: '#10A6BA',
+      bg: '#E0F5F7',
+      title: t('notifications.orderPickedUp'),
+      template: (o) => t('notifications.orderPickedUpBody', {orderNumber: o.order_number, destination: o.recipient_emirate || ''}),
+    },
+    in_transit: {
+      icon: 'truck-fast-outline',
+      color: '#15C7AE',
+      bg: '#E0F8F3',
+      title: t('notifications.inTransit'),
+      template: (o) => t('notifications.inTransitBody', {orderNumber: o.order_number, recipient: o.recipient_name || ''}),
+    },
+    delivered: {
+      icon: 'check-decagram',
+      color: '#15C7AE',
+      bg: '#E0F8F3',
+      title: t('notifications.deliveryCompleted'),
+      template: (o) => t('notifications.deliveryCompletedBody', {orderNumber: o.order_number, recipient: o.recipient_name || ''}),
+    },
+    failed: {
+      icon: 'close-circle-outline',
+      color: colors.danger,
+      bg: '#FDE8EE',
+      title: t('notifications.deliveryFailed'),
+      template: (o) => t('notifications.deliveryFailedBody', {orderNumber: o.order_number}),
+    },
+  };
+  return meta[status] || meta.assigned;
 };
 
 /* ═══════════════════════════════════════════════════════════ */
 const NotificationsScreen = () => {
   const ins = useSafeAreaInsets();
   const navigation = useNavigation();
+  const {t} = useTranslation();
 
   // Server notifications
   const serverNotifs = useNotificationStore(st => st.notifications);
@@ -102,9 +107,9 @@ const NotificationsScreen = () => {
   const allNotifications = useMemo(() => {
     // Convert orders into notification-like items
     const orderNotifs = (orders || []).map((o, idx) => {
-      const meta = notifMeta[o.status] || notifMeta.assigned;
+      const meta = getNotifMeta(o.status, t);
       return {
-        id: `order-${o.tracking_token || o.order_number || o.id || idx}`,
+        id: `order-${o.id || idx}-${o.status || 'unknown'}`,
         type: 'order',
         title: meta.title,
         body: meta.template(o),
@@ -130,8 +135,14 @@ const NotificationsScreen = () => {
       iconBg: n.read_at ? '#F0F2F5' : colors.primary + '0D',
     }));
 
-    // Merge & sort by date (newest first)
-    const all = [...serverItems, ...orderNotifs];
+    // Merge, deduplicate by id, & sort by date (newest first)
+    const merged = [...serverItems, ...orderNotifs];
+    const seen = new Set();
+    const all = merged.filter(item => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
     all.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     return all;
   }, [serverNotifs, orders]);
@@ -144,11 +155,11 @@ const NotificationsScreen = () => {
   const handleClearAll = useCallback(() => {
     if (!serverNotifs?.length) return;
     Alert.alert(
-      'Clear All',
-      'Delete all server notifications?',
+      t('notifications.clearAll'),
+      t('notifications.clearAllConfirm'),
       [
-        {text: 'Cancel', style: 'cancel'},
-        {text: 'Clear All', style: 'destructive', onPress: clearAllNotifications},
+        {text: t('common.cancel'), style: 'cancel'},
+        {text: t('notifications.clearAll'), style: 'destructive', onPress: clearAllNotifications},
       ],
     );
   }, [serverNotifs, clearAllNotifications]);
@@ -169,9 +180,9 @@ const NotificationsScreen = () => {
 
   const handleDelete = useCallback((item) => {
     if (item.type === 'server' && item.id) {
-      Alert.alert('Delete', 'Remove this notification?', [
-        {text: 'Cancel', style: 'cancel'},
-        {text: 'Delete', style: 'destructive', onPress: () => deleteNotification(item.id)},
+      Alert.alert(t('common.delete'), t('notifications.deleteConfirm'), [
+        {text: t('common.cancel'), style: 'cancel'},
+        {text: t('common.delete'), style: 'destructive', onPress: () => deleteNotification(item.id)},
       ]);
     }
   }, [deleteNotification]);
@@ -181,19 +192,19 @@ const NotificationsScreen = () => {
       {/* ── Header ── */}
       <View style={$.hdr}>
         <View>
-          <Text style={$.title}>Notifications</Text>
+          <Text style={$.title}>{t('notifications.title')}</Text>
           <Text style={$.subtitle}>
-            {allNotifications.length} notification{allNotifications.length !== 1 ? 's' : ''}
+            {allNotifications.length} {t('notifications.title').toLowerCase()}
           </Text>
         </View>
         <View style={$.hdrActions}>
           <TouchableOpacity style={$.hdrBtn} onPress={markAllAsRead} activeOpacity={0.6}>
             <Icon name="check-all" size={14} color={colors.primary} />
-            <Text style={$.hdrBtnTxt}>Read all</Text>
+            <Text style={$.hdrBtnTxt}>{t('notifications.markAllRead')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[$.hdrBtn, $.hdrBtnDanger]} onPress={handleClearAll} activeOpacity={0.6}>
             <Icon name="trash-can-outline" size={14} color={colors.danger} />
-            <Text style={[$.hdrBtnTxt, {color: colors.danger}]}>Clear</Text>
+            <Text style={[$.hdrBtnTxt, {color: colors.danger}]}>{t('notifications.clearAll')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -201,7 +212,7 @@ const NotificationsScreen = () => {
       {/* ── List ── */}
       <FlatList
         data={allNotifications}
-        keyExtractor={(item, i) => item?.id?.toString() || i.toString()}
+        keyExtractor={(item, i) => `notif-${item?.id || i}`}
         renderItem={({item}) => (
           <NotifCard
             item={item}
@@ -228,8 +239,9 @@ const NotificationsScreen = () => {
 
 /* ─── Notification Card ──────────────────────────────────── */
 const NotifCard = ({item, onPress, onLongPress}) => {
+  const {t} = useTranslation();
   const unread = !item.read_at;
-  const time = timeAgo(item.created_at);
+  const time = timeAgo(item.created_at, t);
   const stColor = item.status ? getStatusColor(item.status) : null;
 
   return (
@@ -251,7 +263,7 @@ const NotifCard = ({item, onPress, onLongPress}) => {
       <View style={$.cardContent}>
         <View style={$.cardTopRow}>
           <Text style={[$.cardTitle, unread && $.cardTitleBold]} numberOfLines={1}>
-            {item.title || 'Notification'}
+            {item.title || t('notifications.notification')}
           </Text>
           {!!time && <Text style={$.cardTime}>{time}</Text>}
         </View>
@@ -264,13 +276,13 @@ const NotifCard = ({item, onPress, onLongPress}) => {
             <View style={[$.statusTag, {backgroundColor: getStatusBgColor(item.status)}]}>
               <View style={[$.statusDot, {backgroundColor: stColor}]} />
               <Text style={[$.statusTagTxt, {color: stColor}]}>
-                {(item.status || '').replace(/_/g, ' ')}
+                {t('status.' + (item.status || 'pending'), (item.status || ''))}
               </Text>
             </View>
           )}
           {item.data?.tracking_token && (
             <View style={$.actionHint}>
-              <Text style={$.actionHintTxt}>View order</Text>
+              <Text style={$.actionHintTxt}>{t('notifications.viewOrder')}</Text>
               <Icon name="chevron-right" size={12} color={colors.primary} />
             </View>
           )}
@@ -284,19 +296,22 @@ const NotifCard = ({item, onPress, onLongPress}) => {
 };
 
 /* ─── Empty State ────────────────────────────────────────── */
-const Empty = () => (
-  <View style={$.empty}>
-    <View style={$.emptyIcWrap}>
-      <View style={$.emptyIcInner}>
-        <Icon name="bell-check-outline" size={32} color={colors.textLight} />
+const Empty = () => {
+  const {t} = useTranslation();
+  return (
+    <View style={$.empty}>
+      <View style={$.emptyIcWrap}>
+        <View style={$.emptyIcInner}>
+          <Icon name="bell-check-outline" size={32} color={colors.textLight} />
+        </View>
       </View>
+      <Text style={$.emptyH}>{t('notifications.noNotifications')}</Text>
+      <Text style={$.emptyP}>
+        {t('notifications.noNotificationsDesc')}
+      </Text>
     </View>
-    <Text style={$.emptyH}>No notifications</Text>
-    <Text style={$.emptyP}>
-      You're all caught up! Notifications will appear{'\n'}when orders are assigned or updated.
-    </Text>
-  </View>
-);
+  );
+};
 
 export default NotificationsScreen;
 
@@ -319,6 +334,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 22,
     color: colors.textPrimary,
+    textAlign: 'auto',
   },
   subtitle: {
     fontFamily: fontFamily.medium,
@@ -352,6 +368,7 @@ const $ = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 14,
+    gap: 12,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.04,
@@ -369,7 +386,6 @@ const $ = StyleSheet.create({
     borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
     marginTop: 2,
   },
   cardContent: {flex: 1},
@@ -384,7 +400,7 @@ const $ = StyleSheet.create({
     fontSize: 13,
     color: colors.textPrimary,
     flex: 1,
-    marginRight: 8,
+    marginEnd: 8,
   },
   cardTitleBold: {fontFamily: fontFamily.bold},
   cardTime: {
@@ -434,7 +450,7 @@ const $ = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: colors.primary,
     marginTop: 6,
-    marginLeft: 6,
+    marginStart: 6,
   },
 
   /* Empty */

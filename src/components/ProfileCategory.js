@@ -34,7 +34,7 @@ const ProfileCategory = ({
           borderWidth: 1,
           borderColor: theme.COLORS.lightBlue1,
           borderRadius: 25,
-          marginRight: 14,
+          marginEnd: 14,
         }}
       >
         {icon}

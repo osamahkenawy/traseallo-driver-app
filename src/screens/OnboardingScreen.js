@@ -9,11 +9,14 @@ import Icon from '../utils/LucideIcon';
 import {colors} from '../theme/colors';
 import {fontFamily} from '../theme/fonts';
 import images from '../theme/assets';
+import {useTranslation} from 'react-i18next';
+import {routeNames} from '../constants/routeNames';
 
 const {width: W} = Dimensions.get('window');
 
 const OnboardingScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
 
   return (
     <View style={[s.root, {paddingTop: ins.top, paddingBottom: ins.bottom}]}>
@@ -27,18 +30,18 @@ const OnboardingScreen = ({navigation}) => {
         <Image source={images.onboarding1} style={s.illustration} resizeMode="contain" />
 
         <View style={s.textWrap}>
-          <Text style={s.title}>Welcome to Traseallo</Text>
+          <Text style={s.title}>{t('onboarding.welcome')}</Text>
           <Text style={s.subtitle}>
-            Manage your deliveries, track earnings,{'\n'}and stay connected with customers.
+            {t('onboarding.welcomeDesc')}
           </Text>
         </View>
 
         {/* ─── Feature Pills ─────────────────── */}
         <View style={s.pillsRow}>
           {[
-            {icon: 'truck-fast-outline', label: 'Fast Delivery'},
-            {icon: 'chart-line', label: 'Track Earnings'},
-            {icon: 'headset', label: 'Live Support'},
+            {icon: 'truck-fast-outline', label: t('onboarding.fastDelivery')},
+            {icon: 'chart-line', label: t('onboarding.trackEarnings')},
+            {icon: 'headset', label: t('onboarding.liveSupport')},
           ].map((f, i) => (
             <View key={i} style={s.pill}>
               <Icon name={f.icon} size={13} color={colors.primary} />
@@ -53,15 +56,15 @@ const OnboardingScreen = ({navigation}) => {
         <TouchableOpacity
           style={s.btn}
           activeOpacity={0.8}
-          onPress={() => navigation.replace('Login')}>
-          <Text style={s.btnText}>Get Started</Text>
+          onPress={() => navigation.replace(routeNames.Login)}>
+          <Text style={s.btnText}>{t('onboarding.getStarted')}</Text>
           <Icon name="arrow-right" size={18} color="#FFF" />
         </TouchableOpacity>
 
         {/* ─── Powered by ────────────────────── */}
         <View style={s.poweredRow}>
           <Image source={images.traseallaLogo} style={s.poweredLogo} resizeMode="contain" />
-          <Text style={s.poweredText}>Powered by Trasealla Solutions</Text>
+          <Text style={s.poweredText}>{t('onboarding.poweredBy')}</Text>
         </View>
       </View>
     </View>

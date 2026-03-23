@@ -4,21 +4,28 @@
 import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {Marker, Callout} from 'react-native-maps';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily, fontSize} from '../../../theme/fonts';
 
 const STOP_COLORS = {
   pending: colors.primary,
+  assigned: colors.primary,
+  picked_up: colors.info,
+  in_transit: colors.info,
   en_route: colors.info,
   arrived: colors.warning,
   completed: colors.success,
   delivered: colors.success,
   failed: colors.danger,
+  returned: colors.orange,
   skipped: colors.textMuted,
+  cancelled: colors.textMuted,
 };
 
 const StopMarker = ({stop, index, isSelected, onPress, isPickup}) => {
+  const {t} = useTranslation();
   const lat = parseFloat(stop.lat || stop.recipient_lat);
   const lng = parseFloat(stop.lng || stop.recipient_lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
@@ -27,6 +34,7 @@ const StopMarker = ({stop, index, isSelected, onPress, isPickup}) => {
   const markerColor = STOP_COLORS[status] || colors.primary;
   const isCompleted = status === 'completed' || status === 'delivered';
   const isFailed = status === 'failed';
+  const isInTransit = status === 'in_transit' || status === 'en_route';
   const seq = stop.sequence_number || index + 1;
   const name = stop.contact_name || stop.recipient_name || '—';
   const orderNum = stop.order_number || '';
@@ -47,6 +55,8 @@ const StopMarker = ({stop, index, isSelected, onPress, isPickup}) => {
             <Icon name="close" size={12} color={colors.white} />
           ) : isPickup ? (
             <Icon name="store-outline" size={12} color={colors.white} />
+          ) : isInTransit ? (
+            <Icon name="truck-delivery-outline" size={11} color={colors.white} />
           ) : (
             <Text style={$.seq}>{seq}</Text>
           )}
@@ -68,7 +78,7 @@ const StopMarker = ({stop, index, isSelected, onPress, isPickup}) => {
           {orderNum ? <Text style={$.calloutSub}>{orderNum}</Text> : null}
           <View style={[$.calloutStatus, {backgroundColor: markerColor + '20'}]}>
             <Text style={[$.calloutStatusText, {color: markerColor}]}>
-              {(status || 'pending').replace(/_/g, ' ').toUpperCase()}
+              {t('status.' + (status || 'pending'), (status || 'pending')).toUpperCase()}
             </Text>
           </View>
         </View>

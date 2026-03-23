@@ -154,7 +154,7 @@ const useStopsStore = create((set, get) => ({
       const res = await uploadsApi.uploadStopProofPhoto(stopId, uri);
       return res.data;
     } catch (error) {
-      console.warn('[StopsStore] uploadStopPhoto error:', error?.message);
+      if (__DEV__) console.warn('[StopsStore] uploadStopPhoto error:', error?.message);
       throw error;
     }
   },
@@ -167,7 +167,7 @@ const useStopsStore = create((set, get) => ({
       const res = await uploadsApi.uploadStopSignature(stopId, base64);
       return res.data;
     } catch (error) {
-      console.warn('[StopsStore] uploadStopSignature error:', error?.message);
+      if (__DEV__) console.warn('[StopsStore] uploadStopSignature error:', error?.message);
       throw error;
     }
   },

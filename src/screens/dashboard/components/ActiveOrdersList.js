@@ -4,22 +4,25 @@
  */
 
 import React from 'react';
-import {View, StyleSheet, Text, TouchableOpacity, Dimensions} from 'react-native';
+import {View, StyleSheet, Text, TouchableOpacity} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
+import useSettingsStore from '../../../store/settingsStore';
 import {colors, getStatusColor, getStatusBgColor} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
 
-const {width: SW} = Dimensions.get('window');
-
 const ActiveOrdersList = ({orders = [], onOrderPress, onViewAll}) => {
+  const {t} = useTranslation();
+  const currency = useSettingsStore(s => s.currency);
+
   return (
     <View style={$.root}>
       {/* Section header */}
       <View style={$.header}>
-        <Text style={$.sectionTitle}>Active Orders</Text>
+        <Text style={$.sectionTitle}>{t('dashboard.activeOrdersTitle')}</Text>
         {orders.length > 0 && (
           <TouchableOpacity onPress={onViewAll} activeOpacity={0.7}>
-            <Text style={$.viewAll}>View All</Text>
+            <Text style={$.viewAll}>{t('dashboard.viewAll')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -29,9 +32,9 @@ const ActiveOrdersList = ({orders = [], onOrderPress, onViewAll}) => {
           <View style={$.emptyIcon}>
             <Icon name="package-variant-closed" size={28} color={colors.textLight} />
           </View>
-          <Text style={$.emptyTitle}>No active deliveries</Text>
+          <Text style={$.emptyTitle}>{t('dashboard.noActiveDeliveries')}</Text>
           <Text style={$.emptySub}>
-            {`Go online to receive delivery tasks.\nNew orders will appear here.`}
+            {t('dashboard.noActiveDeliveriesDesc')}
           </Text>
         </View>
       ) : (
@@ -41,6 +44,7 @@ const ActiveOrdersList = ({orders = [], onOrderPress, onViewAll}) => {
               key={order?.id || order?.tracking_token || idx}
               order={order}
               onPress={() => onOrderPress?.(order)}
+              t={t}
             />
           ))}
         </View>
@@ -50,7 +54,7 @@ const ActiveOrdersList = ({orders = [], onOrderPress, onViewAll}) => {
 };
 
 /* ── Order Card ── */
-const OrderCard = ({order, onPress}) => {
+const OrderCard = ({order, onPress, t}) => {
   const st = order?.status || 'assigned';
   const stClr = getStatusColor(st);
   const stBg = getStatusBgColor(st);
@@ -67,13 +71,13 @@ const OrderCard = ({order, onPress}) => {
           <View style={[$.statusBadge, {backgroundColor: stBg}]}>
             <View style={[$.statusDot, {backgroundColor: stClr}]} />
             <Text style={[$.statusTxt, {color: stClr}]}>
-              {(st || '').replace(/_/g, ' ')}
+              {t('status.' + st, st)}
             </Text>
           </View>
           {isCOD && (
             <View style={$.codTag}>
               <Icon name="cash" size={11} color="#F9AD28" />
-              <Text style={$.codTxt}>AED {order.cod_amount}</Text>
+              <Text style={$.codTxt}>{currency} {order.cod_amount}</Text>
             </View>
           )}
         </View>
@@ -81,7 +85,7 @@ const OrderCard = ({order, onPress}) => {
         {/* Row 2: Order num + customer */}
         <Text style={$.orderNum}>#{order?.order_number || '---'}</Text>
         <Text style={$.customer} numberOfLines={1}>
-          {order?.recipient_name || 'Customer'}
+          {order?.recipient_name || t('dashboard.customer')}
         </Text>
 
         {/* Row 3: location + stops */}
@@ -96,7 +100,7 @@ const OrderCard = ({order, onPress}) => {
             <View style={$.stopsTag}>
               <Icon name="map-marker-path" size={11} color={colors.textMuted} />
               <Text style={$.stopsTxt}>
-                {remainStops > 0 ? `${remainStops} left` : `${stopCount} stops`}
+                {remainStops > 0 ? t('dashboard.left', {count: remainStops}) : t('dashboard.stops', {count: stopCount})}
               </Text>
             </View>
           )}
@@ -172,7 +176,7 @@ const $ = StyleSheet.create({
   codTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 7,
@@ -203,7 +207,7 @@ const $ = StyleSheet.create({
   locRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     flex: 1,
   },
   locTxt: {
@@ -215,7 +219,7 @@ const $ = StyleSheet.create({
   stopsTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -229,7 +233,7 @@ const $ = StyleSheet.create({
   arrowBtn: {
     position: 'absolute',
     top: 16,
-    right: 16,
+    end: 16,
     width: 32,
     height: 32,
     borderRadius: 16,

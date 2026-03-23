@@ -79,7 +79,7 @@ const useCodStore = create((set, get) => ({
       set({summary: data || null});
       return data;
     } catch (error) {
-      console.warn('[CodStore] fetchSummary error:', error?.message);
+      if (__DEV__) console.warn('[CodStore] fetchSummary error:', error?.message);
       return null;
     }
   },

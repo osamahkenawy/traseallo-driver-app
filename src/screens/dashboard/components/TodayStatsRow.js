@@ -4,15 +4,16 @@
 
 import React from 'react';
 import {View, StyleSheet, Text} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
 
 const STAT_ITEMS = [
-  {key: 'active', icon: 'package-variant', color: '#F9AD28', label: 'Active'},
-  {key: 'delivered', icon: 'check-decagram', color: '#15C7AE', label: 'Delivered'},
-  {key: 'pickups', icon: 'truck-delivery', color: '#4E7AB5', label: 'Pickups'},
-  {key: 'remaining', icon: 'map-marker-path', color: '#EB466D', label: 'Remaining'},
+  {key: 'active', icon: 'package-variant', color: '#F9AD28', labelKey: 'dashboard.activeStat'},
+  {key: 'delivered', icon: 'check-decagram', color: '#15C7AE', labelKey: 'dashboard.deliveredStat'},
+  {key: 'pickups', icon: 'truck-delivery', color: '#4E7AB5', labelKey: 'dashboard.pickupsStat'},
+  {key: 'remaining', icon: 'map-marker-path', color: '#EB466D', labelKey: 'dashboard.remainingStat'},
 ];
 
 const TodayStatsRow = ({
@@ -22,6 +23,7 @@ const TodayStatsRow = ({
   remaining = 0,
 }) => {
   const values = {active, delivered, pickups, remaining};
+  const {t} = useTranslation();
 
   return (
     <View style={$.root}>
@@ -33,7 +35,7 @@ const TodayStatsRow = ({
                 <Icon name={item.icon} size={16} color={item.color} />
               </View>
               <Text style={$.val}>{values[item.key]}</Text>
-              <Text style={$.label}>{item.label}</Text>
+              <Text style={$.label}>{t(item.labelKey)}</Text>
             </View>
             {idx < STAT_ITEMS.length - 1 && <View style={$.divider} />}
           </React.Fragment>

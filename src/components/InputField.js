@@ -17,7 +17,7 @@ const InputField = ({
   return (
     <View
       style={{
-        paddingLeft: 30,
+        paddingStart: 30,
         height: 50,
         width: "100%",
         borderWidth: 1,
@@ -49,7 +49,7 @@ const InputField = ({
           style={{
             position: "absolute",
             top: -12,
-            left: 20,
+            start: 20,
             paddingHorizontal: 10,
             backgroundColor: theme.COLORS.white,
           }}

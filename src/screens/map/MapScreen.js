@@ -49,14 +49,15 @@ import {routeNames} from '../../constants/routeNames';
 import useOrderStore from '../../store/orderStore';
 import useLocationStore from '../../store/locationStore';
 import useRouteStore from '../../store/routeStore';
-import {fetchRoadRouteChunked} from '../../utils/routing';
+import {fetchRoadRouteChunked, fetchOptimizedRoute} from '../../utils/routing';
 
-import {DriverMarker, StopMarker, MapTopBar, OrderSheet} from './components';
+import {DriverMarker, StopMarker, MapTopBar, OrderSheet, TripPreview} from './components';
 
 const {height: SH} = Dimensions.get('window');
 const SHEET_HEIGHT = 320;
 const LATITUDE_DELTA = 0.015;
 const LONGITUDE_DELTA = 0.015;
+const TAB_BAR_HEIGHT = 90; // floating tab bar + safe area
 
 // ─── Helpers ──────────────────────────────────────────
 const isValidCoord = (lat, lng) => {
@@ -125,6 +126,7 @@ const MapScreen = ({navigation}) => {
   const [initialLoad, setInitialLoad] = useState(true);
   const [roadCoords, setRoadCoords] = useState([]);
   const [routeInfo, setRouteInfo] = useState(null); // {distance, duration}
+  const [showTripPreview, setShowTripPreview] = useState(false);
 
   // ── Bottom sheet animation ──────────────────
   const sheetY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
@@ -187,6 +189,15 @@ const MapScreen = ({navigation}) => {
     }, [loadAll]),
   );
 
+  // ── Build an order lookup for enriching route stops ──
+  const orderById = useMemo(() => {
+    const map = {};
+    for (const o of orders) {
+      map[o.id] = o;
+    }
+    return map;
+  }, [orders]);
+
   // ── Route stops (from route API) ────────────
   const routeStops = useMemo(() => {
     const pickups = (route?.pickups || []).map((p) => ({...p, stop_type: 'pickup'}));
@@ -199,25 +210,47 @@ const MapScreen = ({navigation}) => {
   }, [route]);
 
   // Fallback: use order coordinates if route API has no stops
+  // Always re-number and enrich with latest order data
   const mapStops = useMemo(() => {
-    if (routeStops.length > 0) return routeStops;
-    // Fallback to active orders
-    return orders
-      .filter((o) => ['assigned', 'picked_up', 'in_transit'].includes(o.status))
-      .filter((o) => isValidCoord(toNum(o.recipient_lat), toNum(o.recipient_lng)))
-      .map((o, idx) => ({
-        ...o,
-        lat: o.recipient_lat,
-        lng: o.recipient_lng,
-        contact_name: o.recipient_name,
-        contact_phone: o.recipient_phone,
-        address: o.recipient_address,
-        area: o.recipient_area,
-        stop_status: o.status === 'assigned' ? 'pending' : o.status,
-        sequence_number: idx + 1,
-        stop_type: 'delivery',
-      }));
-  }, [routeStops, orders]);
+    let stops;
+    if (routeStops.length > 0) {
+      // Enrich route stops with real order status & extra fields
+      stops = routeStops.map((s) => {
+        const order = orderById[s.order_id];
+        if (!order) return s;
+        return {
+          ...s,
+          // Use real order status for coloring
+          stop_status: order.status,
+          // Merge useful fields from order if missing on route stop
+          payment_method: s.payment_method || order.payment_method,
+          cod_amount: s.cod_amount || order.cod_amount,
+          special_instructions: s.special_instructions || order.special_instructions,
+          total_packages: order.total_packages,
+          order_number: s.order_number || order.order_number,
+          tracking_token: s.tracking_token || order.tracking_token,
+        };
+      });
+    } else {
+      // Fallback to active orders
+      stops = orders
+        .filter((o) => ['assigned', 'picked_up', 'in_transit'].includes(o.status))
+        .filter((o) => isValidCoord(toNum(o.recipient_lat), toNum(o.recipient_lng)))
+        .map((o) => ({
+          ...o,
+          lat: o.recipient_lat,
+          lng: o.recipient_lng,
+          contact_name: o.recipient_name,
+          contact_phone: o.recipient_phone,
+          address: o.recipient_address,
+          area: o.recipient_area,
+          stop_status: o.status,
+          stop_type: 'delivery',
+        }));
+    }
+    // Always assign fresh sequential numbers
+    return stops.map((s, idx) => ({...s, sequence_number: idx + 1}));
+  }, [routeStops, orders, orderById]);
 
   // Keep selected stop synced
   useEffect(() => {
@@ -255,7 +288,7 @@ const MapScreen = ({navigation}) => {
     return coords.length >= 2 ? coords : [];
   }, [mapStops, currentPosition]);
 
-  // ── Fetch road-following route from OSRM ──
+  // ── Fetch optimized road-following route from OSRM ──
   const lastWpKey = useRef('');
   useEffect(() => {
     if (routeWaypoints.length < 2) {
@@ -272,7 +305,13 @@ const MapScreen = ({navigation}) => {
 
     let cancelled = false;
     (async () => {
-      const result = await fetchRoadRouteChunked(routeWaypoints);
+      // Try optimized route first (TSP), then fall back to ordered route
+      let result = routeWaypoints.length <= 25
+        ? await fetchOptimizedRoute(routeWaypoints)
+        : null;
+      if (!result) {
+        result = await fetchRoadRouteChunked(routeWaypoints);
+      }
       if (cancelled) return;
       if (result) {
         setRoadCoords(result.coordinates);
@@ -346,7 +385,7 @@ const MapScreen = ({navigation}) => {
     }
     if (coords.length === 0) return;
     mapRef.current.fitToCoordinates(coords, {
-      edgePadding: {top: 100, right: 60, bottom: 320, left: 60},
+      edgePadding: {top: 100, right: 60, bottom: TAB_BAR_HEIGHT + 120, left: 60},
       animated: true,
     });
   }, [mapStops, currentPosition]);
@@ -372,7 +411,7 @@ const MapScreen = ({navigation}) => {
             else if (next === 'offline') result = await goOffline();
             else result = await onBreak();
             if (result && !result.success) {
-              Alert.alert(t('common.error'), result.error || 'Failed');
+              Alert.alert(t('common.error'), result.error || t('common.failed'));
             }
           },
         },
@@ -380,36 +419,47 @@ const MapScreen = ({navigation}) => {
     );
   }, [driverStatus, goOnline, goOffline, onBreak, t]);
 
-  // ── Start Trip ──────────────────────────────
+  // ── Start Trip (opens preview modal) ─────
   const handleStartTrip = useCallback(() => {
-    if (!currentPosition) return;
-    const assigned = orders.filter((o) => o.status === 'assigned');
-    Alert.alert(
-      t('map.startTrip'),
-      t('map.startTripMsg', {count: assigned.length}),
-      [
-        {text: t('common.cancel'), style: 'cancel'},
-        {
-          text: t('common.confirm'),
-          onPress: async () => {
-            try {
-              await Promise.all(
-                assigned.map((o) =>
-                  startDelivery(o.id, {
-                    lat: currentPosition.latitude,
-                    lng: currentPosition.longitude,
-                  }),
-                ),
-              );
-              loadAll(true);
-            } catch (e) {
-              Alert.alert(t('common.error'), e?.message || 'Failed to start trip');
-            }
-          },
-        },
-      ],
-    );
-  }, [startDelivery, orders, currentPosition, loadAll, t]);
+    setShowTripPreview(true);
+  }, []);
+
+  const handleStartOneOrder = useCallback(
+    async (order) => {
+      if (!currentPosition) return;
+      try {
+        await startDelivery(order.id, {
+          lat: currentPosition.latitude,
+          lng: currentPosition.longitude,
+        });
+        loadAll(true);
+      } catch (e) {
+        Alert.alert(t('common.error'), e?.message || t('map.failedStartDelivery'));
+      }
+    },
+    [startDelivery, currentPosition, loadAll, t],
+  );
+
+  const handleStartAllOrders = useCallback(
+    async (orderedList) => {
+      if (!currentPosition) return;
+      try {
+        await Promise.all(
+          orderedList.map((o) =>
+            startDelivery(o.id, {
+              lat: currentPosition.latitude,
+              lng: currentPosition.longitude,
+            }),
+          ),
+        );
+        setShowTripPreview(false);
+        loadAll(true);
+      } catch (e) {
+        Alert.alert(t('common.error'), e?.message || t('map.failedStartTrip'));
+      }
+    },
+    [startDelivery, currentPosition, loadAll, t],
+  );
 
   // ── Navigate to stop (external maps) ────────
   const handleNavigate = useCallback(
@@ -417,7 +467,7 @@ const MapScreen = ({navigation}) => {
       const lat = toNum(stop.lat || stop.recipient_lat);
       const lng = toNum(stop.lng || stop.recipient_lng);
       if (!isValidCoord(lat, lng)) return;
-      const label = encodeURIComponent(stop.contact_name || stop.recipient_name || 'Delivery');
+      const label = encodeURIComponent(stop.contact_name || stop.recipient_name || t('map.deliveryPoint'));
       const url =
         Platform.OS === 'ios'
           ? `maps:?daddr=${lat},${lng}&q=${label}`
@@ -515,7 +565,7 @@ const MapScreen = ({navigation}) => {
         <View style={[$.loadOverlay, {top: ins.top + 52}]}>
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={$.loadText}>
-            {initialLoad ? 'Loading map...' : 'Refreshing...'}
+            {initialLoad ? t('map.loadingMap') : t('map.refreshing')}
           </Text>
         </View>
       )}
@@ -538,12 +588,57 @@ const MapScreen = ({navigation}) => {
           activeOpacity={0.8}>
           <Icon name="refresh" size={18} color={isRefreshing ? colors.textMuted : colors.primary} />
         </TouchableOpacity>
+
+        {/* Zoom controls */}
+        <View style={$.zoomDivider} />
+        <TouchableOpacity
+          style={$.fab}
+          onPress={() => {
+            mapRef.current?.getCamera?.().then((cam) => {
+              if (!cam) return;
+              if (Platform.OS === 'ios') {
+                mapRef.current.animateCamera(
+                  {...cam, altitude: (cam.altitude || 10000) / 2},
+                  {duration: 200},
+                );
+              } else {
+                mapRef.current.animateCamera(
+                  {...cam, zoom: (cam.zoom || 15) + 1},
+                  {duration: 200},
+                );
+              }
+            });
+          }}
+          activeOpacity={0.8}>
+          <Icon name="plus" size={20} color={colors.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={$.fab}
+          onPress={() => {
+            mapRef.current?.getCamera?.().then((cam) => {
+              if (!cam) return;
+              if (Platform.OS === 'ios') {
+                mapRef.current.animateCamera(
+                  {...cam, altitude: Math.min((cam.altitude || 10000) * 2, 500000)},
+                  {duration: 200},
+                );
+              } else {
+                mapRef.current.animateCamera(
+                  {...cam, zoom: Math.max((cam.zoom || 15) - 1, 3)},
+                  {duration: 200},
+                );
+              }
+            });
+          }}
+          activeOpacity={0.8}>
+          <Icon name="minus" size={20} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Start Trip FAB */}
       {assignedCount > 0 && !selectedStop && (
         <TouchableOpacity
-          style={[$.startTrip, {bottom: ins.bottom + 16}]}
+          style={[$.startTrip, {bottom: TAB_BAR_HEIGHT + 16}]}
           onPress={handleStartTrip}
           disabled={isUpdatingStatus}
           activeOpacity={0.8}>
@@ -556,23 +651,23 @@ const MapScreen = ({navigation}) => {
 
       {/* Route summary banner */}
       {!initialLoad && summary && !selectedStop && assignedCount === 0 && (
-        <View style={[$.summaryBanner, {bottom: ins.bottom + 16}]}>
+        <View style={[$.summaryBanner, {bottom: TAB_BAR_HEIGHT + 16}]}>
           <View style={$.summaryRow}>
             <View style={$.summaryItem}>
               <Text style={$.summaryNum}>{summary.remaining_stops || 0}</Text>
-              <Text style={$.summaryLabel}>Remaining</Text>
+              <Text style={$.summaryLabel}>{t('map.remaining')}</Text>
             </View>
             <View style={[$.summaryDiv]} />
             <View style={$.summaryItem}>
               <Text style={[$.summaryNum, {color: colors.success}]}>{summary.completed_today || 0}</Text>
-              <Text style={$.summaryLabel}>Completed</Text>
+              <Text style={$.summaryLabel}>{t('map.completed')}</Text>
             </View>
             <View style={[$.summaryDiv]} />
             <View style={$.summaryItem}>
               <Text style={[$.summaryNum, {color: colors.warning}]}>
                 {parseFloat(summary.pending_cod || 0).toFixed(0)}
               </Text>
-              <Text style={$.summaryLabel}>COD (AED)</Text>
+              <Text style={$.summaryLabel}>{t('map.codAed')}</Text>
             </View>
           </View>
         </View>
@@ -580,7 +675,7 @@ const MapScreen = ({navigation}) => {
 
       {/* Empty state */}
       {!initialLoad && mapStops.length === 0 && !selectedStop && (
-        <View style={[$.emptyBanner, {bottom: ins.bottom + 16}]}>
+        <View style={[$.emptyBanner, {bottom: TAB_BAR_HEIGHT + 16}]}>
           <Icon name="map-marker-off-outline" size={18} color={colors.textMuted} />
           <Text style={$.emptyText}>{t('map.noDeliveries')}</Text>
         </View>
@@ -597,6 +692,17 @@ const MapScreen = ({navigation}) => {
         onViewDetail={handleViewDetail}
         haversine={haversine}
         estimateETA={estimateETA}
+        t={t}
+      />
+
+      {/* Trip Preview Modal */}
+      <TripPreview
+        visible={showTripPreview}
+        orders={orders}
+        driverPosition={currentPosition}
+        onStartOne={handleStartOneOrder}
+        onStartAll={handleStartAllOrders}
+        onClose={() => setShowTripPreview(false)}
         t={t}
       />
     </View>
@@ -636,13 +742,13 @@ const $ = StyleSheet.create({
   // FABs
   fabCol: {
     position: 'absolute',
-    right: 14,
-    gap: 8,
+    end: 14,
+    gap: 14,
   },
   fab: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
@@ -651,6 +757,12 @@ const $ = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  zoomDivider: {
+    width: 24,
+    height: 1,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
   },
 
   // Start Trip

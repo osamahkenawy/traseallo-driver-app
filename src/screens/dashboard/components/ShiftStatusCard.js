@@ -8,6 +8,7 @@ import {View, StyleSheet, Text, TouchableOpacity, ActivityIndicator} from 'react
 import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
+import {useTranslation} from 'react-i18next';
 
 const STATUS_CONFIG = {
   offline: {
@@ -72,11 +73,18 @@ const ShiftStatusCard = ({
   onContinueRoute,
 }) => {
   const [isActing, setIsActing] = useState(false);
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.offline;
+  const {t} = useTranslation();
+  const STATUS_CONFIG_T = {
+    offline: {...STATUS_CONFIG.offline, title: t('dashboard.offlineTitle'), subtitle: t('dashboard.offlineMsg'), btnLabel: t('dashboard.goOnline')},
+    available: {...STATUS_CONFIG.available, title: t('dashboard.onlineTitle'), subtitle: t('dashboard.waitingOrders'), btnLabel: t('dashboard.takeBreak')},
+    busy: {...STATUS_CONFIG.busy, title: t('dashboard.onDelivery'), subtitle: t('dashboard.activeInProgress'), btnLabel: t('dashboard.continueRoute')},
+    on_break: {...STATUS_CONFIG.on_break, title: t('dashboard.onBreak'), subtitle: t('dashboard.assignmentsPaused'), btnLabel: t('dashboard.resumeWork')},
+  };
+  const cfg = STATUS_CONFIG_T[status] || STATUS_CONFIG_T.offline;
 
   const subtitle =
     status === 'busy'
-      ? `${activeCount} active order${activeCount !== 1 ? 's' : ''} in progress`
+      ? t('dashboard.activeOrderCount', {count: activeCount})
       : cfg.subtitle;
 
   const handlePress = async () => {
@@ -110,7 +118,7 @@ const ShiftStatusCard = ({
           </View>
           <View style={[$.pill, {backgroundColor: cfg.accentColor + '20'}]}>
             <View style={[$.pillDot, {backgroundColor: cfg.accentColor}]} />
-            <Text style={[$.pillTxt, {color: cfg.accentColor}]}>{cfg.pillLabel}</Text>
+            <Text style={[$.pillTxt, {color: cfg.accentColor}]}>{t('status.' + status, cfg.pillLabel).toUpperCase()}</Text>
           </View>
         </View>
 
@@ -123,17 +131,17 @@ const ShiftStatusCard = ({
           <View style={$.statsRow}>
             <View style={$.statItem}>
               <Text style={$.statVal}>{activeCount}</Text>
-              <Text style={$.statLbl}>Active</Text>
+              <Text style={$.statLbl}>{t('dashboard.statActive')}</Text>
             </View>
             <View style={$.statDivider} />
             <View style={$.statItem}>
               <Text style={$.statVal}>{deliveredCount}</Text>
-              <Text style={$.statLbl}>Delivered</Text>
+              <Text style={$.statLbl}>{t('dashboard.statDelivered')}</Text>
             </View>
             <View style={$.statDivider} />
             <View style={$.statItem}>
               <Text style={$.statVal}>{pickupCount}</Text>
-              <Text style={$.statLbl}>Pickups</Text>
+              <Text style={$.statLbl}>{t('dashboard.statPickups')}</Text>
             </View>
           </View>
         )}
@@ -184,7 +192,7 @@ const $ = StyleSheet.create({
   deco1: {
     position: 'absolute',
     top: -20,
-    right: -20,
+    end: -20,
     width: 100,
     height: 100,
     borderRadius: 50,
@@ -192,7 +200,7 @@ const $ = StyleSheet.create({
   deco2: {
     position: 'absolute',
     bottom: -30,
-    left: -15,
+    start: -15,
     width: 80,
     height: 80,
     borderRadius: 40,

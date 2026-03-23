@@ -17,6 +17,7 @@ import {useNavigation} from '@react-navigation/native';
 import useRouteStore from '../../store/routeStore';
 import useStopsStore from '../../store/stopsStore';
 import {routeNames} from '../../constants/routeNames';
+import {useTranslation} from 'react-i18next';
 
 const STATUS_COLORS = {
   pending: '#F39C12',
@@ -28,6 +29,7 @@ const STATUS_COLORS = {
 };
 
 const RouteProgressScreen = () => {
+  const {t} = useTranslation();
   const navigation = useNavigation();
   const {route, progress, isLoading, isRefreshing, fetchRoute, fetchProgress} =
     useRouteStore();
@@ -93,10 +95,10 @@ const RouteProgressScreen = () => {
           {/* Stop info */}
           <View style={styles.stopInfo}>
             <View style={styles.stopHeader}>
-              <Text style={styles.stopSequence}>Stop {item.sequence || index + 1}</Text>
+              <Text style={styles.stopSequence}>{t('routeProgress.title')} {item.sequence || index + 1}</Text>
               <View style={[styles.statusPill, {backgroundColor: color + '20'}]}>
                 <Text style={[styles.statusPillText, {color}]}>
-                  {(item.status || 'pending').replace(/_/g, ' ').toUpperCase()}
+                  {t('status.' + (item.status || 'pending'), (item.status || 'pending')).toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -106,7 +108,7 @@ const RouteProgressScreen = () => {
             <Text style={styles.address} numberOfLines={1}>
               {item.address || '—'}
             </Text>
-            {item.eta && <Text style={styles.eta}>ETA: {item.eta}</Text>}
+            {item.eta && <Text style={styles.eta}>{t('routeProgress.eta', {time: item.eta})}</Text>}
           </View>
         </TouchableOpacity>
       );
@@ -126,13 +128,13 @@ const RouteProgressScreen = () => {
     <View style={styles.container}>
       {/* Progress Header */}
       <View style={styles.progressCard}>
-        <Text style={styles.progressTitle}>Route Progress</Text>
+        <Text style={styles.progressTitle}>{t('routeProgress.title')}</Text>
         <View style={styles.progressBarBg}>
           <View style={[styles.progressBarFill, {width: `${percentage}%`}]} />
         </View>
         <View style={styles.progressStats}>
           <Text style={styles.progressText}>
-            {completedCount} of {totalCount} stops completed
+            {completedCount} {t('routeProgress.completed')} / {totalCount} {t('routeProgress.totalStops')}
           </Text>
           <Text style={styles.progressPercent}>{percentage}%</Text>
         </View>
@@ -144,7 +146,7 @@ const RouteProgressScreen = () => {
       {/* Stops List */}
       <FlatList
         data={stops}
-        keyExtractor={(item, idx) => String(item.id || idx)}
+        keyExtractor={(item, idx) => `stop-${item.id || item.stop_number || idx}`}
         renderItem={renderStop}
         contentContainerStyle={styles.list}
         refreshControl={
@@ -152,7 +154,7 @@ const RouteProgressScreen = () => {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No stops on current route</Text>
+            <Text style={styles.emptyText}>{t('routeProgress.noStops')}</Text>
           </View>
         }
       />
@@ -231,7 +233,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  stopInfo: {flex: 1, marginLeft: 10},
+  stopInfo: {flex: 1, marginStart: 10},
   stopHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

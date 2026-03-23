@@ -12,7 +12,6 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors} from '../../theme/colors';
@@ -22,16 +21,18 @@ import {ordersApi, uploadsApi, packagesApi} from '../../api';
 import {launchCamera} from 'react-native-image-picker';
 import useLocationStore from '../../store/locationStore';
 import {routeNames} from '../../constants/routeNames';
+import {useTranslation} from 'react-i18next';
 
 const REASONS = [
-  {key: 'no_answer', label: 'No answer from customer'},
-  {key: 'wrong_address', label: 'Wrong address'},
-  {key: 'customer_refused', label: 'Customer refused'},
-  {key: 'unreachable', label: 'Area unreachable'},
-  {key: 'other', label: 'Other'},
+  {key: 'no_answer', labelKey: 'failureReport.recipientNotAvailable'},
+  {key: 'wrong_address', labelKey: 'failureReport.wrongAddress'},
+  {key: 'customer_refused', labelKey: 'failureReport.recipientRefused'},
+  {key: 'unreachable', labelKey: 'failureReport.accessIssue'},
+  {key: 'other', labelKey: 'failureReport.other'},
 ];
 
 const FailureReportScreen = ({navigation, route}) => {
+  const {t} = useTranslation();
   const ins = useSafeAreaInsets();
   const {token, orderId} = route.params || {};
   const [sel, setSel] = useState(null);
@@ -43,13 +44,15 @@ const FailureReportScreen = ({navigation, route}) => {
 
   // Check if order has packages — if so redirect to per-package failure
   React.useEffect(() => {
+    let cancelled = false;
     const checkAndRedirect = async () => {
       if (!orderId) {
-        setCheckingPackages(false);
+        if (!cancelled) setCheckingPackages(false);
         return;
       }
       try {
         const res = await packagesApi.getOrderPackages(orderId);
+        if (cancelled) return;
         const data = res.data?.data || res.data;
         const pkgs = data?.packages || data || [];
         const undelivered = pkgs.find(
@@ -68,9 +71,10 @@ const FailureReportScreen = ({navigation, route}) => {
       } catch {
         // No packages — continue with order-level flow
       }
-      setCheckingPackages(false);
+      if (!cancelled) setCheckingPackages(false);
     };
     checkAndRedirect();
+    return () => { cancelled = true; };
   }, [orderId]);
 
   const handleTakePhoto = () => {
@@ -87,7 +91,7 @@ const FailureReportScreen = ({navigation, route}) => {
   const handleReport = async () => {
     if (!sel) return;
     if (!orderId) {
-      Alert.alert('Error', 'No order ID provided.');
+      Alert.alert(t('failureReport.error'), t('failureReport.noOrderId'));
       return;
     }
     setLoading(true);
@@ -101,19 +105,19 @@ const FailureReportScreen = ({navigation, route}) => {
 
       await ordersApi.failOrder(orderId, {
         reason: sel,
-        note: `Reason: ${REASONS.find(r => r.key === sel)?.label || sel}${notes.trim() ? `. ${notes.trim()}` : ''}`,
+        note: `Reason: ${t(REASONS.find(r => r.key === sel)?.labelKey || sel)}${notes.trim() ? `. ${notes.trim()}` : ''}`,
         proof_photo: proofUrl || undefined,
         lat: currentPosition?.latitude || undefined,
         lng: currentPosition?.longitude || undefined,
       });
 
-      Alert.alert('Report Submitted', 'Failure report has been submitted.', [
-        {text: 'OK', onPress: () => navigation.goBack()},
+      Alert.alert(t('failureReport.submitted'), t('failureReport.submittedDesc'), [
+        {text: t('common.done'), onPress: () => navigation.goBack()},
       ]);
     } catch (e) {
       Alert.alert(
-        'Report Failed',
-        e?.response?.data?.message || 'Something went wrong. Please try again.',
+        t('failureReport.error'),
+        e?.response?.data?.message || t('failureReport.failedToSubmit'),
       );
     } finally {
       setLoading(false);
@@ -126,7 +130,7 @@ const FailureReportScreen = ({navigation, route}) => {
         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={{fontFamily: fontFamily.medium, fontSize: 12, color: colors.textMuted, marginTop: 8}}>
-            Checking packages...
+            {t('common.checkingPackages')}
           </Text>
         </View>
       ) : (
@@ -135,7 +139,7 @@ const FailureReportScreen = ({navigation, route}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Report Failure</Text>
+        <Text style={s.hdrTitle}>{t('failureReport.title')}</Text>
         <View style={{width: 20}} />
       </View>
 
@@ -143,7 +147,7 @@ const FailureReportScreen = ({navigation, route}) => {
         <View style={s.failIc}>
           <Icon name="close-circle-outline" size={32} color={colors.danger} />
         </View>
-        <Text style={s.question}>Why couldn't you deliver?</Text>
+        <Text style={s.question}>{t('failureReport.selectReason')}</Text>
 
         {REASONS.map(r => {
           const on = sel === r.key;
@@ -155,17 +159,17 @@ const FailureReportScreen = ({navigation, route}) => {
               <View style={[s.radio, on && s.radioOn]}>
                 {on && <View style={s.radioInner} />}
               </View>
-              <Text style={[s.reasonLabel, on && s.reasonLabelOn]}>{r.label}</Text>
+              <Text style={[s.reasonLabel, on && s.reasonLabelOn]}>{t(r.labelKey)}</Text>
             </TouchableOpacity>
           );
         })}
 
-        <Text style={s.secTitle}>Additional Notes</Text>
+        <Text style={s.secTitle}>{t('failureReport.addNotes')}</Text>
         <TextInput
           style={s.input}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Describe what happened..."
+          placeholder={t('failureReport.addNotes')}
           placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={4}
@@ -176,12 +180,12 @@ const FailureReportScreen = ({navigation, route}) => {
           {photoUri ? (
             <>
               <Icon name="check-circle" size={16} color={colors.success} />
-              <Text style={[s.photoLabel, {color: colors.success}]}>Photo attached</Text>
+              <Text style={[s.photoLabel, {color: colors.success}]}>{t('failureReport.addPhoto')}</Text>
             </>
           ) : (
             <>
               <Icon name="camera-outline" size={18} color={colors.textMuted} />
-              <Text style={s.photoLabel}>Add a photo (optional)</Text>
+              <Text style={s.photoLabel}>{t('failureReport.addPhoto')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -196,7 +200,7 @@ const FailureReportScreen = ({navigation, route}) => {
           {loading ? (
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
-            <Text style={s.reportTxt}>Submit Report</Text>
+            <Text style={s.reportTxt}>{t('failureReport.submitReport')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -210,9 +214,9 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52,
+    paddingHorizontal: 20, height: 52, gap: 8,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 120, alignItems: 'center'},
 
   failIc: {

@@ -17,7 +17,6 @@ import {
   Image,
   StatusBar,
   Animated,
-  Dimensions,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from '../../utils/LucideIcon';
@@ -27,11 +26,11 @@ import {routeNames} from '../../constants/routeNames';
 import useAuthStore from '../../store/authStore';
 import {authApi} from '../../api';
 import images from '../../theme/assets';
-
-const {width: SCREEN_W} = Dimensions.get('window');
+import {useTranslation} from 'react-i18next';
 
 const LoginScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -44,7 +43,6 @@ const LoginScreen = ({navigation}) => {
   const isLoading = useAuthStore(state => state.isLoading);
   const loginError = useAuthStore(state => state.loginError);
   const clearLoginError = useAuthStore(state => state.clearLoginError);
-  const subscriptionBlocked = useAuthStore(state => state.subscriptionBlocked);
 
   // ─── Animations ────────────────────────────────
   const fadeIn = useRef(new Animated.Value(0)).current;
@@ -82,16 +80,18 @@ const LoginScreen = ({navigation}) => {
 
   // Fetch tenant branding on mount
   useEffect(() => {
+    let cancelled = false;
     const fetchBranding = async () => {
       try {
         const res = await authApi.getBranding('traseallo');
         const data = res.data?.data || res.data;
-        if (data) setBranding(data);
+        if (!cancelled && data) setBranding(data);
       } catch {
         // Silently fail — fall back to default logo
       }
     };
     fetchBranding();
+    return () => { cancelled = true; };
   }, []);
 
   const handleLogin = useCallback(async () => {
@@ -132,7 +132,7 @@ const LoginScreen = ({navigation}) => {
             {branding?.logo_url ? (
               <Image source={{uri: branding.logo_url}} style={s.logo} resizeMode="contain" />
             ) : (
-              <Image source={images.logoFullColored} style={s.logo} resizeMode="contain" />
+              <Image source={images.logoFullColor3x} style={s.logo} resizeMode="contain" />
             )}
           </Animated.View>
 
@@ -140,8 +140,8 @@ const LoginScreen = ({navigation}) => {
           <Animated.View style={[s.card, {opacity: formFade, transform: [{translateY: formSlide}]}]}>
 
             {/* Card title */}
-            <Text style={s.cardTitle}>Let's Get Moving</Text>
-            <Text style={s.cardSub}>Sign in with your email or username</Text>
+            <Text style={s.cardTitle}>{t('auth.letsGetMoving')}</Text>
+            <Text style={s.cardSub}>{t('auth.signInSubtitle')}</Text>
 
             {/* Error */}
             {loginError ? (
@@ -155,7 +155,7 @@ const LoginScreen = ({navigation}) => {
             ) : null}
 
             {/* ─── Email / Username ─────────────── */}
-            <Text style={s.label}>Email or Username</Text>
+            <Text style={s.label}>{t('auth.emailOrUsername')}</Text>
             <View style={[
               s.fieldRow,
               focusedField === 'id' && s.fieldRowActive,
@@ -171,8 +171,8 @@ const LoginScreen = ({navigation}) => {
               <TextInput
                 style={s.fieldInput}
                 value={identifier}
-                onChangeText={t => { clearLoginError(); setIdentifier(t); }}
-                placeholder="Enter email or username"
+                onChangeText={val => { clearLoginError(); setIdentifier(val); }}
+                placeholder={t('auth.emailPlaceholder')}
                 placeholderTextColor={colors.textLight}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -192,7 +192,7 @@ const LoginScreen = ({navigation}) => {
             </View>
 
             {/* ─── Password ─────────────────────── */}
-            <Text style={s.label}>Password</Text>
+            <Text style={s.label}>{t('auth.password')}</Text>
             <View style={[
               s.fieldRow,
               focusedField === 'pw' && s.fieldRowActive,
@@ -209,8 +209,8 @@ const LoginScreen = ({navigation}) => {
                 ref={passwordRef}
                 style={s.fieldInput}
                 value={password}
-                onChangeText={t => { clearLoginError(); setPassword(t); }}
-                placeholder="Enter your password"
+                onChangeText={val => { clearLoginError(); setPassword(val); }}
+                placeholder={t('auth.passwordPlaceholder')}
                 placeholderTextColor={colors.textLight}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
@@ -238,7 +238,7 @@ const LoginScreen = ({navigation}) => {
               onPress={() => navigation.navigate(routeNames.ForgotPassword)}
               style={s.forgotRow}
               activeOpacity={0.6}>
-              <Text style={s.forgotText}>Forgot password?</Text>
+              <Text style={s.forgotText}>{t('auth.forgotPassword')}</Text>
             </TouchableOpacity>
 
             {/* ─── Sign In Button ────────────────── */}
@@ -252,7 +252,7 @@ const LoginScreen = ({navigation}) => {
                   <ActivityIndicator color="#FFF" size="small" />
                 ) : (
                   <>
-                    <Text style={s.ctaText}>Sign In</Text>
+                    <Text style={s.ctaText}>{t('auth.signIn')}</Text>
                     <View style={{width: 8}} />
                     <View style={s.ctaArrow}>
                       <Icon name="arrow-right" size={18} color={colors.primary} />
@@ -267,10 +267,10 @@ const LoginScreen = ({navigation}) => {
           <View style={[s.footer, {paddingBottom: ins.bottom + 20}]}>
             <View style={s.footerSecure}>
               <Icon name="shield-check-outline" size={13} color={colors.success} />
-              <Text style={s.footerSecureTxt}>Secure Connection</Text>
+              <Text style={s.footerSecureTxt}>{t('auth.secureConnection')}</Text>
             </View>
             <Image source={images.traseallaLogo} style={s.footerLogo} resizeMode="contain" />
-            <Text style={s.footerCopy}>Powered by Trasealla Solutions</Text>
+            <Text style={s.footerCopy}>{t('common.poweredBy')}</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -366,7 +366,7 @@ const s = StyleSheet.create({
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.dangerBg,
-    borderLeftWidth: 3, borderLeftColor: colors.danger,
+    borderStartWidth: 3, borderStartColor: colors.danger,
     borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12,
     marginBottom: 24,
@@ -381,7 +381,7 @@ const s = StyleSheet.create({
     fontFamily: fontFamily.semiBold, fontSize: 13,
     color: colors.textPrimary,
     marginBottom: 10,
-    marginLeft: 2,
+    marginStart: 2,
   },
 
   // ─── Fields ────────────────────────────────────
@@ -409,7 +409,7 @@ const s = StyleSheet.create({
     width: 38, height: 38, borderRadius: 12,
     backgroundColor: 'rgba(36, 64, 102, 0.08)',
     justifyContent: 'center', alignItems: 'center',
-    marginLeft: 9, marginRight: 4,
+    marginStart: 9, marginEnd: 4,
   },
   fieldIconActive: {
     backgroundColor: colors.primary,
@@ -418,7 +418,7 @@ const s = StyleSheet.create({
     flex: 1, height: '100%',
     fontFamily: fontFamily.medium, fontSize: 15,
     color: colors.textPrimary,
-    paddingLeft: 10, paddingRight: 14,
+    paddingStart: 10, paddingEnd: 14,
   },
   fieldClear: {paddingHorizontal: 14, height: '100%', justifyContent: 'center'},
   eyeBtn: {paddingHorizontal: 16, height: '100%', justifyContent: 'center'},

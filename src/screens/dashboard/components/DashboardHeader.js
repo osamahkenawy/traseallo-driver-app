@@ -2,12 +2,13 @@
  * DashboardHeader — Teal hero with day/date, driver info card overlay
  */
 
-import React, {useMemo} from 'react';
+import React, {useMemo, useState, useEffect} from 'react';
 import {View, StyleSheet, Text, TouchableOpacity, Image} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Bell, User, Clock} from 'lucide-react-native';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
+import {useTranslation} from 'react-i18next';
 
 const HEADER_BG = '#244066';
 
@@ -17,17 +18,19 @@ const DashboardHeader = ({
   driverStatus = 'offline', loginTime,
 }) => {
   const ins = useSafeAreaInsets();
+  const {t, i18n} = useTranslation();
 
   const now = new Date();
   const hour = now.getHours();
   const greetingText =
-    hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+    hour < 12 ? t('dashboard.goodMorning') : hour < 17 ? t('dashboard.goodAfternoon') : t('dashboard.goodEvening');
+  const locale = i18n.language === 'ar' ? 'ar-AE' : 'en-US';
   const dateFmt =
-    now.toLocaleDateString('en-US', {weekday: 'long'}) +
+    now.toLocaleDateString(locale, {weekday: 'long'}) +
     ', ' +
-    now.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+    now.toLocaleDateString(locale, {month: 'short', day: 'numeric', year: 'numeric'});
 
-  const statusLabel = (driverStatus || 'offline').replace(/_/g, ' ').toUpperCase();
+  const statusLabel = t('status.' + (driverStatus || 'offline')).toUpperCase();
   const statusColor =
     driverStatus === 'available' || driverStatus === 'busy'
       ? '#15C7AE'
@@ -47,19 +50,26 @@ const DashboardHeader = ({
     return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
   }, [loginTime]);
 
-  const elapsed = useMemo(() => {
+  // Tick every second so the elapsed clock updates
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(v => v + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const elapsed = (() => {
     const h = now.getHours();
     const m = now.getMinutes();
     const s = now.getSeconds();
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }, []);
+  })();
 
   return (
     <View>
       {/* ═══ Teal header ═══ */}
       <View style={[$.headerBand, {paddingTop: ins.top + 12}]}>
         <View style={$.topRow}>
-          <View>
+          <View style={{flex: 1}}>
             <Text style={$.dayName}>{greetingText}</Text>
             <Text style={$.dateText}>{dateFmt}</Text>
           </View>
@@ -101,7 +111,7 @@ const DashboardHeader = ({
           <View style={$.timeBar}>
             <View style={$.timeLeft}>
               <Clock size={12} color={colors.textMuted} strokeWidth={2} />
-              <Text style={$.timeLabel}>Logged from {loginTimeFmt}</Text>
+              <Text style={$.timeLabel}>{t('dashboard.loggedFrom', {time: loginTimeFmt})}</Text>
             </View>
             <Text style={$.elapsed}>{elapsed}</Text>
           </View>
@@ -162,8 +172,8 @@ const $ = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     overflow: 'hidden',
-    borderLeftWidth: 4,
-    borderLeftColor: colors.secondary,
+    borderStartWidth: 4,
+    borderStartColor: colors.secondary,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 6},
     shadowOpacity: 0.12,
@@ -173,6 +183,7 @@ const $ = StyleSheet.create({
   driverRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     padding: 16,
     paddingBottom: 14,
   },
@@ -188,7 +199,7 @@ const $ = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  driverInfo: {flex: 1, marginLeft: 12},
+  driverInfo: {flex: 1},
   driverName: {
     fontFamily: fontFamily.semiBold,
     fontSize: 16,
@@ -207,7 +218,7 @@ const $ = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
-    gap: 5,
+    gap: 6,
   },
   statusDot: {width: 7, height: 7, borderRadius: 3.5},
   statusTxt: {fontFamily: fontFamily.bold, fontSize: 10, letterSpacing: 0.5},

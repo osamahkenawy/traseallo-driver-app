@@ -14,38 +14,38 @@ import {
   RefreshControl,
   TextInput,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../utils/LucideIcon';
 import {colors, getStatusColor, getStatusBgColor} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {routeNames} from '../../constants/routeNames';
+import useSettingsStore from '../../store/settingsStore';
 import useOrders from '../../hooks/useOrders';
 
-const {width: SW} = Dimensions.get('window');
 const HP = 20;
 
 const TABS = [
-  {key: 'all', label: 'All', icon: 'view-grid-outline'},
-  {key: 'assigned', label: 'Assigned', icon: 'clipboard-text-clock-outline'},
-  {key: 'picked_up', label: 'Picked Up', icon: 'package-variant'},
-  {key: 'in_transit', label: 'In Transit', icon: 'truck-fast-outline'},
-  {key: 'delivered', label: 'Delivered', icon: 'check-decagram'},
-  {key: 'failed', label: 'Failed', icon: 'close-circle-outline'},
+  {key: 'all', labelKey: 'orders.all', icon: 'view-grid-outline'},
+  {key: 'assigned', labelKey: 'orders.assigned', icon: 'clipboard-text-clock-outline'},
+  {key: 'picked_up', labelKey: 'orders.pickedUp', icon: 'package-variant'},
+  {key: 'in_transit', labelKey: 'orders.inTransit', icon: 'truck-fast-outline'},
+  {key: 'delivered', labelKey: 'orders.completed', icon: 'check-decagram'},
+  {key: 'failed', labelKey: 'orders.failed', icon: 'close-circle-outline'},
 ];
 
 /* ── Helpers ── */
-const timeAgo = (dateStr) => {
+const timeAgo = (dateStr, t) => {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('notifications.justNow');
+  if (mins < 60) return t('notifications.minutesAgo', {count: mins});
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t('notifications.hoursAgo', {count: hrs});
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return t('notifications.daysAgo', {count: days});
 };
 
 const getStatusIcon = (st) => {
@@ -63,10 +63,12 @@ const getStatusIcon = (st) => {
 /* ═══════════════════════════════════════════════════════════ */
 const MyOrdersScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
+  const currency = useSettingsStore(s => s.currency);
   const [tab, setTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // newest | status
-  const {orders, isLoading, isRefreshing, onRefresh, tabCounts} = useOrders();
+  const {orders, isLoading, isRefreshing, onRefresh} = useOrders();
 
   /* ── Client-side filter by tab ── */
   const tabFiltered = useMemo(() => {
@@ -120,10 +122,10 @@ const MyOrdersScreen = ({navigation}) => {
       {/* ── Header ── */}
       <View style={$.hdr}>
         <View>
-          <Text style={$.title}>My Orders</Text>
+          <Text style={$.title}>{t('orders.title')}</Text>
           <Text style={$.subtitle}>
-            {sortedOrders.length} order{sortedOrders.length !== 1 ? 's' : ''}
-            {tab !== 'all' ? ` · ${tab.replace(/_/g, ' ')}` : ''}
+            {t('orders.subtitle', {count: sortedOrders.length})}
+            {tab !== 'all' ? ` · ${t('status.' + tab, tab)}` : ''}
           </Text>
         </View>
         <TouchableOpacity
@@ -136,7 +138,7 @@ const MyOrdersScreen = ({navigation}) => {
             color={colors.primary}
           />
           <Text style={$.sortTxt}>
-            {sortBy === 'newest' ? 'Newest' : 'Priority'}
+            {sortBy === 'newest' ? t('orders.newest') : t('orders.priority')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -147,7 +149,7 @@ const MyOrdersScreen = ({navigation}) => {
           <Icon name="magnify" size={18} color={colors.textMuted} />
           <TextInput
             style={$.searchInput}
-            placeholder="Search orders, customers, locations..."
+            placeholder={t('orders.searchPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -185,9 +187,9 @@ const MyOrdersScreen = ({navigation}) => {
                   name={item.icon}
                   size={14}
                   color={on ? '#FFF' : colors.textMuted}
-                  style={{marginRight: 4}}
+                  style={{marginEnd: 4}}
                 />
-                <Text style={[$.chipTxt, on && $.chipTxtOn]}>{item.label}</Text>
+                <Text style={[$.chipTxt, on && $.chipTxtOn]}>{t(item.labelKey)}</Text>
                 {count > 0 && (
                   <View style={[$.chipCount, on && $.chipCountOn]}>
                     <Text style={[$.chipCountTxt, on && $.chipCountTxtOn]}>
@@ -205,20 +207,22 @@ const MyOrdersScreen = ({navigation}) => {
       {isLoading && !isRefreshing ? (
         <View style={$.loadingWrap}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={$.loadingTxt}>Loading orders...</Text>
+          <Text style={$.loadingTxt}>{t('orders.loadingOrders')}</Text>
         </View>
       ) : (
         <FlatList
           data={sortedOrders}
-          keyExtractor={(item, i) => item?.id?.toString() || item?.tracking_token || i.toString()}
+          keyExtractor={(item, i) => `order-${item?.id || ''}-${item?.tracking_token || i}`}
           renderItem={({item, index}) => (
             <OrderCard
               order={item}
               index={index}
               onPress={() => goDetail(item)}
+              t={t}
+              currency={currency}
             />
           )}
-          ListEmptyComponent={<Empty tab={tab} onRefresh={onRefresh} />}
+          ListEmptyComponent={<Empty tab={tab} onRefresh={onRefresh} t={t} />}
           contentContainerStyle={$.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -237,12 +241,12 @@ const MyOrdersScreen = ({navigation}) => {
 };
 
 /* ─── Order Card ─────────────────────────────────────────── */
-const OrderCard = ({order, onPress}) => {
+const OrderCard = ({order, onPress, t, currency}) => {
   const st = order?.status || 'assigned';
   const stClr = getStatusColor(st);
   const stBg = getStatusBgColor(st);
   const isCOD = order?.payment_method === 'cod' && parseFloat(order?.cod_amount) > 0;
-  const time = timeAgo(order?.created_at || order?.scheduled_date);
+  const time = timeAgo(order?.created_at || order?.scheduled_date, t);
 
   return (
     <TouchableOpacity style={$.card} onPress={onPress} activeOpacity={0.55}>
@@ -255,7 +259,7 @@ const OrderCard = ({order, onPress}) => {
           <View style={[$.statusBadge, {backgroundColor: stBg}]}>
             <Icon name={getStatusIcon(st)} size={11} color={stClr} />
             <Text style={[$.statusTxt, {color: stClr}]}>
-              {(st || '').replace(/_/g, ' ')}
+              {t('status.' + st, st)}
             </Text>
           </View>
           <View style={$.cardTopRight}>
@@ -263,7 +267,7 @@ const OrderCard = ({order, onPress}) => {
               <View style={$.codTag}>
                 <Icon name="cash" size={10} color="#F9AD28" />
                 <Text style={$.codTxt}>
-                  COD {order?.cod_amount ? `AED ${order.cod_amount}` : ''}
+                COD {order?.cod_amount ? `${currency} ${order.cod_amount}` : ''}
                 </Text>
               </View>
             )}
@@ -284,8 +288,8 @@ const OrderCard = ({order, onPress}) => {
             </Text>
             <Text style={$.custName} numberOfLines={1}>
               {st === 'assigned'
-                ? `Pickup: ${order?.sender_name || order?.client_name || 'Client'}`
-                : order?.recipient_name || 'Customer'}
+                ? `${t('orders.pickup')} ${order?.sender_name || order?.client_name || t('orders.client')}`
+                : order?.recipient_name || t('orders.customer')}
             </Text>
           </View>
           <View style={$.arrowCircle}>
@@ -307,7 +311,7 @@ const OrderCard = ({order, onPress}) => {
             <View style={$.infoChip}>
               <Icon name="package-variant" size={12} color={colors.textMuted} />
               <Text style={$.infoChipTxt}>
-                {order.packages.filter(p => p.status === 'delivered').length}/{order.packages.length} pkgs
+                {order.packages.filter(p => p.status === 'delivered').length}/{order.packages.length} {t('orders.pkgs')}
               </Text>
             </View>
           )}
@@ -315,7 +319,7 @@ const OrderCard = ({order, onPress}) => {
             <View style={$.infoChip}>
               <Icon name="map-marker-path" size={12} color={colors.textMuted} />
               <Text style={$.infoChipTxt}>
-                {order.stops.filter(s => s.status === 'completed').length}/{order.stops.length} stops
+                {order.stops.filter(s => s.status === 'completed').length}/{order.stops.length} {t('orders.stops')}
               </Text>
             </View>
           )}
@@ -330,7 +334,7 @@ const OrderCard = ({order, onPress}) => {
           {!!order?.items_count && (
             <View style={$.infoChip}>
               <Icon name="cube-outline" size={12} color={colors.textMuted} />
-              <Text style={$.infoChipTxt}>{order.items_count} items</Text>
+              <Text style={$.infoChipTxt}>{order.items_count} {t('orders.items')}</Text>
             </View>
           )}
         </View>
@@ -340,7 +344,7 @@ const OrderCard = ({order, onPress}) => {
 };
 
 /* ─── Empty State ────────────────────────────────────────── */
-const Empty = ({tab, onRefresh}) => (
+const Empty = ({tab, onRefresh, t}) => (
   <View style={$.empty}>
     <View style={$.emptyIcWrap}>
       <View style={$.emptyIcInner}>
@@ -348,16 +352,16 @@ const Empty = ({tab, onRefresh}) => (
       </View>
     </View>
     <Text style={$.emptyH}>
-      {tab === 'all' ? 'No orders yet' : `No ${tab.replace(/_/g, ' ')} orders`}
+      {tab === 'all' ? t('orders.noOrdersYet') : t('orders.noFilteredOrders', {tab: t('status.' + tab, tab)})}
     </Text>
     <Text style={$.emptyP}>
       {tab === 'all'
-        ? 'Your assigned orders will appear here.\nPull down to refresh.'
-        : `No orders with "${tab.replace(/_/g, ' ')}" status.\nTry a different filter or pull to refresh.`}
+        ? t('orders.emptyMessage')
+        : t('orders.emptyFilteredMessage', {tab: t('status.' + tab, tab)})}
     </Text>
     <TouchableOpacity style={$.emptyBtn} activeOpacity={0.6} onPress={onRefresh}>
       <Icon name="refresh" size={15} color={colors.primary} />
-      <Text style={$.emptyBtnTxt}>Refresh</Text>
+      <Text style={$.emptyBtnTxt}>{t('orders.refresh')}</Text>
     </TouchableOpacity>
   </View>
 );
@@ -383,6 +387,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 22,
     color: colors.textPrimary,
+    textAlign: 'auto',
   },
   subtitle: {
     fontFamily: fontFamily.medium,
@@ -436,6 +441,7 @@ const $ = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 22,
@@ -458,7 +464,7 @@ const $ = StyleSheet.create({
   },
   chipTxtOn: {color: '#FFF'},
   chipCount: {
-    marginLeft: 5,
+    marginStart: 5,
     backgroundColor: '#E8ECF0',
     borderRadius: 10,
     minWidth: 20,
@@ -489,7 +495,7 @@ const $ = StyleSheet.create({
   },
 
   /* List */
-  list: {paddingHorizontal: HP, paddingTop: 4, paddingBottom: 24, flexGrow: 1},
+  list: {paddingHorizontal: HP, paddingTop: 4, paddingBottom: 110, flexGrow: 1},
 
   /* Order Card */
   card: {
@@ -534,7 +540,7 @@ const $ = StyleSheet.create({
   codTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -556,6 +562,7 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
+    gap: 12,
   },
   cardIcon: {
     width: 42,
@@ -566,7 +573,7 @@ const $ = StyleSheet.create({
   },
   cardMidText: {
     flex: 1,
-    marginLeft: 12,
+    marginStart: 12,
   },
   orderNum: {
     fontFamily: fontFamily.bold,

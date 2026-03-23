@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import {I18nManager} from 'react-native';
 import {
   ArrowLeft,
   ArrowRight,
@@ -108,6 +109,27 @@ import {
   Circle,
   PackageOpen,
   Trash2,
+  Play,
+  Minus,
+  RotateCcw,
+  Sparkles,
+  GripVertical,
+  ArrowUp,
+  ArrowDown,
+  MapPinned,
+  Mail,
+  Moon,
+  CircleUser,
+  Car,
+  IdCard,
+  Palette,
+  Weight,
+  StickyNote,
+  NotepadText,
+  History,
+  MapPinCheck,
+  LogOut,
+  Text,
 } from 'lucide-react-native';
 
 const ICON_MAP = {
@@ -364,6 +386,36 @@ const ICON_MAP = {
   // Misc
   'trash-can-outline': Trash2,
 
+  // Play / media
+  'play': Play,
+  'play-outline': Play,
+
+  // Minus
+  'minus': Minus,
+
+  // Rotate
+  'rotate-ccw': RotateCcw,
+  'autorenew': RotateCcw,
+
+  // Sparkle
+  'sparkles': Sparkles,
+  'auto-fix': Sparkles,
+
+  // Grip
+  'grip-vertical': GripVertical,
+  'drag-vertical': GripVertical,
+  'reorder-horizontal': GripVertical,
+
+  // Arrows
+  'arrow-up': ArrowUp,
+  'arrow-down': ArrowDown,
+
+  // Map pinned
+  'map-pinned': MapPinned,
+
+  // Route
+  'route': Route,
+
   // Profile / edit
   'steering': Navigation,
   'pencil-outline': PenTool,
@@ -373,11 +425,64 @@ const ICON_MAP = {
   // Earnings
   'cash-multiple': Banknote,
   'receipt': FileText,
+
+  // Email
+  'email-outline': Mail,
+
+  // Sleep / power
+  'power-sleep': Moon,
+
+  // User circle
+  'account-circle-outline': CircleUser,
+
+  // Vehicle
+  'truck-outline': Truck,
+  'truck-check-outline': Truck,
+  'car-outline': Car,
+  'car-info': Car,
+
+  // ID card
+  'card-text-outline': IdCard,
+
+  // Palette
+  'palette-outline': Palette,
+
+  // Weight
+  'weight-kilogram': Weight,
+
+  // Notes / text
+  'text-box-outline': Text,
+  'note-text-outline': StickyNote,
+
+  // Timeline
+  'timeline-clock-outline': History,
+
+  // Map pin check
+  'map-marker-check': MapPinCheck,
+
+  // Logout
+  'logout': LogOut,
 };
 
-const LucideIcon = ({name, size = 24, color = '#000', strokeWidth, ...rest}) => {
+/** Icons that should mirror horizontally in RTL mode */
+const RTL_FLIP = new Set([
+  'arrow-left',
+  'arrow-right',
+  'chevron-right',
+  'chevron-left',
+  'navigation-variant',
+  'navigation-variant-outline',
+  'navigation-outline',
+  'account-arrow-right-outline',
+]);
+
+const LucideIcon = ({name, size = 24, color = '#000', strokeWidth, style, ...rest}) => {
   const IconComponent = ICON_MAP[name] || HelpCircle;
-  return <IconComponent size={size} color={color} strokeWidth={strokeWidth || 2} {...rest} />;
+  const flip = I18nManager.isRTL && RTL_FLIP.has(name);
+  const mergedStyle = flip
+    ? [{transform: [{scaleX: -1}]}, style].filter(Boolean)
+    : style;
+  return <IconComponent size={size} color={color} strokeWidth={strokeWidth || 2} style={mergedStyle} {...rest} />;
 };
 
 export default LucideIcon;

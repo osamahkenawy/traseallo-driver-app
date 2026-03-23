@@ -11,8 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Linking,
-  Alert,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from '../../utils/LucideIcon';
@@ -23,6 +21,7 @@ import useAuth from '../../hooks/useAuth';
 import {authApi, uploadsApi} from '../../api';
 import images from '../../theme/assets';
 import {version as appVersion} from '../../../package.json';
+import {useTranslation} from 'react-i18next';
 
 const MenuItem = ({icon, iconColor, label, sub, onPress, danger}) => {
   const c = danger ? colors.danger : iconColor || colors.primary;
@@ -42,6 +41,7 @@ const MenuItem = ({icon, iconColor, label, sub, onPress, danger}) => {
 
 const ProfileScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
   const {user, displayName, logout} = useAuth();
   const [driverProfile, setDriverProfile] = useState(null);
 
@@ -59,7 +59,7 @@ const ProfileScreen = ({navigation}) => {
     : images.avatarPlaceholder;
 
   const handleSupport = () => {
-    Linking.openURL('mailto:support@trasealla.com?subject=Driver App Support');
+    navigation.navigate(routeNames.Support);
   };
 
   return (
@@ -67,7 +67,7 @@ const ProfileScreen = ({navigation}) => {
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={s.hdr}>
-          <Text style={s.title}>Profile</Text>
+          <Text style={s.title}>{t('profile.title')}</Text>
         </View>
 
         {/* Profile card */}
@@ -77,11 +77,11 @@ const ProfileScreen = ({navigation}) => {
               <Image source={avatarSource} style={s.avatar} resizeMode="cover" />
               <View style={s.onlineDot} />
             </View>
-            <View style={{flex: 1, marginLeft: 14}}>
+            <View style={{flex: 1}}>
               <Text style={s.name}>{profile?.full_name || displayName}</Text>
               <View style={s.rolePill}>
                 <Icon name="steering" size={11} color={colors.primary} />
-                <Text style={s.roleText}>Driver</Text>
+                <Text style={s.roleText}>{t('profile.role')}</Text>
               </View>
               {(profile?.email || user?.email) ? <Text style={s.email}>{profile?.email || user?.email}</Text> : null}
             </View>
@@ -98,65 +98,65 @@ const ProfileScreen = ({navigation}) => {
             <View style={s.statsRow}>
               <View style={s.statItem}>
                 <Text style={s.statVal}>{driverProfile.delivered_orders || 0}</Text>
-                <Text style={s.statLabel}>Delivered</Text>
+                <Text style={s.statLabel}>{t('profile.delivered')}</Text>
               </View>
               <View style={s.statDiv} />
               <View style={s.statItem}>
                 <Text style={s.statVal}>{driverProfile.rating || '—'}</Text>
-                <Text style={s.statLabel}>Rating</Text>
+                <Text style={s.statLabel}>{t('profile.rating')}</Text>
               </View>
               <View style={s.statDiv} />
               <View style={s.statItem}>
                 <Text style={s.statVal}>{driverProfile.vehicle_type || '—'}</Text>
-                <Text style={s.statLabel}>Vehicle</Text>
+                <Text style={s.statLabel}>{t('profile.vehicle')}</Text>
               </View>
             </View>
           )}
         </View>
 
         {/* Account section */}
-        <Text style={s.secLabel}>ACCOUNT</Text>
+        <Text style={s.secLabel}>{t('settings.account')}</Text>
         <View style={s.menuCard}>
           <MenuItem
             icon="wallet-outline"
             iconColor={colors.orange}
-            label="Earnings"
-            sub="View earnings & COD"
+            label={t('profile.earnings')}
+            sub={t('profile.viewEarnings')}
             onPress={() => navigation.navigate(routeNames.Earnings)}
           />
           <View style={s.div} />
           <MenuItem
             icon="star-outline"
             iconColor={colors.warning}
-            label="Ratings"
-            sub="Customer reviews"
+            label={t('profile.ratings')}
+            sub={t('profile.customerReviews')}
             onPress={() => navigation.navigate(routeNames.Ratings)}
           />
         </View>
 
         {/* Preferences section */}
-        <Text style={s.secLabel}>PREFERENCES</Text>
+        <Text style={s.secLabel}>{t('settings.preferences')}</Text>
         <View style={s.menuCard}>
           <MenuItem
             icon="cog-outline"
             iconColor={colors.textSecondary}
-            label="Settings"
-            sub="Language, notifications"
+            label={t('settings.title')}
+            sub={t('profile.languageNotifications')}
             onPress={() => navigation.navigate(routeNames.Settings)}
           />
           <View style={s.div} />
           <MenuItem
             icon="headset"
             iconColor={colors.info}
-            label="Support"
-            sub="Help & feedback"
+            label={t('profile.support')}
+            sub={t('profile.helpFeedback')}
             onPress={handleSupport}
           />
         </View>
 
         {/* Logout */}
         <View style={[s.menuCard, {marginTop: 14}]}>
-          <MenuItem icon="logout" label="Logout" onPress={logout} danger />
+          <MenuItem icon="logout" label={t('profile.logout')} onPress={logout} danger />
         </View>
 
         <Text style={s.version}>Traseallo v{appVersion || '1.0.0'}</Text>
@@ -169,7 +169,7 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   scroll: {paddingHorizontal: 20, paddingBottom: 40},
   hdr: {paddingVertical: 14},
-  title: {fontFamily: fontFamily.bold, fontSize: 18, color: colors.textPrimary},
+  title: {fontFamily: fontFamily.bold, fontSize: 18, color: colors.textPrimary, textAlign: 'auto'},
 
   /* Profile card */
   profileCard: {
@@ -180,7 +180,7 @@ const s = StyleSheet.create({
     borderColor: '#EEF1F5',
     marginBottom: 22,
   },
-  avatarRow: {flexDirection: 'row', alignItems: 'center'},
+  avatarRow: {flexDirection: 'row', alignItems: 'center', gap: 14},
   avatarWrap: {position: 'relative'},
   avatar: {width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: colors.primary + '20'},
   onlineDot: {
@@ -210,7 +210,7 @@ const s = StyleSheet.create({
   rolePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 6,
     alignSelf: 'flex-start',
     backgroundColor: colors.primary + '0D',
     paddingHorizontal: 8,
@@ -235,8 +235,9 @@ const s = StyleSheet.create({
     fontSize: 10,
     color: colors.textLight,
     letterSpacing: 1.2,
+    textAlign: 'auto',
     marginBottom: 8,
-    marginLeft: 2,
+    marginStart: 2,
   },
 
   /* Menu card */
@@ -253,6 +254,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 13,
+    gap: 12,
   },
   miIc: {
     width: 32,
@@ -260,11 +262,10 @@ const s = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   miLabel: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary},
   miSub: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 1},
-  div: {height: 1, backgroundColor: '#EEF1F5', marginLeft: 58},
+  div: {height: 1, backgroundColor: '#EEF1F5', marginStart: 58},
 
   version: {
     fontFamily: fontFamily.regular,

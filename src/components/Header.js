@@ -2,6 +2,7 @@ import {View, Text, TouchableOpacity, TextInput} from "react-native";
 import React, {useState} from "react";
 import {useNavigation} from "@react-navigation/native";
 import {useSelector, useDispatch} from "react-redux";
+import {useTranslation} from 'react-i18next';
 import {setScreen} from "../store/tabSlice";
 import {cartIsEmpty} from "../utils/functions";
 
@@ -21,6 +22,7 @@ const Header = ({
 }) => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const {t} = useTranslation();
   const list = useSelector((state) => state.cart.list);
   const quantity = list.length;
   const total = useSelector((state) => state.cart.total).toFixed(2);
@@ -43,7 +45,7 @@ const Header = ({
         <View
           style={{
             position: "absolute",
-            left: 0,
+            start: 0,
             alignItems: "center",
           }}
         >
@@ -78,12 +80,12 @@ const Header = ({
             width: theme.SIZES.width - 200,
           }}
         >
-          <View style={{marginRight: 7}}>
+          <View style={{marginEnd: 7}}>
             <svg.HeaderSearchSvg />
           </View>
 
           <TextInput
-            placeholder="Search"
+            placeholder={t('common.search')}
             style={{height: "100%", width: "100%"}}
           />
         </View>
@@ -97,9 +99,9 @@ const Header = ({
         <View
           style={{
             position: "absolute",
-            left: 0,
+            start: 0,
             alignItems: "center",
-            paddingLeft: 20,
+            paddingStart: 20,
           }}
         >
           <TouchableOpacity onPress={() => setShowModal(true)}>
@@ -111,12 +113,12 @@ const Header = ({
         <View
           style={{
             position: "absolute",
-            right: 0,
-            paddingRight: 20,
+            end: 0,
+            paddingEnd: 20,
           }}
         >
           <TouchableOpacity
-            style={{paddingLeft: 20, flexDirection: "row"}}
+            style={{paddingStart: 20, flexDirection: "row"}}
             onPress={() => {
               list.length > 0
                 ? dispatch(setScreen("Order")) &&
@@ -128,7 +130,7 @@ const Header = ({
             <View
               style={{
                 position: "absolute",
-                right: 15,
+                end: 15,
                 bottom: -3,
                 backgroundColor: theme.COLORS.accent,
                 borderRadius: 30,

@@ -15,11 +15,15 @@ import {
   Alert,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {useTranslation} from 'react-i18next';
 import useCodStore from '../../store/codStore';
+import useSettingsStore from '../../store/settingsStore';
 import {routeNames} from '../../constants/routeNames';
 
 const CODPendingScreen = () => {
   const navigation = useNavigation();
+  const {t} = useTranslation();
+  const currency = useSettingsStore(s => s.currency);
   const {
     pendingOrders: orders,
     summary,
@@ -45,21 +49,21 @@ const CODPendingScreen = () => {
   const handleCollect = useCallback(
     (orderId, orderNumber, amount) => {
       Alert.alert(
-        'Collect COD',
-        `Confirm collection of AED ${amount} for order #${orderNumber}?`,
+        t('codPending.collectCod'),
+        t('codPending.confirmCollect', {amount, orderNumber}),
         [
-          {text: 'Cancel', style: 'cancel'},
+          {text: t('common.cancel'), style: 'cancel'},
           {
-            text: 'Confirm',
+            text: t('common.confirm'),
             onPress: async () => {
               setCollectingId(orderId);
               try {
                 await collectCod(orderId, {amount_collected: amount});
-                Alert.alert('Success', `COD AED ${amount} collected.`);
+                Alert.alert(t('codPending.success'), t('codPending.collected', {amount}));
               } catch (error) {
                 Alert.alert(
-                  'Error',
-                  error?.response?.data?.message || 'Failed to collect COD.',
+                  t('common.error'),
+                  error?.response?.data?.message || t('codPending.collectFailed'),
                 );
               } finally {
                 setCollectingId(null);
@@ -100,7 +104,7 @@ const CODPendingScreen = () => {
           </TouchableOpacity>
 
           <View style={styles.cardRight}>
-            <Text style={styles.amount}>AED {item.cod_amount || '0'}</Text>
+            <Text style={styles.amount}>{currency} {item.cod_amount || '0'}</Text>
             <TouchableOpacity
               style={[styles.collectBtn, isThisCollecting && {opacity: 0.5}]}
               disabled={isThisCollecting}
@@ -110,7 +114,7 @@ const CODPendingScreen = () => {
               {isThisCollecting ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.collectBtnText}>Collect</Text>
+                <Text style={styles.collectBtnText}>{t('codPending.collect')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -134,18 +138,18 @@ const CODPendingScreen = () => {
       <View style={styles.summaryCard}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Pending COD</Text>
-            <Text style={styles.summaryValue}>AED {totalPending.toFixed(2)}</Text>
+            <Text style={styles.summaryLabel}>{t('codPending.pendingCod')}</Text>
+            <Text style={styles.summaryValue}>{currency} {totalPending.toFixed(2)}</Text>
           </View>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Orders</Text>
+            <Text style={styles.summaryLabel}>{t('codPending.orders')}</Text>
             <Text style={styles.summaryValue}>{orders.length}</Text>
           </View>
           {summary?.total_collected != null && (
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Collected Today</Text>
+              <Text style={styles.summaryLabel}>{t('codPending.collectedToday')}</Text>
               <Text style={[styles.summaryValue, {color: '#27AE60'}]}>
-                AED {summary.total_collected}
+                {currency} {summary.total_collected}
               </Text>
             </View>
           )}
@@ -154,7 +158,7 @@ const CODPendingScreen = () => {
 
       <FlatList
         data={orders}
-        keyExtractor={(item, idx) => String(item.order_id || item.id || idx)}
+        keyExtractor={(item, idx) => `cod-${item.order_id || item.id || idx}`}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         refreshControl={
@@ -162,7 +166,7 @@ const CODPendingScreen = () => {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No pending COD orders</Text>
+            <Text style={styles.emptyText}>{t('codPending.noPending')}</Text>
           </View>
         }
       />
@@ -202,7 +206,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  cardBody: {flex: 1, marginRight: 12},
+  cardBody: {flex: 1, marginEnd: 12},
   orderNumber: {fontSize: 15, fontWeight: '700', color: '#1A1A2E', marginBottom: 4},
   recipient: {fontSize: 13, color: '#333', marginBottom: 2},
   address: {fontSize: 12, color: '#999'},

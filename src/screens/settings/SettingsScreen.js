@@ -38,7 +38,7 @@ const SettingRow = ({iconName, iconColor, label, value, onPress, showChevron = t
 
 const SettingsScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
-  const {i18n} = useTranslation();
+  const {t, i18n} = useTranslation();
   const [langModal, setLangModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
@@ -49,10 +49,10 @@ const SettingsScreen = ({navigation}) => {
     if (lang.code === i18n.language) return;
     await changeLanguage(lang.code);
     Alert.alert(
-      'Language Changed',
+      t('settings.languageChanged'),
       lang.code === 'ar'
-        ? 'Please restart the app to apply RTL layout.'
-        : 'Language updated successfully.',
+        ? t('settings.restartRTL')
+        : t('settings.languageUpdated'),
     );
   }, [i18n.language]);
 
@@ -60,28 +60,28 @@ const SettingsScreen = ({navigation}) => {
     setNotificationsEnabled(val);
     if (!val) {
       Alert.alert(
-        'Disable Notifications',
-        'To fully disable notifications, open system settings.',
+        t('settings.disableNotifications'),
+        t('settings.openSystemSettings'),
         [
-          {text: 'Open Settings', onPress: () => {
+          {text: t('settings.openSettings'), onPress: () => {
             if (Platform.OS === 'ios') {
               Linking.openURL('app-settings:');
             } else {
               Linking.openSettings();
             }
           }},
-          {text: 'Cancel', style: 'cancel', onPress: () => setNotificationsEnabled(true)},
+          {text: t('common.cancel'), style: 'cancel', onPress: () => setNotificationsEnabled(true)},
         ],
       );
     }
   }, []);
 
   const handleOpenTOS = useCallback(() => {
-    navigation.navigate(routeNames.WebView, {url: TOS_URL, title: 'Terms of Service'});
+    navigation.navigate(routeNames.WebView, {url: TOS_URL, title: t('settings.termsOfService')});
   }, [navigation]);
 
   const handleOpenPrivacy = useCallback(() => {
-    navigation.navigate(routeNames.WebView, {url: PRIVACY_URL, title: 'Privacy Policy'});
+    navigation.navigate(routeNames.WebView, {url: PRIVACY_URL, title: t('settings.privacyPolicy')});
   }, [navigation]);
 
   return (
@@ -91,33 +91,33 @@ const SettingsScreen = ({navigation}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Settings</Text>
+        <Text style={s.hdrTitle}>{t('settings.title')}</Text>
         <View style={{width: 20}} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* ─── Account ─────────────────────── */}
-        <Text style={s.secLabel}>ACCOUNT</Text>
+        <Text style={s.secLabel}>{t('settings.account')}</Text>
         <View style={s.card}>
           <SettingRow
             iconName="lock-outline"
             iconColor={colors.primary}
-            label="Change Password"
+            label={t('changePassword.title')}
             onPress={() => navigation.navigate(routeNames.ChangePassword)}
           />
         </View>
 
         {/* ─── Preferences ─────────────────── */}
-        <Text style={s.secLabel}>PREFERENCES</Text>
+        <Text style={s.secLabel}>{t('settings.preferences')}</Text>
         <View style={s.card}>
-          <SettingRow iconName="translate" iconColor={colors.info} label="Language" value={currentLang.label} onPress={() => setLangModal(true)} />
+          <SettingRow iconName="translate" iconColor={colors.info} label={t('settings.language')} value={currentLang.label} onPress={() => setLangModal(true)} />
           <View style={s.divider} />
           <TouchableOpacity style={s.row} onPress={() => handleNotificationsToggle(!notificationsEnabled)} activeOpacity={0.6}>
             <View style={s.rowLeft}>
               <View style={[s.rowIcon, {backgroundColor: (colors.warning) + '12'}]}>
                 <Icon name="bell-outline" size={16} color={colors.warning} />
               </View>
-              <Text style={s.rowLabel}>Notifications</Text>
+              <Text style={s.rowLabel}>{t('settings.notifications')}</Text>
             </View>
             <Switch
               value={notificationsEnabled}
@@ -130,13 +130,13 @@ const SettingsScreen = ({navigation}) => {
         </View>
 
         {/* ─── About ───────────────────────── */}
-        <Text style={s.secLabel}>ABOUT</Text>
+        <Text style={s.secLabel}>{t('settings.about')}</Text>
         <View style={s.card}>
-          <SettingRow iconName="information-outline" iconColor={colors.textMuted} label="Version" value={appVersion || '1.0.0'} showChevron={false} onPress={() => {}} />
+          <SettingRow iconName="information-outline" iconColor={colors.textMuted} label={t('settings.version')} value={appVersion || '1.0.0'} showChevron={false} onPress={() => {}} />
           <View style={s.divider} />
-          <SettingRow iconName="file-document-outline" iconColor={colors.textSecondary} label="Terms of Service" onPress={handleOpenTOS} />
+          <SettingRow iconName="file-document-outline" iconColor={colors.textSecondary} label={t('settings.termsOfService')} onPress={handleOpenTOS} />
           <View style={s.divider} />
-          <SettingRow iconName="shield-check-outline" iconColor={colors.success} label="Privacy Policy" onPress={handleOpenPrivacy} />
+          <SettingRow iconName="shield-check-outline" iconColor={colors.success} label={t('settings.privacyPolicy')} onPress={handleOpenPrivacy} />
         </View>
       </ScrollView>
 
@@ -145,7 +145,7 @@ const SettingsScreen = ({navigation}) => {
         <Pressable style={s.overlay} onPress={() => setLangModal(false)}>
           <Pressable style={[s.sheet, {paddingBottom: ins.bottom + 16}]} onPress={e => e.stopPropagation()}>
             <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>Select Language</Text>
+            <Text style={s.sheetTitle}>{t('settings.selectLanguage')}</Text>
 
             {LANGUAGES.map(lang => {
               const active = lang.code === i18n.language;
@@ -174,14 +174,14 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52,
+    paddingHorizontal: 20, height: 52, gap: 8,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 40},
 
   secLabel: {
     fontFamily: fontFamily.semiBold, fontSize: 11, color: colors.textMuted,
-    letterSpacing: 0.8, marginTop: 20, marginBottom: 8, marginLeft: 4,
+    letterSpacing: 0.8, marginTop: 20, marginBottom: 8, marginStart: 4,
   },
   card: {
     backgroundColor: '#FFF', borderRadius: 14,
@@ -200,7 +200,7 @@ const s = StyleSheet.create({
   rowLabel: {fontFamily: fontFamily.medium, fontSize: 14, color: colors.textPrimary},
   rowRight: {flexDirection: 'row', alignItems: 'center', gap: 6},
   rowValue: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted},
-  divider: {height: 1, backgroundColor: '#EEF1F5', marginLeft: 58},
+  divider: {height: 1, backgroundColor: '#EEF1F5', marginStart: 58},
 
   /* Language Modal */
   overlay: {

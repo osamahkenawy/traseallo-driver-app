@@ -17,10 +17,12 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import useSupportStore from '../../store/supportStore';
 import {routeNames} from '../../constants/routeNames';
+import {useTranslation} from 'react-i18next';
 
 const HelpScreen = () => {
   const navigation = useNavigation();
   const {help, isLoading, fetchHelp} = useSupportStore();
+  const {t} = useTranslation();
   const [expandedIdx, setExpandedIdx] = useState(null);
 
   useEffect(() => {
@@ -49,12 +51,12 @@ const HelpScreen = () => {
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}>
-      <Text style={styles.title}>Help & FAQ</Text>
+      <Text style={styles.title}>{t('help.title')}</Text>
 
       {/* FAQ Section */}
       {faqs.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
+          <Text style={styles.sectionTitle}>{t('help.faqTitle')}</Text>
           {faqs.map((faq, idx) => (
             <TouchableOpacity
               key={idx}
@@ -71,7 +73,7 @@ const HelpScreen = () => {
               </View>
               {expandedIdx === idx && (
                 <Text style={styles.faqAnswer}>
-                  {faq.answer || faq.content || 'No answer available.'}
+                  {faq.answer || faq.content || t('help.noAnswer')}
                 </Text>
               )}
             </TouchableOpacity>
@@ -82,13 +84,13 @@ const HelpScreen = () => {
       {/* Contact Section */}
       {contactInfo && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact Support</Text>
+          <Text style={styles.sectionTitle}>{t('help.contactSupport')}</Text>
           <View style={styles.contactCard}>
             {contactInfo.phone && (
               <TouchableOpacity
                 style={styles.contactRow}
                 onPress={() => Linking.openURL(`tel:${contactInfo.phone}`)}>
-                <Text style={styles.contactLabel}>Phone</Text>
+                <Text style={styles.contactLabel}>{t('help.phone')}</Text>
                 <Text style={styles.contactValue}>{contactInfo.phone}</Text>
               </TouchableOpacity>
             )}
@@ -96,7 +98,7 @@ const HelpScreen = () => {
               <TouchableOpacity
                 style={styles.contactRow}
                 onPress={() => Linking.openURL(`mailto:${contactInfo.email}`)}>
-                <Text style={styles.contactLabel}>Email</Text>
+                <Text style={styles.contactLabel}>{t('help.email')}</Text>
                 <Text style={styles.contactValue}>{contactInfo.email}</Text>
               </TouchableOpacity>
             )}
@@ -108,7 +110,7 @@ const HelpScreen = () => {
                     `https://wa.me/${contactInfo.whatsapp.replace(/[^0-9]/g, '')}`,
                   )
                 }>
-                <Text style={styles.contactLabel}>WhatsApp</Text>
+                <Text style={styles.contactLabel}>{t('help.whatsapp')}</Text>
                 <Text style={styles.contactValue}>{contactInfo.whatsapp}</Text>
               </TouchableOpacity>
             )}
@@ -120,12 +122,12 @@ const HelpScreen = () => {
       <TouchableOpacity
         style={styles.ctaBtn}
         onPress={() => navigation.navigate(routeNames.Support)}>
-        <Text style={styles.ctaBtnText}>Create Support Ticket</Text>
+        <Text style={styles.ctaBtnText}>{t('help.createTicket')}</Text>
       </TouchableOpacity>
 
       {faqs.length === 0 && !contactInfo && (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>No help content available</Text>
+          <Text style={styles.emptyText}>{t('help.noContent')}</Text>
         </View>
       )}
     </ScrollView>
@@ -136,7 +138,7 @@ const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#F5F6FA'},
   content: {padding: 20, paddingBottom: 40},
   centered: {flex: 1, alignItems: 'center', justifyContent: 'center'},
-  title: {fontSize: 22, fontWeight: '700', color: '#1A1A2E', marginBottom: 20},
+  title: {fontSize: 22, fontWeight: '700', color: '#1A1A2E', marginBottom: 20, textAlign: 'auto'},
   section: {marginBottom: 24},
   sectionTitle: {fontSize: 16, fontWeight: '600', color: '#1A1A2E', marginBottom: 12},
   faqCard: {
@@ -155,7 +157,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  faqQuestion: {fontSize: 14, fontWeight: '600', color: '#333', flex: 1, marginRight: 8},
+  faqQuestion: {fontSize: 14, fontWeight: '600', color: '#333', flex: 1, marginEnd: 8},
   faqChevron: {fontSize: 12, color: '#999'},
   faqAnswer: {fontSize: 13, color: '#666', lineHeight: 20, marginTop: 10},
   contactCard: {

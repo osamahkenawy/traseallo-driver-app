@@ -31,6 +31,21 @@ const supportApi = {
     apiClient.get('/driver-app/support/tickets', {params: {page: 1, limit: 20, ...params}}),
 
   /**
+   * Get ticket detail with replies
+   * @param {number} id - Ticket ID
+   */
+  getTicketDetail: (id) =>
+    apiClient.get(`/driver-app/support/tickets/${id}`),
+
+  /**
+   * Reply to a ticket
+   * @param {number} id - Ticket ID
+   * @param {object} data - { message }
+   */
+  replyToTicket: (id, data) =>
+    apiClient.post(`/driver-app/support/tickets/${id}/reply`, data),
+
+  /**
    * Get FAQ and help content
    * @returns {Promise} { categories: [{ title, faqs: [{ question, answer }] }] }
    */

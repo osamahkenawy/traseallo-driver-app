@@ -10,6 +10,7 @@ import useOrderStore from '../store/orderStore';
 import useNotificationStore from '../store/notificationStore';
 import useDashboardStore from '../store/dashboardStore';
 import useLocationStore from '../store/locationStore';
+import i18n from '../i18n';
 
 const SOCKET_URL = 'https://api.traseallo.com';
 
@@ -65,8 +66,8 @@ const useSocket = () => {
       fetchDashboard();
       addNotification({
         id: `socket-assigned-${Date.now()}`,
-        title: 'New Order Assigned',
-        body: `Order #${data?.order_number || ''} has been assigned to you.`,
+        title: i18n.t('notifications.newOrderAssigned', 'New Order Assigned'),
+        body: i18n.t('notifications.orderAssignedBody', {orderNumber: data?.order_number || '', defaultValue: `Order #${data?.order_number || ''} has been assigned to you.`}),
         created_at: new Date().toISOString(),
         read_at: null,
         is_read: false,
@@ -78,11 +79,11 @@ const useSocket = () => {
       if (__DEV__) console.log('📦 Order status changed:', data);
       fetchOrders();
       fetchDashboard();
-      const statusLabel = (data?.status || '').replace(/_/g, ' ');
+      const statusLabel = i18n.t('status.' + (data?.status || ''), data?.status || '');
       addNotification({
         id: `socket-status-${Date.now()}`,
-        title: `Order ${statusLabel}`,
-        body: `Order #${data?.order_number || ''} is now ${statusLabel}.`,
+        title: `${i18n.t('dashboard.order', 'Order')} ${statusLabel}`,
+        body: `${i18n.t('dashboard.order', 'Order')} #${data?.order_number || ''} ${statusLabel}.`,
         created_at: new Date().toISOString(),
         read_at: null,
         is_read: false,
@@ -114,8 +115,8 @@ const useSocket = () => {
       fetchDashboard();
       addNotification({
         id: `socket-cod-${Date.now()}`,
-        title: 'COD Collected',
-        body: `AED ${data?.amount || ''} collected for Order #${data?.order_number || ''}`,
+        title: i18n.t('notifications.codCollected', 'COD Collected'),
+        body: i18n.t('notifications.codCollectedBody', {amount: data?.amount || '', orderNumber: data?.order_number || '', defaultValue: `AED ${data?.amount || ''} collected for Order #${data?.order_number || ''}`}),
         created_at: new Date().toISOString(),
         read_at: null,
         is_read: false,

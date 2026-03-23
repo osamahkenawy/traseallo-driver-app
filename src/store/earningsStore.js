@@ -68,7 +68,7 @@ const useEarningsStore = create((set, get) => ({
       return breakdown;
     } catch (error) {
       set({isLoadingDaily: false});
-      console.warn('[EarningsStore] fetchDailyBreakdown error:', error?.message);
+      if (__DEV__) console.warn('[EarningsStore] fetchDailyBreakdown error:', error?.message);
       return [];
     }
   },

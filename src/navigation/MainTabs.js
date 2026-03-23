@@ -169,7 +169,7 @@ const $ = StyleSheet.create({
   badge: {
     position: 'absolute',
     top: 2,
-    right: '30%',
+    end: '30%',
     width: 7,
     height: 7,
     borderRadius: 3.5,

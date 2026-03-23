@@ -6,6 +6,7 @@
 
 import React, {useState} from 'react';
 import {View, StyleSheet, Text, TouchableOpacity, LayoutAnimation, Platform, UIManager} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
@@ -16,21 +17,22 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const PRIMARY_ACTIONS = [
-  {icon: 'package-variant-closed', label: 'Orders', color: '#244066', bg: '#E8EDF4', route: 'MyOrders'},
-  {icon: 'barcode-scan', label: 'Scanner', color: '#10A6BA', bg: '#E0F5F7', route: 'Scanner'},
-  {icon: 'map-marker-radius', label: 'Map', color: '#15C7AE', bg: '#E0F8F3', route: 'MapScreen'},
-  {icon: 'wallet-outline', label: 'Earnings', color: '#F9AD28', bg: '#FFF4E0', route: 'Earnings'},
+  {icon: 'package-variant-closed', labelKey: 'dashboard.ordersLabel', color: '#244066', bg: '#E8EDF4', route: 'MyOrders'},
+  {icon: 'barcode-scan', labelKey: 'dashboard.scannerLabel', color: '#10A6BA', bg: '#E0F5F7', route: 'Scanner'},
+  {icon: 'map-marker-radius', labelKey: 'dashboard.mapLabel', color: '#15C7AE', bg: '#E0F8F3', route: 'MapScreen'},
+  {icon: 'wallet-outline', labelKey: 'dashboard.earningsLabel', color: '#F9AD28', bg: '#FFF4E0', route: 'Earnings'},
 ];
 
 const SECONDARY_ACTIONS = [
-  {icon: 'truck-delivery', label: 'Pickups', color: '#4E7AB5', bg: '#E3EEF9', route: 'MyPickups'},
-  {icon: 'bell-ring-outline', label: 'Alerts', color: '#EB466D', bg: '#FDE8EE', route: 'Notifications'},
-  {icon: 'cog-outline', label: 'Settings', color: '#495057', bg: '#EAEBEC', route: 'Settings'},
-  {icon: 'headset', label: 'Support', color: '#9261C6', bg: '#EDE7F6', route: 'Support'},
+  {icon: 'truck-delivery', labelKey: 'dashboard.pickupsLabel', color: '#4E7AB5', bg: '#E3EEF9', route: 'MyPickups'},
+  {icon: 'bell-ring-outline', labelKey: 'dashboard.alertsLabel', color: '#EB466D', bg: '#FDE8EE', route: 'Notifications'},
+  {icon: 'cog-outline', labelKey: 'dashboard.settingsLabel', color: '#495057', bg: '#EAEBEC', route: 'Settings'},
+  {icon: 'headset', labelKey: 'dashboard.supportLabel', color: '#9261C6', bg: '#EDE7F6', route: 'Support'},
 ];
 
 const QuickActions = ({onNavigate}) => {
   const [expanded, setExpanded] = useState(false);
+  const {t} = useTranslation();
 
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -42,33 +44,33 @@ const QuickActions = ({onNavigate}) => {
       <View style={$.card}>
         {/* Primary row */}
         <View style={$.row}>
-          {PRIMARY_ACTIONS.map((a, i) => (
+          {PRIMARY_ACTIONS.map((a) => (
             <TouchableOpacity
-              key={i}
+              key={a.route}
               style={$.item}
               activeOpacity={0.55}
               onPress={() => onNavigate?.(a.route)}>
               <View style={[$.iconWrap, {backgroundColor: a.bg}]}>
                 <Icon name={a.icon} size={24} color={a.color} />
               </View>
-              <Text style={$.label}>{a.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+              <Text style={$.label}>{t(a.labelKey)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        {/* Secondary row (expandable) */}
+        {/* Secondary row (expanded) */}
         {expanded && (
-          <View style={[$.row, {marginTop: 10}]}>
-            {SECONDARY_ACTIONS.map((a, i) => (
+          <View style={$.row}>
+            {SECONDARY_ACTIONS.map((a) => (
               <TouchableOpacity
-                key={i}
+                key={a.route}
                 style={$.item}
                 activeOpacity={0.55}
                 onPress={() => onNavigate?.(a.route)}>
                 <View style={[$.iconWrap, {backgroundColor: a.bg}]}>
                   <Icon name={a.icon} size={24} color={a.color} />
                 </View>
-                <Text style={$.label}>{a.label}</Text>
+                <Text style={$.label}>{t(a.labelKey)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -84,7 +86,7 @@ const QuickActions = ({onNavigate}) => {
             size={18}
             color={colors.textMuted}
           />
-          <Text style={$.toggleTxt}>{expanded ? 'Less' : 'More'}</Text>
+          <Text style={$.toggleTxt}>{expanded ? t('dashboard.less') : t('dashboard.more')}</Text>
         </TouchableOpacity>
       </View>
     </View>

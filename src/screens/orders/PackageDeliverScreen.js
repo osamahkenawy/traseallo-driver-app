@@ -25,10 +25,14 @@ import {packagesApi, uploadsApi} from '../../api';
 import {launchCamera} from 'react-native-image-picker';
 import useLocationStore from '../../store/locationStore';
 import useOrderStore from '../../store/orderStore';
+import useSettingsStore from '../../store/settingsStore';
 import {routeNames} from '../../constants/routeNames';
+import {useTranslation} from 'react-i18next';
 
 const PackageDeliverScreen = ({navigation, route}) => {
+  const {t} = useTranslation();
   const ins = useSafeAreaInsets();
+  const currency = useSettingsStore(s => s.currency);
   const {
     packageId,
     orderId,
@@ -79,7 +83,7 @@ const PackageDeliverScreen = ({navigation, route}) => {
 
   const handleConfirm = async () => {
     if (!packageId) {
-      Alert.alert('Error', 'No package ID provided.');
+      Alert.alert(t('packageDeliver.error'), t('packageDeliver.noPackageId'));
       return;
     }
     setLoading(true);
@@ -122,14 +126,14 @@ const PackageDeliverScreen = ({navigation, route}) => {
       const progress = result?.progress;
       if (progress) {
         showMessage({
-          message: `Package ${progress.delivered}/${progress.total} delivered`,
+          message: t('packageDeliver.success'),
           type: 'success',
           icon: 'auto',
           duration: 2500,
         });
       } else {
         showMessage({
-          message: 'Package delivered!',
+          message: t('packageDeliver.success'),
           type: 'success',
           icon: 'auto',
           duration: 2000,
@@ -138,14 +142,14 @@ const PackageDeliverScreen = ({navigation, route}) => {
 
       // Check if all done → go to summary
       if (progress && progress.delivered + progress.failed >= progress.total) {
-        navigation.replace('DeliverySummary', {orderId, token});
+        navigation.replace(routeNames.DeliverySummary, {orderId, token});
       } else {
         navigation.goBack();
       }
     } catch (e) {
       showMessage({
-        message: 'Delivery Failed',
-        description: e?.response?.data?.message || 'Something went wrong.',
+        message: t('packageDeliver.failedToDeliver'),
+        description: e?.response?.data?.message || t('common.error'),
         type: 'danger',
         icon: 'auto',
       });
@@ -162,7 +166,7 @@ const PackageDeliverScreen = ({navigation, route}) => {
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{flex: 1, alignItems: 'center'}}>
-          <Text style={s.hdrTitle}>Deliver Package</Text>
+          <Text style={s.hdrTitle}>{t('packageDeliver.title')}</Text>
           <Text style={s.hdrSub}>{barcode || `PKG #${packageId}`}</Text>
         </View>
         <View style={{width: 36}} />
@@ -179,7 +183,7 @@ const PackageDeliverScreen = ({navigation, route}) => {
             <Icon name="package-variant" size={20} color={colors.success} />
           </View>
           <View style={{flex: 1}}>
-            <Text style={s.infoName}>{recipientName || 'Recipient'}</Text>
+            <Text style={s.infoName}>{recipientName || t('orderDetail.recipient')}</Text>
             {barcode ? <Text style={s.infoBarcode}>{barcode}</Text> : null}
             {recipientAddress ? (
               <Text style={s.infoAddr} numberOfLines={2}>{recipientAddress}</Text>
@@ -188,7 +192,7 @@ const PackageDeliverScreen = ({navigation, route}) => {
         </View>
 
         {/* Proof Photo */}
-        <Text style={s.secTitle}>Proof Photo</Text>
+        <Text style={s.secTitle}>{t('packageDeliver.takePhoto')}</Text>
         <TouchableOpacity style={s.photoBox} onPress={handleTakePhoto} activeOpacity={0.7}>
           {photoUri ? (
             <Image source={{uri: photoUri}} style={s.photoImg} resizeMode="cover" />
@@ -197,19 +201,19 @@ const PackageDeliverScreen = ({navigation, route}) => {
               <View style={s.photoIc}>
                 <Icon name="camera-outline" size={24} color={colors.textMuted} />
               </View>
-              <Text style={s.photoLabel}>Tap to take a photo</Text>
+              <Text style={s.photoLabel}>{t('packageDeliver.takePhoto')}</Text>
             </>
           )}
         </TouchableOpacity>
         {photoUri && (
           <TouchableOpacity style={s.retakeBtn} onPress={handleTakePhoto}>
             <Icon name="camera-retake-outline" size={14} color={colors.primary} />
-            <Text style={s.retakeTxt}>Retake Photo</Text>
+            <Text style={s.retakeTxt}>{t('packageDeliver.retakePhoto')}</Text>
           </TouchableOpacity>
         )}
 
         {/* Signature */}
-        <Text style={s.secTitle}>Driver Signature</Text>
+        <Text style={s.secTitle}>{t('packageDeliver.addSignature')}</Text>
         <TouchableOpacity
           style={[s.sigTapBox, signatureData && s.sigTapBoxDone]}
           onPress={openSignatureScreen}
@@ -220,8 +224,8 @@ const PackageDeliverScreen = ({navigation, route}) => {
                 <Icon name="check-circle" size={22} color={colors.success} />
               </View>
               <View style={{flex: 1}}>
-                <Text style={s.sigDoneLabel}>Signature captured</Text>
-                <Text style={s.sigDoneSub}>Tap to re-sign</Text>
+                <Text style={s.sigDoneLabel}>{t('signature.done')}</Text>
+                <Text style={s.sigDoneSub}>{t('packageDeliver.retakePhoto')}</Text>
               </View>
               <Icon name="chevron-right" size={20} color={colors.textMuted} />
             </View>
@@ -230,18 +234,18 @@ const PackageDeliverScreen = ({navigation, route}) => {
               <View style={s.sigIconWrap}>
                 <Icon name="draw" size={24} color={colors.textMuted} />
               </View>
-              <Text style={s.sigTapLabel}>Tap to sign</Text>
+              <Text style={s.sigTapLabel}>{t('packageDeliver.addSignature')}</Text>
             </>
           )}
         </TouchableOpacity>
 
         {/* Delivery Notes */}
-        <Text style={s.secTitle}>Notes (Optional)</Text>
+        <Text style={s.secTitle}>{t('packageDeliver.notes')}</Text>
         <TextInput
           style={s.input}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Left with receptionist, handed to guard, etc."
+          placeholder={t('packageDeliver.notesPlaceholder')}
           placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={3}
@@ -251,15 +255,15 @@ const PackageDeliverScreen = ({navigation, route}) => {
         {/* COD */}
         {hasCod && (
           <>
-            <Text style={s.secTitle}>COD Collection</Text>
+            <Text style={s.secTitle}>{t('packageDeliver.codCollection')}</Text>
             <View style={s.codCard}>
               <View style={s.codRow}>
                 <Icon name="cash" size={18} color={colors.orange} />
-                <Text style={s.codLabel}>Amount to Collect</Text>
-                <Text style={s.codExpected}>AED {Number(codAmount).toFixed(2)}</Text>
+                <Text style={s.codLabel}>{t('packageDeliver.codAmount', {amount: Number(codAmount).toFixed(2)})}</Text>
+                <Text style={s.codExpected}>{currency} {Number(codAmount).toFixed(2)}</Text>
               </View>
               <View style={s.codInputRow}>
-                <Text style={s.codPrefix}>AED</Text>
+                <Text style={s.codPrefix}>{currency}</Text>
                 <TextInput
                   style={s.codInput}
                   value={codCollected}
@@ -288,7 +292,7 @@ const PackageDeliverScreen = ({navigation, route}) => {
           ) : (
             <Icon name="check-decagram" size={18} color="#FFF" />
           )}
-          <Text style={s.confirmTxt}>{loading ? 'Confirming...' : 'Confirm Delivery'}</Text>
+          <Text style={s.confirmTxt}>{loading ? t('packageDeliver.delivering') : t('packageDeliver.confirmDelivery')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -298,14 +302,14 @@ const PackageDeliverScreen = ({navigation, route}) => {
 const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52, gap: 8,
   },
   hdrBack: {
     width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF',
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: '#EEF1F5',
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary, textAlign: 'auto'},
   hdrSub: {fontFamily: fontFamily.medium, fontSize: 10, color: colors.textMuted, marginTop: 1},
   scroll: {paddingHorizontal: 20, paddingBottom: 120},
 
@@ -385,11 +389,11 @@ const s = StyleSheet.create({
   codLabel: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, flex: 1},
   codExpected: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.orange},
   codInputRow: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#F8F9FA', borderRadius: 10,
     borderWidth: 1, borderColor: '#EEF1F5', height: 44, paddingHorizontal: 12,
   },
-  codPrefix: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textMuted, marginRight: 8},
+  codPrefix: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textMuted, marginEnd: 8},
   codInput: {
     flex: 1, fontFamily: fontFamily.medium, fontSize: 15, color: colors.textPrimary, paddingVertical: 0,
   },

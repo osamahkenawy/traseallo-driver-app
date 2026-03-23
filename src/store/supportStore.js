@@ -89,7 +89,7 @@ const useSupportStore = create((set, get) => ({
       return data;
     } catch (error) {
       set({isLoadingTickets: false});
-      console.warn('[SupportStore] fetchTickets error:', error?.message);
+      if (__DEV__) console.warn('[SupportStore] fetchTickets error:', error?.message);
       return null;
     }
   },

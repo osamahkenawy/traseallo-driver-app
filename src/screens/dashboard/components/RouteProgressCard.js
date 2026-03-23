@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import {View, StyleSheet, Text, Animated} from 'react-native';
+import {View, StyleSheet, Text} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
@@ -17,16 +18,17 @@ const RouteProgressCard = ({
   totalStops = 0,
   remaining = 0,
 }) => {
+  const {t} = useTranslation();
   const pct = Math.min(Math.max(completionPct, 0), 100);
   const hasData = totalOrders > 0 || totalStops > 0;
 
   if (!hasData) {
     return (
       <View style={$.root}>
-        <Text style={$.sectionTitle}>Route Progress</Text>
+        <Text style={$.sectionTitle}>{t('dashboard.routeProgress')}</Text>
         <View style={$.emptyCard}>
           <Icon name="map-marker-path" size={24} color={colors.textLight} />
-          <Text style={$.emptyTxt}>Today's route progress will appear here after your first delivery</Text>
+          <Text style={$.emptyTxt}>{t('dashboard.routeEmptyText')}</Text>
         </View>
       </View>
     );
@@ -37,17 +39,17 @@ const RouteProgressCard = ({
 
   return (
     <View style={$.root}>
-      <Text style={$.sectionTitle}>Route Progress</Text>
+      <Text style={$.sectionTitle}>{t('dashboard.routeProgress')}</Text>
       <View style={$.card}>
         {/* Top: percentage + label */}
         <View style={$.topRow}>
           <View style={$.pctWrap}>
             <Text style={[$.pctVal, {color: barColor}]}>{pct}%</Text>
-            <Text style={$.pctLabel}>completed</Text>
+            <Text style={$.pctLabel}>{t('dashboard.completed')}</Text>
           </View>
           <View style={$.remainWrap}>
             <Text style={$.remainVal}>{remaining}</Text>
-            <Text style={$.remainLabel}>remaining</Text>
+            <Text style={$.remainLabel}>{t('dashboard.remaining')}</Text>
           </View>
         </View>
 
@@ -61,13 +63,13 @@ const RouteProgressCard = ({
           <View style={$.statItem}>
             <Icon name="check-circle" size={14} color="#15C7AE" />
             <Text style={$.statVal}>{delivered}</Text>
-            <Text style={$.statLbl}>of {totalOrders} orders</Text>
+            <Text style={$.statLbl}>{t('dashboard.ofOrders', {count: totalOrders})}</Text>
           </View>
           <View style={$.statDivider} />
           <View style={$.statItem}>
             <Icon name="map-marker-check" size={14} color={colors.primary} />
             <Text style={$.statVal}>{completedStops}</Text>
-            <Text style={$.statLbl}>of {totalStops} stops</Text>
+            <Text style={$.statLbl}>{t('dashboard.ofStops', {count: totalStops})}</Text>
           </View>
         </View>
       </View>

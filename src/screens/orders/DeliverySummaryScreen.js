@@ -20,18 +20,9 @@ import {fontFamily} from '../../theme/fonts';
 import {packagesApi} from '../../api';
 import {routeNames} from '../../constants/routeNames';
 import {CommonActions} from '@react-navigation/native';
+import {useTranslation} from 'react-i18next';
 
-const STATUS_LABELS = {
-  delivered: 'Delivered',
-  failed: 'Failed',
-  returned: 'Returned',
-  created: 'Created',
-  assigned: 'Assigned',
-  picked_up: 'Picked Up',
-  in_transit: 'In Transit',
-  out_for_delivery: 'Out for Delivery',
-  warehouse_in: 'Warehouse In',
-};
+// STATUS_LABELS now uses t('status.*') inside component
 
 const STATUS_ICONS = {
   delivered: 'check-decagram',
@@ -40,6 +31,7 @@ const STATUS_ICONS = {
 };
 
 const DeliverySummaryScreen = ({navigation, route}) => {
+  const {t} = useTranslation();
   const ins = useSafeAreaInsets();
   const {orderId, token} = route.params || {};
   const [packages, setPackages] = useState([]);
@@ -47,19 +39,22 @@ const DeliverySummaryScreen = ({navigation, route}) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       try {
         const res = await packagesApi.getOrderPackages(orderId);
+        if (cancelled) return;
         const data = res.data?.data || res.data;
         setPackages(data?.packages || data || []);
         setSummary(data?.summary || null);
       } catch {
         // fallback
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     if (orderId) load();
+    return () => { cancelled = true; };
   }, [orderId]);
 
   const delivered = summary?.delivered || packages.filter(p => p.status === 'delivered').length;
@@ -70,10 +65,10 @@ const DeliverySummaryScreen = ({navigation, route}) => {
   const allDelivered = delivered === total;
   const heroColor = allDelivered ? colors.success : colors.warning;
   const heroIcon = allDelivered ? 'check-circle' : 'alert-circle';
-  const heroTitle = allDelivered ? 'All Delivered!' : 'Partial Delivery';
+  const heroTitle = allDelivered ? t('deliverySummary.orderDelivered') : t('deliverySummary.title');
   const heroSub = allDelivered
-    ? `All ${total} packages delivered successfully`
-    : `${delivered} of ${total} packages delivered`;
+    ? `${total} ${t('orderDetail.packages').toLowerCase()} ✓`
+    : `${delivered} / ${total}`;
 
   if (loading) {
     return (
@@ -90,7 +85,7 @@ const DeliverySummaryScreen = ({navigation, route}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.hdrBack}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Delivery Summary</Text>
+        <Text style={s.hdrTitle}>{t('deliverySummary.title')}</Text>
         <View style={{width: 36}} />
       </View>
 
@@ -111,32 +106,32 @@ const DeliverySummaryScreen = ({navigation, route}) => {
             <View style={s.statItem}>
               <View style={[s.statDot, {backgroundColor: colors.success}]} />
               <Text style={s.statVal}>{delivered}</Text>
-              <Text style={s.statLabel}>Delivered</Text>
+              <Text style={s.statLabel}>{t('status.delivered')}</Text>
             </View>
             {failed > 0 && (
               <View style={s.statItem}>
                 <View style={[s.statDot, {backgroundColor: colors.danger}]} />
                 <Text style={s.statVal}>{failed}</Text>
-                <Text style={s.statLabel}>Failed</Text>
+                <Text style={s.statLabel}>{t('status.failed')}</Text>
               </View>
             )}
             {returned > 0 && (
               <View style={s.statItem}>
                 <View style={[s.statDot, {backgroundColor: colors.orange}]} />
                 <Text style={s.statVal}>{returned}</Text>
-                <Text style={s.statLabel}>Returned</Text>
+                <Text style={s.statLabel}>{t('status.returned')}</Text>
               </View>
             )}
             <View style={s.statItem}>
               <View style={[s.statDot, {backgroundColor: colors.primary}]} />
               <Text style={s.statVal}>{total}</Text>
-              <Text style={s.statLabel}>Total</Text>
+              <Text style={s.statLabel}>{t('orderDetail.total')}</Text>
             </View>
           </View>
         </View>
 
         {/* Package Cards */}
-        <Text style={s.secTitle}>Package Results</Text>
+        <Text style={s.secTitle}>{t('orderDetail.packages')}</Text>
         {packages.map((pkg, idx) => {
           const pkgStatus = pkg.status || 'assigned';
           const isDelivered = pkgStatus === 'delivered';
@@ -149,7 +144,7 @@ const DeliverySummaryScreen = ({navigation, route}) => {
                   <Text style={[s.pkgNum, {color: statusColor}]}>#{idx + 1}</Text>
                 </View>
                 <View style={{flex: 1}}>
-                  <Text style={s.pkgBarcode}>{pkg.barcode || `Package ${idx + 1}`}</Text>
+                  <Text style={s.pkgBarcode}>{pkg.barcode || t('deliverySummary.packageFallback', {num: idx + 1})}</Text>
                   <Text style={s.pkgRecipient}>{pkg.recipient_name || '---'}</Text>
                 </View>
                 <View style={[s.pkgStatusBadge, {backgroundColor: getStatusBgColor(pkgStatus)}]}>
@@ -159,7 +154,7 @@ const DeliverySummaryScreen = ({navigation, route}) => {
                     color={statusColor}
                   />
                   <Text style={[s.pkgStatusTxt, {color: statusColor}]}>
-                    {STATUS_LABELS[pkgStatus] || pkgStatus}
+                    {t('status.' + pkgStatus) || pkgStatus}
                   </Text>
                 </View>
               </View>
@@ -192,7 +187,7 @@ const DeliverySummaryScreen = ({navigation, route}) => {
             );
           }}
           activeOpacity={0.75}>
-          <Text style={s.continueTxt}>Continue to Orders</Text>
+          <Text style={s.continueTxt}>{t('deliverySummary.backToOrders')}</Text>
           <Icon name="arrow-right" size={18} color="#FFF" />
         </TouchableOpacity>
       </View>
@@ -204,14 +199,14 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, height: 52,
+    paddingHorizontal: 16, height: 52, gap: 8,
   },
   hdrBack: {
     width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF',
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: '#EEF1F5',
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 120},
 
   /* Hero */

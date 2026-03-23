@@ -14,6 +14,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from '../../../utils/LucideIcon';
 import {colors, getStatusColor, getStatusBgColor} from '../../../theme/colors';
+import useSettingsStore from '../../../store/settingsStore';
 import {fontFamily, fontSize} from '../../../theme/fonts';
 
 const cleanPhone = (p) => (p || '').replace(/[\s\-()]/g, '');
@@ -31,6 +32,19 @@ const OrderSheet = ({
   t,
 }) => {
   const ins = useSafeAreaInsets();
+  const currency = useSettingsStore(s => s.currency);
+  const TAB_BAR_HEIGHT = 90;
+
+  // Distance & ETA (must be before early return to satisfy Rules of Hooks)
+  const distInfo = useMemo(() => {
+    if (!stop || !driverPosition) return null;
+    const lat = parseFloat(stop.lat || stop.recipient_lat);
+    const lng = parseFloat(stop.lng || stop.recipient_lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const dist = haversine(driverPosition.latitude, driverPosition.longitude, lat, lng);
+    return {km: dist.toFixed(1), eta: estimateETA(dist)};
+  }, [stop, driverPosition, haversine, estimateETA]);
+
   if (!stop) return null;
 
   const name = stop.contact_name || stop.recipient_name || '—';
@@ -43,16 +57,6 @@ const OrderSheet = ({
   const area = stop.area || stop.recipient_area;
   const seq = stop.sequence_number;
   const isPickup = stop.stop_type === 'pickup';
-
-  // Distance & ETA
-  const distInfo = useMemo(() => {
-    if (!driverPosition) return null;
-    const lat = parseFloat(stop.lat || stop.recipient_lat);
-    const lng = parseFloat(stop.lng || stop.recipient_lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-    const dist = haversine(driverPosition.latitude, driverPosition.longitude, lat, lng);
-    return {km: dist.toFixed(1), eta: estimateETA(dist)};
-  }, [stop, driverPosition, haversine, estimateETA]);
 
   const handleCall = () => {
     if (!phone) return;
@@ -69,7 +73,7 @@ const OrderSheet = ({
 
   return (
     <Animated.View
-      style={[$.sheet, {transform: [{translateY: sheetY}], paddingBottom: ins.bottom + 8}]}
+      style={[$.sheet, {transform: [{translateY: sheetY}], paddingBottom: TAB_BAR_HEIGHT + 8}]}
       {...panHandlers}>
       {/* Handle */}
       <View style={$.handleBar}>
@@ -87,11 +91,11 @@ const OrderSheet = ({
             )}
             <View style={{flex: 1}}>
               <Text style={$.orderNum} numberOfLines={1}>{orderNum || name}</Text>
-              {isPickup && <Text style={$.pickupTag}>PICKUP</Text>}
+              {isPickup && <Text style={$.pickupTag}>{t ? t('map.pickupPoint') : 'PICKUP'}</Text>}
             </View>
             <View style={[$.statusBadge, {backgroundColor: getStatusBgColor(status, 0.12)}]}>
               <Text style={[$.statusText, {color: statusColor}]}>
-                {(status || 'pending').replace(/_/g, ' ')}
+                {t ? t('status.' + (status || 'pending'), (status || 'pending')) : (status || 'pending').replace(/_/g, ' ')}
               </Text>
             </View>
           </View>
@@ -147,14 +151,14 @@ const OrderSheet = ({
             <View style={[$.chip, {backgroundColor: colors.warningBg}]}>
               <Icon name="cash" size={12} color={colors.warning} />
               <Text style={[$.chipText, {color: colors.warning}]}>
-                AED {parseFloat(stop.cod_amount).toFixed(0)}
+                {currency} {parseFloat(stop.cod_amount).toFixed(0)}
               </Text>
             </View>
           )}
           {stop.special_instructions && (
             <View style={[$.chip, {backgroundColor: colors.dangerBg}]}>
               <Icon name="alert-circle-outline" size={12} color={colors.danger} />
-              <Text style={[$.chipText, {color: colors.danger}]}>Note</Text>
+              <Text style={[$.chipText, {color: colors.danger}]}>{t ? t('map.note') : 'Note'}</Text>
             </View>
           )}
         </View>
@@ -173,7 +177,7 @@ const OrderSheet = ({
             onPress={() => onNavigate?.(stop)}
             activeOpacity={0.7}>
             <Icon name="navigation-variant" size={16} color={colors.white} />
-            <Text style={[$.actionText, {color: colors.white}]}>Navigate</Text>
+            <Text style={[$.actionText, {color: colors.white}]}>{t ? t('map.navigate') : 'Navigate'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -181,7 +185,7 @@ const OrderSheet = ({
             onPress={() => onViewDetail?.(stop)}
             activeOpacity={0.7}>
             <Icon name="file-document-outline" size={16} color={colors.primary} />
-            <Text style={[$.actionText, {color: colors.primary}]}>Details</Text>
+            <Text style={[$.actionText, {color: colors.primary}]}>{t ? t('map.details') : 'Details'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -229,7 +233,7 @@ const $ = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     gap: 8,
-    marginRight: 10,
+    marginEnd: 10,
   },
   seqBadge: {
     width: 26,
@@ -310,7 +314,7 @@ const $ = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 6,
     marginBottom: 8,
-    paddingLeft: 2,
+    paddingStart: 2,
   },
   addressText: {
     fontFamily: fontFamily.regular,

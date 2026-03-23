@@ -16,17 +16,17 @@ import {
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import useOrderStore from '../../store/orderStore';
+import {useTranslation} from 'react-i18next';
 
 const RETURN_REASONS = [
-  'Customer refused delivery',
-  'Customer unreachable',
-  'Wrong address',
-  'Package damaged',
-  'Customer requested return',
-  'Other',
+  {value: 'customer_request', labelKey: 'returnOrder.customerRequest'},
+  {value: 'wrong_item', labelKey: 'returnOrder.wrongItem'},
+  {value: 'damaged', labelKey: 'returnOrder.damaged'},
+  {value: 'other', labelKey: 'returnOrder.other'},
 ];
 
 const ReturnOrderScreen = () => {
+  const {t} = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
   const {orderId, orderNumber} = route.params || {};
@@ -38,17 +38,17 @@ const ReturnOrderScreen = () => {
 
   const handleSubmit = async () => {
     if (!selectedReason) {
-      Alert.alert('Required', 'Please select a return reason.');
+      Alert.alert(t('returnOrder.error'), t('returnOrder.selectReason'));
       return;
     }
 
     Alert.alert(
-      'Confirm Return',
-      `Are you sure you want to return order #${orderNumber || orderId}?`,
+      t('returnOrder.confirmReturn'),
+      `${t('returnOrder.title')} #${orderNumber || orderId}?`,
       [
-        {text: 'Cancel', style: 'cancel'},
+        {text: t('common.cancel'), style: 'cancel'},
         {
-          text: 'Return',
+          text: t('returnOrder.confirmReturn'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -56,13 +56,13 @@ const ReturnOrderScreen = () => {
                 reason: selectedReason,
                 notes: notes.trim() || undefined,
               });
-              Alert.alert('Success', 'Order has been marked for return.', [
-                {text: 'OK', onPress: () => navigation.goBack()},
+              Alert.alert(t('returnOrder.success'), t('returnOrder.successDesc'), [
+                {text: t('common.done'), onPress: () => navigation.goBack()},
               ]);
             } catch (error) {
               Alert.alert(
-                'Error',
-                error?.response?.data?.message || 'Failed to return order.',
+                t('returnOrder.error'),
+                error?.response?.data?.message || t('returnOrder.failedToReturn'),
               );
             }
           },
@@ -73,37 +73,40 @@ const ReturnOrderScreen = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Return Order</Text>
+      <Text style={styles.title}>{t('returnOrder.title')}</Text>
       <Text style={styles.subtitle}>
-        Order #{orderNumber || orderId}
+        {t('dashboard.order')} #{orderNumber || orderId}
       </Text>
 
-      <Text style={styles.sectionTitle}>Select Return Reason</Text>
-      {RETURN_REASONS.map(reason => (
+      <Text style={styles.sectionTitle}>{t('returnOrder.selectReason')}</Text>
+      {RETURN_REASONS.map(reason => {
+        const label = t(reason.labelKey);
+        return (
         <TouchableOpacity
-          key={reason}
+          key={reason.value}
           style={[
             styles.reasonCard,
-            selectedReason === reason && styles.reasonCardSelected,
+            selectedReason === reason.value && styles.reasonCardSelected,
           ]}
-          onPress={() => setSelectedReason(reason)}>
+          onPress={() => setSelectedReason(reason.value)}>
           <View style={styles.radio}>
-            {selectedReason === reason && <View style={styles.radioInner} />}
+            {selectedReason === reason.value && <View style={styles.radioInner} />}
           </View>
           <Text
             style={[
               styles.reasonText,
-              selectedReason === reason && styles.reasonTextSelected,
+              selectedReason === reason.value && styles.reasonTextSelected,
             ]}>
-            {reason}
+            {label}
           </Text>
         </TouchableOpacity>
-      ))}
+        );
+      })}
 
-      <Text style={styles.sectionTitle}>Additional Notes (Optional)</Text>
+      <Text style={styles.sectionTitle}>{t('returnOrder.addNotes')}</Text>
       <TextInput
         style={styles.textArea}
-        placeholder="Add any additional details..."
+        placeholder={t('returnOrder.addNotes')}
         placeholderTextColor="#999"
         multiline
         numberOfLines={4}
@@ -119,7 +122,7 @@ const ReturnOrderScreen = () => {
         {isActing ? (
           <ActivityIndicator color="#FFF" />
         ) : (
-          <Text style={styles.submitBtnText}>Confirm Return</Text>
+          <Text style={styles.submitBtnText}>{t('returnOrder.confirmReturn')}</Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -129,7 +132,7 @@ const ReturnOrderScreen = () => {
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#F5F6FA'},
   content: {padding: 20, paddingBottom: 40},
-  title: {fontSize: 22, fontWeight: '700', color: '#1A1A2E', marginBottom: 4},
+  title: {fontSize: 22, fontWeight: '700', color: '#1A1A2E', marginBottom: 4, textAlign: 'auto'},
   subtitle: {fontSize: 14, color: '#666', marginBottom: 24},
   sectionTitle: {fontSize: 15, fontWeight: '600', color: '#1A1A2E', marginBottom: 12, marginTop: 8},
   reasonCard: {
@@ -154,7 +157,7 @@ const styles = StyleSheet.create({
     borderColor: '#CCC',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginEnd: 12,
   },
   radioInner: {
     width: 10,

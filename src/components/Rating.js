@@ -28,7 +28,7 @@ const Rating = ({item}) => {
           fontSize: 12,
           color: theme.COLORS.gray1,
           lineHeight: 12 * 1.7,
-          marginLeft: 4,
+          marginStart: 4,
         }}
       >
         ({item.reviews.length})

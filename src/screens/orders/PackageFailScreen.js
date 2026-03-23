@@ -25,17 +25,19 @@ import {packagesApi, uploadsApi} from '../../api';
 import {launchCamera} from 'react-native-image-picker';
 import useLocationStore from '../../store/locationStore';
 import useOrderStore from '../../store/orderStore';
+import {useTranslation} from 'react-i18next';
 
 const REASONS = [
-  {key: 'recipient_absent', label: 'Recipient absent', icon: 'account-off-outline'},
-  {key: 'wrong_address', label: 'Wrong address', icon: 'map-marker-off-outline'},
-  {key: 'customer_refused', label: 'Customer refused', icon: 'hand-back-left-outline'},
-  {key: 'area_unreachable', label: 'Area unreachable', icon: 'road-variant'},
-  {key: 'package_damaged', label: 'Package damaged', icon: 'package-variant-remove'},
-  {key: 'other', label: 'Other', icon: 'dots-horizontal-circle-outline'},
+  {key: 'recipient_absent', labelKey: 'packageFail.recipientNotAvailable', icon: 'account-off-outline'},
+  {key: 'wrong_address', labelKey: 'packageFail.wrongAddress', icon: 'map-marker-off-outline'},
+  {key: 'customer_refused', labelKey: 'packageFail.recipientRefused', icon: 'hand-back-left-outline'},
+  {key: 'area_unreachable', labelKey: 'packageFail.accessIssue', icon: 'road-variant'},
+  {key: 'package_damaged', labelKey: 'packageFail.packageDamaged', icon: 'package-variant-remove'},
+  {key: 'other', labelKey: 'packageFail.other', icon: 'dots-horizontal-circle-outline'},
 ];
 
 const PackageFailScreen = ({navigation, route}) => {
+  const {t} = useTranslation();
   const ins = useSafeAreaInsets();
   const {
     packageId,
@@ -66,11 +68,11 @@ const PackageFailScreen = ({navigation, route}) => {
 
   const handleSubmit = async () => {
     if (!selectedReason) {
-      showMessage({message: 'Please select a reason', type: 'warning', icon: 'auto'});
+      showMessage({message: t('packageFail.selectReason'), type: 'warning', icon: 'auto'});
       return;
     }
     if (!packageId) {
-      Alert.alert('Error', 'No package ID provided.');
+      Alert.alert(t('packageFail.error'), t('packageFail.noPackageId'));
       return;
     }
     setLoading(true);
@@ -102,25 +104,25 @@ const PackageFailScreen = ({navigation, route}) => {
       const progress = result?.progress;
       if (progress) {
         showMessage({
-          message: `Package failed — ${progress.delivered + progress.failed}/${progress.total} processed`,
+          message: t('packageFail.success'),
           type: 'info',
           icon: 'auto',
           duration: 2500,
         });
       } else {
-        showMessage({message: 'Failure reported', type: 'info', icon: 'auto', duration: 2000});
+        showMessage({message: t('packageFail.success'), type: 'info', icon: 'auto', duration: 2000});
       }
 
       // Check if all packages terminal → summary
       if (progress && progress.delivered + progress.failed >= progress.total) {
-        navigation.replace('DeliverySummary', {orderId, token});
+        navigation.replace(routeNames.DeliverySummary, {orderId, token});
       } else {
         navigation.goBack();
       }
     } catch (e) {
       showMessage({
-        message: 'Report Failed',
-        description: e?.response?.data?.message || 'Something went wrong.',
+        message: t('packageFail.failedToSubmit'),
+        description: e?.response?.data?.message || t('common.error'),
         type: 'danger',
         icon: 'auto',
       });
@@ -137,7 +139,7 @@ const PackageFailScreen = ({navigation, route}) => {
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{flex: 1, alignItems: 'center'}}>
-          <Text style={s.hdrTitle}>Report Failure</Text>
+          <Text style={s.hdrTitle}>{t('packageFail.title')}</Text>
           <Text style={s.hdrSub}>{barcode || `PKG #${packageId}`}</Text>
         </View>
         <View style={{width: 36}} />
@@ -154,13 +156,13 @@ const PackageFailScreen = ({navigation, route}) => {
             <Icon name="package-variant-remove" size={20} color={colors.danger} />
           </View>
           <View style={{flex: 1}}>
-            <Text style={s.infoName}>{recipientName || 'Recipient'}</Text>
+            <Text style={s.infoName}>{recipientName || t('orderDetail.recipient')}</Text>
             {barcode ? <Text style={s.infoBarcode}>{barcode}</Text> : null}
           </View>
         </View>
 
         {/* Failure Reason */}
-        <Text style={s.secTitle}>Why couldn't you deliver?</Text>
+        <Text style={s.secTitle}>{t('packageFail.selectReason')}</Text>
         {REASONS.map(r => {
           const on = selectedReason === r.key;
           return (
@@ -172,7 +174,7 @@ const PackageFailScreen = ({navigation, route}) => {
               <View style={[s.reasonIc, on && {backgroundColor: colors.dangerBg}]}>
                 <Icon name={r.icon} size={18} color={on ? colors.danger : colors.textMuted} />
               </View>
-              <Text style={[s.reasonLabel, on && s.reasonLabelOn]}>{r.label}</Text>
+              <Text style={[s.reasonLabel, on && s.reasonLabelOn]}>{t(r.labelKey)}</Text>
               <View style={[s.radio, on && s.radioOn]}>
                 {on && <View style={s.radioInner} />}
               </View>
@@ -181,12 +183,12 @@ const PackageFailScreen = ({navigation, route}) => {
         })}
 
         {/* Notes */}
-        <Text style={s.secTitle}>Additional Notes</Text>
+        <Text style={s.secTitle}>{t('packageFail.addNotes')}</Text>
         <TextInput
           style={s.input}
           value={notes}
           onChangeText={setNotes}
-          placeholder="Describe what happened..."
+          placeholder={t('packageFail.addNotes')}
           placeholderTextColor={colors.textMuted}
           multiline
           numberOfLines={3}
@@ -198,12 +200,12 @@ const PackageFailScreen = ({navigation, route}) => {
           {photoUri ? (
             <>
               <Icon name="check-circle" size={16} color={colors.success} />
-              <Text style={[s.photoLabel, {color: colors.success}]}>Photo attached</Text>
+              <Text style={[s.photoLabel, {color: colors.success}]}>{t('packageFail.addPhoto')}</Text>
             </>
           ) : (
             <>
               <Icon name="camera-outline" size={18} color={colors.textMuted} />
-              <Text style={s.photoLabel}>Add evidence photo (optional)</Text>
+              <Text style={s.photoLabel}>{t('packageFail.addPhoto')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -223,7 +225,7 @@ const PackageFailScreen = ({navigation, route}) => {
           ) : (
             <Icon name="alert-circle-outline" size={17} color="#FFF" />
           )}
-          <Text style={s.submitTxt}>{loading ? 'Submitting...' : 'Submit Report'}</Text>
+          <Text style={s.submitTxt}>{loading ? t('packageFail.submitting') : t('packageFail.submitReport')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -233,14 +235,14 @@ const PackageFailScreen = ({navigation, route}) => {
 const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52, gap: 8,
   },
   hdrBack: {
     width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF',
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: '#EEF1F5',
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary, textAlign: 'auto'},
   hdrSub: {fontFamily: fontFamily.medium, fontSize: 10, color: colors.textMuted, marginTop: 1},
   scroll: {paddingHorizontal: 20, paddingBottom: 120},
 

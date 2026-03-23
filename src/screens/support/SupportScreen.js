@@ -15,20 +15,34 @@ import {
   ActivityIndicator,
   RefreshControl,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import Icon from '../../utils/LucideIcon';
 import useSupportStore from '../../store/supportStore';
+import {useTranslation} from 'react-i18next';
+import {colors} from '../../theme/colors';
+import {fontFamily} from '../../theme/fonts';
 
 const ISSUE_TYPES = [
-  {label: 'Order Issue', value: 'order_issue'},
-  {label: 'App Bug', value: 'app_bug'},
-  {label: 'Payment Problem', value: 'payment'},
-  {label: 'Navigation', value: 'navigation'},
-  {label: 'Account', value: 'account'},
-  {label: 'Other', value: 'other'},
+  {labelKey: 'support.orderIssue', value: 'order_issue'},
+  {labelKey: 'support.appBug', value: 'app_bug'},
+  {labelKey: 'support.paymentProblem', value: 'payment'},
+  {labelKey: 'support.navigation', value: 'navigation'},
+  {labelKey: 'support.account', value: 'account'},
+  {labelKey: 'support.other', value: 'other'},
 ];
 
-const SupportScreen = () => {
+const STATUS_COLORS = {
+  open: colors.warning,
+  pending: colors.warning,
+  resolved: colors.success,
+  closed: colors.textMuted,
+};
+
+const SupportScreen = ({navigation}) => {
+  const ins = useSafeAreaInsets();
   const {
     tickets,
     isLoadingTickets,
@@ -38,6 +52,7 @@ const SupportScreen = () => {
     loadMoreTickets,
     resetTickets,
   } = useSupportStore();
+  const {t} = useTranslation();
 
   const [tab, setTab] = useState('new'); // 'new' | 'history'
   const [subject, setSubject] = useState('');
@@ -46,18 +61,17 @@ const SupportScreen = () => {
 
   useEffect(() => {
     if (tab === 'history') {
-      resetTickets();
       fetchTickets({page: 1});
     }
   }, [tab]);
 
   const handleSubmit = async () => {
     if (!subject.trim()) {
-      Alert.alert('Required', 'Please enter a subject.');
+      Alert.alert(t('support.required'), t('support.enterSubject'));
       return;
     }
     if (!description.trim()) {
-      Alert.alert('Required', 'Please describe your issue.');
+      Alert.alert(t('support.required'), t('support.describeIssue'));
       return;
     }
 
@@ -65,16 +79,17 @@ const SupportScreen = () => {
       await createTicket({
         subject: subject.trim(),
         description: description.trim(),
-        type: issueType || 'other',
+        category: issueType || 'other',
       });
-      Alert.alert('Submitted', 'Your support ticket has been created.');
       setSubject('');
       setDescription('');
       setIssueType('');
+      Alert.alert(t('support.submitted'), t('support.ticketCreated'));
+      setTab('history');
     } catch (error) {
       Alert.alert(
-        'Error',
-        error?.response?.data?.message || 'Failed to submit ticket.',
+        t('common.error'),
+        error?.response?.data?.message || t('support.failedSubmit'),
       );
     }
   };
@@ -86,120 +101,163 @@ const SupportScreen = () => {
 
   const renderTicket = useCallback(
     ({item}) => {
-      const statusColor =
-        item.status === 'open'
-          ? '#F39C12'
-          : item.status === 'resolved'
-          ? '#27AE60'
-          : '#95A5A6';
+      const raw = (item.status || 'open').toLowerCase();
+      const statusColor = STATUS_COLORS[raw] || colors.textMuted;
+      const statusKey = 'support.ticketStatus' + raw.charAt(0).toUpperCase() + raw.slice(1);
       return (
-        <View style={styles.ticketCard}>
-          <View style={styles.ticketHeader}>
-            <Text style={styles.ticketSubject} numberOfLines={1}>
-              {item.subject || 'No subject'}
-            </Text>
-            <View style={[styles.ticketBadge, {backgroundColor: statusColor + '20'}]}>
-              <Text style={[styles.ticketBadgeText, {color: statusColor}]}>
-                {(item.status || 'open').toUpperCase()}
+        <View style={s.ticketCard}>
+          <View style={s.ticketRow}>
+            <View style={[s.ticketDot, {backgroundColor: statusColor}]} />
+            <View style={s.ticketBody}>
+              <Text style={s.ticketSubject} numberOfLines={1}>
+                {item.subject || t('support.noSubject')}
+              </Text>
+              <Text style={s.ticketDesc} numberOfLines={2}>
+                {item.description || ''}
+              </Text>
+              <Text style={s.ticketDate}>
+                {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
+              </Text>
+            </View>
+            <View style={[s.ticketBadge, {backgroundColor: statusColor + '18'}]}>
+              <Text style={[s.ticketBadgeText, {color: statusColor}]}>
+                {t(statusKey, raw).toUpperCase()}
               </Text>
             </View>
           </View>
-          <Text style={styles.ticketDesc} numberOfLines={2}>
-            {item.description || ''}
-          </Text>
-          <Text style={styles.ticketDate}>
-            {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
-          </Text>
         </View>
       );
     },
-    [],
+    [t],
   );
 
+  const isNew = tab === 'new';
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {/* Tabs */}
-      <View style={styles.tabRow}>
+    <View style={[s.root, {paddingTop: ins.top}]}>
+      {/* ─── Header ──────────────────────────── */}
+      <View style={s.hdr}>
         <TouchableOpacity
-          style={[styles.tab, tab === 'new' && styles.tabActive]}
-          onPress={() => setTab('new')}>
-          <Text style={[styles.tabText, tab === 'new' && styles.tabTextActive]}>
-            New Ticket
-          </Text>
+          onPress={() => navigation.goBack()}
+          style={s.backBtn}
+          hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+          <Icon name="arrow-left" size={18} color="#FFF" />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, tab === 'history' && styles.tabActive]}
-          onPress={() => setTab('history')}>
-          <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>
-            My Tickets
-          </Text>
-        </TouchableOpacity>
+        <Text style={s.hdrTitle}>{t('support.title')}</Text>
+        <View style={s.backBtn} />
       </View>
 
-      {tab === 'new' ? (
-        <View style={styles.form}>
-          {/* Issue Type */}
-          <Text style={styles.label}>Issue Type</Text>
-          <View style={styles.typeRow}>
-            {ISSUE_TYPES.map(t => (
-              <TouchableOpacity
-                key={t.value}
-                style={[
-                  styles.typePill,
-                  issueType === t.value && styles.typePillActive,
-                ]}
-                onPress={() => setIssueType(t.value)}>
-                <Text
-                  style={[
-                    styles.typePillText,
-                    issueType === t.value && styles.typePillTextActive,
-                  ]}>
-                  {t.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.label}>Subject</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Brief summary of your issue"
-            placeholderTextColor="#999"
-            value={subject}
-            onChangeText={setSubject}
-          />
-
-          <Text style={styles.label}>Description</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Describe the issue in detail..."
-            placeholderTextColor="#999"
-            multiline
-            numberOfLines={5}
-            textAlignVertical="top"
-            value={description}
-            onChangeText={setDescription}
-          />
-
+      {/* ─── Segmented Tabs ──────────────────── */}
+      <View style={s.tabWrapper}>
+        <View style={s.tabBar}>
           <TouchableOpacity
-            style={[styles.submitBtn, isSubmitting && {opacity: 0.5}]}
-            disabled={isSubmitting}
-            onPress={handleSubmit}>
-            {isSubmitting ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <Text style={styles.submitBtnText}>Submit Ticket</Text>
-            )}
+            style={[s.tab, isNew && s.tabActive]}
+            activeOpacity={0.7}
+            onPress={() => setTab('new')}>
+            <Icon
+              name="plus-circle"
+              size={14}
+              color={isNew ? '#FFF' : colors.textMuted}
+              style={{marginEnd: 6}}
+            />
+            <Text style={[s.tabText, isNew && s.tabTextActive]}>
+              {t('support.newTicket')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.tab, !isNew && s.tabActive]}
+            activeOpacity={0.7}
+            onPress={() => setTab('history')}>
+            <Icon
+              name="list"
+              size={14}
+              color={!isNew ? '#FFF' : colors.textMuted}
+              style={{marginEnd: 6}}
+            />
+            <Text style={[s.tabText, !isNew && s.tabTextActive]}>
+              {t('support.myTickets')}
+            </Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* ─── Content ─────────────────────────── */}
+      {isNew ? (
+        <KeyboardAvoidingView
+          style={{flex: 1}}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView
+            contentContainerStyle={s.formScroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
+            {/* Issue Type */}
+            <Text style={s.label}>{t('support.issueType')}</Text>
+            <View style={s.typeRow}>
+              {ISSUE_TYPES.map(type => {
+                const active = issueType === type.value;
+                return (
+                  <TouchableOpacity
+                    key={type.value}
+                    style={[s.typePill, active && s.typePillActive]}
+                    activeOpacity={0.7}
+                    onPress={() => setIssueType(type.value)}>
+                    {active && (
+                      <Icon name="check" size={12} color="#FFF" style={{marginEnd: 4}} />
+                    )}
+                    <Text style={[s.typePillText, active && s.typePillTextActive]}>
+                      {t(type.labelKey)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Subject */}
+            <Text style={s.label}>{t('support.subject')}</Text>
+            <TextInput
+              style={s.input}
+              placeholder={t('support.subjectPlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              value={subject}
+              onChangeText={setSubject}
+            />
+
+            {/* Description */}
+            <Text style={s.label}>{t('support.description')}</Text>
+            <TextInput
+              style={[s.input, s.textArea]}
+              placeholder={t('support.descriptionPlaceholder')}
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+              value={description}
+              onChangeText={setDescription}
+            />
+
+            {/* Submit */}
+            <TouchableOpacity
+              style={[s.submitBtn, isSubmitting && {opacity: 0.5}]}
+              disabled={isSubmitting}
+              activeOpacity={0.8}
+              onPress={handleSubmit}>
+              {isSubmitting ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <>
+                  <Icon name="send" size={16} color="#FFF" style={{marginEnd: 8}} />
+                  <Text style={s.submitBtnText}>{t('support.submitTicket')}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
       ) : (
         <FlatList
           data={tickets}
-          keyExtractor={(item, idx) => String(item.id || idx)}
+          keyExtractor={(item, idx) => `ticket-${item.id || idx}`}
           renderItem={renderTicket}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={s.list}
           refreshControl={
             <RefreshControl refreshing={isLoadingTickets} onRefresh={onRefresh} />
           }
@@ -207,86 +265,197 @@ const SupportScreen = () => {
           onEndReachedThreshold={0.3}
           ListEmptyComponent={
             !isLoadingTickets ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyText}>No tickets yet</Text>
+              <View style={s.empty}>
+                <Icon name="inbox" size={48} color={colors.border} />
+                <Text style={s.emptyTitle}>{t('support.noTickets')}</Text>
               </View>
             ) : null
           }
         />
       )}
-    </KeyboardAvoidingView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#F5F6FA'},
-  tabRow: {
+/* ─── Styles ────────────────────────────────────── */
+const s = StyleSheet.create({
+  root: {flex: 1, backgroundColor: colors.bgScreen},
+
+  /* Header */
+  hdr: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    height: 52,
   },
-  tab: {flex: 1, paddingVertical: 14, alignItems: 'center'},
-  tabActive: {borderBottomWidth: 2, borderBottomColor: '#4A90D9'},
-  tabText: {fontSize: 14, color: '#999', fontWeight: '600'},
-  tabTextActive: {color: '#4A90D9'},
-  form: {padding: 20},
-  label: {fontSize: 14, fontWeight: '600', color: '#1A1A2E', marginBottom: 8, marginTop: 12},
-  typeRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4},
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hdrTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 16,
+    color: colors.textPrimary,
+    textAlign: 'auto',
+  },
+
+  /* Segmented Tabs */
+  tabWrapper: {paddingHorizontal: 20, marginBottom: 8},
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.bgGray,
+    borderRadius: 12,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  tabActive: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tabText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  tabTextActive: {color: '#FFF'},
+
+  /* Form */
+  formScroll: {paddingHorizontal: 20, paddingBottom: 40},
+  label: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: colors.textPrimary,
+    marginBottom: 8,
+    marginTop: 16,
+    marginStart: 2,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   typePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#FFF',
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
-  typePillActive: {backgroundColor: '#4A90D9', borderColor: '#4A90D9'},
-  typePillText: {fontSize: 12, color: '#666'},
-  typePillTextActive: {color: '#FFF', fontWeight: '600'},
+  typePillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  typePillText: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  typePillTextActive: {color: '#FFF'},
   input: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 14,
-    color: '#333',
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-  },
-  textArea: {minHeight: 120},
-  submitBtn: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
+    padding: 14,
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    textAlign: 'auto',
+  },
+  textArea: {minHeight: 130, paddingTop: 14},
+  submitBtn: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 24,
+    justifyContent: 'center',
+    marginTop: 28,
   },
-  submitBtnText: {fontSize: 16, fontWeight: '700', color: '#FFF'},
-  list: {padding: 16, paddingBottom: 24},
+  submitBtnText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 15,
+    color: '#FFF',
+  },
+
+  /* Ticket List */
+  list: {paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24},
   ticketCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: colors.bgCard,
+    borderRadius: 14,
+    padding: 16,
     marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  ticketHeader: {
+  ticketRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
+    alignItems: 'flex-start',
   },
-  ticketSubject: {fontSize: 15, fontWeight: '600', color: '#1A1A2E', flex: 1, marginRight: 8},
-  ticketBadge: {paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10},
-  ticketBadgeText: {fontSize: 10, fontWeight: '700'},
-  ticketDesc: {fontSize: 13, color: '#666', marginBottom: 6},
-  ticketDate: {fontSize: 11, color: '#999'},
-  empty: {alignItems: 'center', paddingTop: 60},
-  emptyText: {fontSize: 15, color: '#999'},
+  ticketDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginTop: 6,
+    marginEnd: 12,
+  },
+  ticketBody: {flex: 1, marginEnd: 10},
+  ticketSubject: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  ticketBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  ticketBadgeText: {
+    fontFamily: fontFamily.bold,
+    fontSize: 9,
+    letterSpacing: 0.5,
+  },
+  ticketDesc: {
+    fontFamily: fontFamily.regular,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  ticketDate: {
+    fontFamily: fontFamily.regular,
+    fontSize: 11,
+    color: colors.textLight,
+  },
+
+  /* Empty state */
+  empty: {alignItems: 'center', paddingTop: 80, gap: 12},
+  emptyTitle: {
+    fontFamily: fontFamily.medium,
+    fontSize: 15,
+    color: colors.textMuted,
+  },
 });
 
 export default SupportScreen;

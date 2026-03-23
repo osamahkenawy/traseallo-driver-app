@@ -5,7 +5,9 @@
  * and returns decoded coordinates ready for react-native-maps <Polyline>.
  */
 
-const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
+const OSRM_BASE = 'https://router.project-osrm.org';
+const ROUTE_URL = `${OSRM_BASE}/route/v1/driving`;
+const TRIP_URL = `${OSRM_BASE}/trip/v1/driving`;
 
 /**
  * Decode Google-encoded polyline string into array of {latitude, longitude}.
@@ -63,7 +65,7 @@ export async function fetchRoadRoute(waypoints, options = {}) {
     .map((w) => `${w.longitude},${w.latitude}`)
     .join(';');
 
-  const url = `${OSRM_BASE}/${coordStr}?overview=full&geometries=polyline`;
+  const url = `${ROUTE_URL}/${coordStr}?overview=full&geometries=polyline`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeout || 8000);
@@ -129,4 +131,58 @@ export async function fetchRoadRouteChunked(waypoints, options = {}) {
   return allCoords.length >= 2
     ? {coordinates: allCoords, distance: totalDist, duration: totalDur}
     : null;
+}
+
+/**
+ * Fetch an optimized route (TSP) using OSRM's /trip endpoint.
+ * The first waypoint (driver position) is fixed as start; the rest are
+ * reordered to minimize total travel distance.
+ *
+ * @param {Array<{latitude: number, longitude: number}>} waypoints
+ * @param {Object} [options]
+ * @returns {Promise<{coordinates: Array, distance: number, duration: number, optimizedOrder: number[]} | null>}
+ *   optimizedOrder: reordered indices of the input waypoints (0-based)
+ */
+export async function fetchOptimizedRoute(waypoints, options = {}) {
+  if (!waypoints || waypoints.length < 2) return null;
+
+  const coordStr = waypoints
+    .map((w) => `${w.longitude},${w.latitude}`)
+    .join(';');
+
+  // source=first: fix driver position as start; roundtrip=false: don't return to start
+  const url = `${TRIP_URL}/${coordStr}?overview=full&geometries=polyline&source=first&roundtrip=false`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeout || 10000);
+
+  try {
+    const res = await fetch(url, {signal: controller.signal});
+    clearTimeout(timeout);
+
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    if (json.code !== 'Ok' || !json.trips || json.trips.length === 0) {
+      return null;
+    }
+
+    const trip = json.trips[0];
+    const coordinates = decodePolyline(trip.geometry);
+
+    // Extract the optimized waypoint ordering
+    const optimizedOrder = (json.waypoints || [])
+      .sort((a, b) => a.trips_index - b.trips_index || a.waypoint_index - b.waypoint_index)
+      .map((w) => w.waypoint_index);
+
+    return {
+      coordinates,
+      distance: trip.distance,
+      duration: trip.duration,
+      optimizedOrder,
+    };
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
 }

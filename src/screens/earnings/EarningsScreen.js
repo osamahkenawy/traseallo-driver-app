@@ -19,11 +19,15 @@ import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import useEarningsStore from '../../store/earningsStore';
 import useCodStore from '../../store/codStore';
-
-const PERIODS = ['Today', 'This Week', 'This Month', 'All Time'];
+import useSettingsStore from '../../store/settingsStore';
+import {useTranslation} from 'react-i18next';
 
 const EarningsScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
+  const currency = useSettingsStore(s => s.currency);
+
+  const PERIODS = [t('earnings.today'), t('earnings.thisWeek'), t('earnings.thisMonth'), t('earnings.allTime')];
 
   const {earnings: earningsData, summary: earningSummary, isLoading, isRefreshing, fetchEarnings} = useEarningsStore();
   const {pendingOrders: transactions, summary: codSummary, fetchPending, fetchSummary} = useCodStore();
@@ -61,9 +65,7 @@ const EarningsScreen = ({navigation}) => {
     const isCollected = item.status === 'collected' || item.status === 'settled';
     const statusColor = isCollected ? colors.success : colors.warning;
     const statusIcon = isCollected ? 'check-circle-outline' : 'clock-outline';
-    const statusLabel = item.status
-      ? item.status.charAt(0).toUpperCase() + item.status.slice(1)
-      : 'Pending';
+    const statusLabel = t('status.' + (item.status || 'pending'));
     return (
       <View style={s.txRow}>
         <View style={[s.txIcon, {backgroundColor: statusColor + '12'}]}>
@@ -71,7 +73,7 @@ const EarningsScreen = ({navigation}) => {
         </View>
         <View style={{flex: 1}}>
           <Text style={s.txTitle} numberOfLines={1}>
-            Order #{item.order_number || item.order_id || item.id}
+            {t('orders.orderNumber', {num: item.order_number || item.order_id || item.id})}
           </Text>
           <Text style={s.txDate}>
             {item.created_at
@@ -86,7 +88,7 @@ const EarningsScreen = ({navigation}) => {
         </View>
         <View style={{alignItems: 'flex-end'}}>
           <Text style={[s.txAmount, {color: statusColor}]}>
-            AED {formatAmount(item.amount || item.cod_amount)}
+            {currency} {formatAmount(item.amount || item.cod_amount)}
           </Text>
           <Text style={[s.txStatus, {color: statusColor}]}>{statusLabel}</Text>
         </View>
@@ -101,7 +103,7 @@ const EarningsScreen = ({navigation}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Earnings</Text>
+        <Text style={s.hdrTitle}>{t('earnings.title')}</Text>
         <View style={{width: 20}} />
       </View>
 
@@ -130,8 +132,8 @@ const EarningsScreen = ({navigation}) => {
 
         {/* Earnings Header */}
         <View style={s.earningsHero}>
-          <Text style={s.earningsLabel}>{PERIODS[selectedPeriod]} Earnings</Text>
-          <Text style={s.earningsVal}>AED {getEarningsForPeriod()}</Text>
+          <Text style={s.earningsLabel}>{PERIODS[selectedPeriod]} {t('earnings.title')}</Text>
+          <Text style={s.earningsVal}>{currency} {getEarningsForPeriod()}</Text>
         </View>
 
         {/* Summary cards */}
@@ -141,23 +143,23 @@ const EarningsScreen = ({navigation}) => {
               <Icon name="wallet-outline" size={18} color={colors.orange} />
             </View>
             <Text style={[s.sumVal, {color: colors.orange}]}>
-              AED {formatAmount(codSummary?.total_collected || codSummary?.collected)}
+              {currency} {formatAmount(codSummary?.total_collected || codSummary?.collected)}
             </Text>
-            <Text style={s.sumLabel}>COD Collected</Text>
+            <Text style={s.sumLabel}>{t('earnings.codCollected')}</Text>
           </View>
           <View style={s.sumCard}>
             <View style={[s.sumIc, {backgroundColor: colors.success + '0D'}]}>
               <Icon name="cash-multiple" size={18} color={colors.success} />
             </View>
             <Text style={[s.sumVal, {color: colors.success}]}>
-              AED {formatAmount(codSummary?.total_pending || codSummary?.pending)}
+              {currency} {formatAmount(codSummary?.total_pending || codSummary?.pending)}
             </Text>
-            <Text style={s.sumLabel}>COD Pending</Text>
+            <Text style={s.sumLabel}>{t('earnings.codPending')}</Text>
           </View>
         </View>
 
         {/* Transaction History */}
-        <Text style={s.secTitle}>Recent Transactions</Text>
+        <Text style={s.secTitle}>{t('earnings.recentTransactions')}</Text>
 
         {loading ? (
           <View style={s.emptyCard}>
@@ -168,8 +170,8 @@ const EarningsScreen = ({navigation}) => {
             <View style={s.emptyIc}>
               <Icon name="receipt" size={22} color={colors.textLight} />
             </View>
-            <Text style={s.emptyH}>No transactions yet</Text>
-            <Text style={s.emptyP}>Your earnings history will appear here.</Text>
+            <Text style={s.emptyH}>{t('earnings.noTransactions')}</Text>
+            <Text style={s.emptyP}>{t('earnings.noTransactionsDesc')}</Text>
           </View>
         ) : (
           <View style={s.txCard}>
@@ -195,7 +197,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     height: 52,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 40},
 
   /* Period pills */

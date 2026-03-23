@@ -19,8 +19,10 @@ import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import authApi from '../../api/auth';
 import {routeNames} from '../../constants/routeNames';
+import {useTranslation} from 'react-i18next';
 
 const ForgotPasswordScreen = ({navigation}) => {
+  const {t} = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -35,7 +37,7 @@ const ForgotPasswordScreen = ({navigation}) => {
       await authApi.forgotPassword(email.trim());
       setSent(true);
     } catch (e) {
-      setError(e?.response?.data?.message || 'Something went wrong');
+      setError(e?.response?.data?.message || t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -56,18 +58,18 @@ const ForgotPasswordScreen = ({navigation}) => {
           <Icon name="lock-reset" size={28} color={colors.primary} />
         </View>
 
-        <Text style={s.title}>Forgot Password</Text>
-        <Text style={s.subtitle}>Enter your email or phone and we'll send you an OTP to reset your password.</Text>
+        <Text style={s.title}>{t('auth.forgotPasswordTitle')}</Text>
+        <Text style={s.subtitle}>{t('auth.forgotPasswordSubtitle')}</Text>
 
         {sent ? (
           <View style={s.successBox}>
             <Icon name="check-circle-outline" size={18} color={colors.success} />
-            <Text style={s.successText}>An OTP has been sent to your email/phone.</Text>
+            <Text style={s.successText}>{t('auth.otpSent')}</Text>
             <TouchableOpacity
               style={[s.btn, {marginTop: 12}]}
               onPress={() => navigation.navigate(routeNames.ResetPassword, {identifier: email.trim()})}
               activeOpacity={0.8}>
-              <Text style={s.btnText}>Enter OTP & Reset</Text>
+              <Text style={s.btnText}>{t('auth.enterOtpReset')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -79,14 +81,14 @@ const ForgotPasswordScreen = ({navigation}) => {
               </View>
             ) : null}
 
-            <Text style={s.label}>Email Address</Text>
+            <Text style={s.label}>{t('auth.emailAddress')}</Text>
             <View style={[s.inputRow, focused && s.inputRowFocused]}>
               <Icon name="email-outline" size={18} color={focused ? colors.primary : colors.textMuted} style={s.inputIcon} />
               <TextInput
                 style={s.input}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="you@example.com"
+                placeholder={t('auth.emailPlaceholderExample')}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -104,7 +106,7 @@ const ForgotPasswordScreen = ({navigation}) => {
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={s.btnText}>Send Reset Link</Text>
+                <Text style={s.btnText}>{t('auth.sendResetLink')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -112,7 +114,7 @@ const ForgotPasswordScreen = ({navigation}) => {
 
         <TouchableOpacity style={s.backLink} onPress={() => navigation.goBack()}>
           <Icon name="arrow-left" size={14} color={colors.primary} />
-          <Text style={s.backLinkText}>Back to Sign In</Text>
+          <Text style={s.backLinkText}>{t('auth.backToSignIn')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -140,11 +142,11 @@ const s = StyleSheet.create({
 
   /* Success */
   successBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    alignItems: 'center', gap: 10,
     backgroundColor: colors.successBg, borderRadius: 12,
     padding: 16, borderWidth: 1, borderColor: colors.success + '30',
   },
-  successText: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.success, flex: 1, lineHeight: 18},
+  successText: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.success, textAlign: 'center', lineHeight: 18},
 
   /* Card */
   card: {
@@ -165,8 +167,8 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#EEF1F5', marginBottom: 20,
   },
   inputRowFocused: {borderColor: colors.primary, backgroundColor: '#FFF'},
-  inputIcon: {marginLeft: 14, marginRight: 8},
-  input: {flex: 1, height: '100%', fontFamily: fontFamily.regular, fontSize: 14, color: colors.textPrimary, paddingRight: 14},
+  inputIcon: {marginStart: 14, marginEnd: 8},
+  input: {flex: 1, height: '100%', fontFamily: fontFamily.regular, fontSize: 14, color: colors.textPrimary, paddingEnd: 14},
 
   btn: {
     height: 48, backgroundColor: colors.primary, borderRadius: 12,

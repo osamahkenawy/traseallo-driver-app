@@ -6,7 +6,7 @@ import { theme } from "../constants";
 const TrackCategory = ({ line, performed, status, comment }) => {
   return (
     <View style={{ flexDirection: "row", marginBottom: 6 }}>
-      <View style={{ alignItems: "center", marginRight: 24 }}>
+      <View style={{ alignItems: "center", marginEnd: 24 }}>
         <View
           style={{
             width: 30,

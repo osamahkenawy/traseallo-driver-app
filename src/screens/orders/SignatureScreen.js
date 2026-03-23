@@ -16,8 +16,10 @@ import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import useAuthStore from '../../store/authStore';
 import SignaturePad from '../../components/SignaturePad';
+import {useTranslation} from 'react-i18next';
 
 const SignatureScreen = ({navigation, route}) => {
+  const {t} = useTranslation();
   const ins = useSafeAreaInsets();
   const {returnScreen, returnParams = {}} = route.params || {};
   const sigRef = useRef(null);
@@ -75,7 +77,7 @@ const SignatureScreen = ({navigation, route}) => {
     <View style={[s.root, {paddingTop: ins.top}]}>
       {/* Header area */}
       <View style={s.header}>
-        <Text style={s.title}>Driver's signature</Text>
+        <Text style={s.title}>{t('signature.title')}</Text>
         <Text style={s.driverName}>{driverName}</Text>
       </View>
 
@@ -93,7 +95,7 @@ const SignatureScreen = ({navigation, route}) => {
 
       {/* Clear signature */}
       <TouchableOpacity style={s.clearBtn} onPress={handleClear} activeOpacity={0.6}>
-        <Text style={s.clearTxt}>Clear signature</Text>
+        <Text style={s.clearTxt}>{t('signature.clear')}</Text>
       </TouchableOpacity>
 
       {/* Bottom buttons */}
@@ -102,14 +104,14 @@ const SignatureScreen = ({navigation, route}) => {
           style={s.backBtn}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}>
-          <Text style={s.backTxt}>Back</Text>
+          <Text style={s.backTxt}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[s.confirmBtn, !hasStrokes && s.confirmDisabled]}
           onPress={handleConfirm}
           activeOpacity={0.7}
           disabled={!hasStrokes}>
-          <Text style={s.confirmTxt}>Confirm</Text>
+          <Text style={s.confirmTxt}>{t('common.confirm')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -132,6 +134,7 @@ const s = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 22,
     color: colors.textPrimary,
+    textAlign: 'auto',
     letterSpacing: -0.3,
   },
   driverName: {

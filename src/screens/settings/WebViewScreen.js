@@ -9,8 +9,12 @@ import {WebView} from 'react-native-webview';
 import Icon from '../../utils/LucideIcon';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
+import {useTranslation} from 'react-i18next';
 
 const ALLOWED_DOMAINS = [
+  'trasealla.com',
+  'api.trasealla.com',
+  'delivery.trasealla.com',
   'traseallo.com',
   'api.traseallo.com',
   'delivery.traseallo.com',
@@ -28,6 +32,7 @@ const isAllowedUrl = (urlString) => {
 
 const WebViewScreen = ({navigation, route}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
   const {url, title} = route.params || {};
   const safeUrl = isAllowedUrl(url) ? url : 'about:blank';
   const [loading, setLoading] = useState(true);
@@ -42,7 +47,7 @@ const WebViewScreen = ({navigation, route}) => {
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={s.hdrTitle} numberOfLines={1}>
-          {title || 'Web Page'}
+          {title || t('common.webPage')}
         </Text>
         <View style={{width: 20}} />
       </View>
@@ -51,7 +56,7 @@ const WebViewScreen = ({navigation, route}) => {
       {loading && (
         <View style={s.loadingBar}>
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={s.loadingText}>Loading...</Text>
+          <Text style={s.loadingText}>{t('common.loading')}</Text>
         </View>
       )}
 

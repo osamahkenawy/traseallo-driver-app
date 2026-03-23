@@ -5,6 +5,7 @@
 
 import React from 'react';
 import {View, StyleSheet, Text, TouchableOpacity} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
@@ -27,19 +28,21 @@ const NotificationsPreview = ({
   onViewAll,
   onPress,
 }) => {
+  const {t} = useTranslation();
+
   if (unreadCount === 0 && notifications.length === 0) return null;
 
   return (
     <View style={$.root}>
       <View style={$.header}>
-        <Text style={$.sectionTitle}>Notifications</Text>
+        <Text style={$.sectionTitle}>{t('dashboard.notifications')}</Text>
         {unreadCount > 0 && (
           <View style={$.countBadge}>
             <Text style={$.countTxt}>{unreadCount}</Text>
           </View>
         )}
         <TouchableOpacity onPress={onViewAll} activeOpacity={0.7} style={$.viewAllBtn}>
-          <Text style={$.viewAll}>View All</Text>
+          <Text style={$.viewAll}>{t('dashboard.viewAll')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -57,7 +60,7 @@ const NotificationsPreview = ({
               </View>
               <View style={$.notifBody}>
                 <Text style={$.notifTitle} numberOfLines={1}>
-                  {notif.title || 'Notification'}
+                  {notif.title || t('dashboard.notificationFallback')}
                 </Text>
                 <Text style={$.notifSub} numberOfLines={1}>
                   {notif.body || notif.message || ''}
@@ -103,7 +106,7 @@ const $ = StyleSheet.create({
     color: '#FFF',
   },
   viewAllBtn: {
-    marginLeft: 'auto',
+    marginStart: 'auto',
   },
   viewAll: {
     fontFamily: fontFamily.bold,

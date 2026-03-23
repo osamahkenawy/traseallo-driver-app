@@ -7,6 +7,7 @@ import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import {I18nManager} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import RNRestart from 'react-native-restart';
 
 import en from './en.json';
 import ar from './ar.json';
@@ -37,11 +38,15 @@ export const changeLanguage = async (lang) => {
   try {
     await AsyncStorage.setItem(LANGUAGE_KEY, lang);
     const isRTL = lang === 'ar';
+    const needsRestart = I18nManager.isRTL !== isRTL;
     I18nManager.forceRTL(isRTL);
     I18nManager.allowRTL(isRTL);
     await i18n.changeLanguage(lang);
+    if (needsRestart) {
+      RNRestart.restart();
+    }
   } catch (error) {
-    console.error('Failed to change language:', error);
+    if (__DEV__) console.error('Failed to change language:', error);
   }
 };
 

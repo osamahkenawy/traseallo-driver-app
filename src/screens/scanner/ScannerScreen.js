@@ -23,9 +23,11 @@ import useScanStore from '../../store/scanStore';
 import {packagesApi} from '../../api';
 import {routeNames} from '../../constants/routeNames';
 import {showMessage} from 'react-native-flash-message';
+import {useTranslation} from 'react-i18next';
 
 const ScannerScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
   const inputRef = useRef(null);
   const {scanBarcode, isScanning} = useScanStore();
 
@@ -49,7 +51,7 @@ const ScannerScreen = ({navigation}) => {
       if (order?.id) {
         Vibration.vibrate(100);
         setLastResult({type: 'order', success: true, order});
-        showMessage({message: 'Order found!', type: 'success', icon: 'auto', duration: 1500});
+        showMessage({message: t('scanner.orderFound'), type: 'success', icon: 'auto', duration: 1500});
         setSearching(false);
         return;
       }
@@ -68,7 +70,7 @@ const ScannerScreen = ({navigation}) => {
           await packagesApi.logScan(pkg.id, {scan_type: 'driver_scan'});
         } catch {}
         setLastResult({type: 'package', success: true, pkg});
-        showMessage({message: 'Package found!', type: 'success', icon: 'auto', duration: 1500});
+        showMessage({message: t('scanner.packageFound'), type: 'success', icon: 'auto', duration: 1500});
         setSearching(false);
         return;
       }
@@ -77,7 +79,7 @@ const ScannerScreen = ({navigation}) => {
     }
 
     Vibration.vibrate([0, 100, 50, 100]);
-    setLastResult({success: false, message: 'No order or package found for this code'});
+    setLastResult({success: false, message: t('scanner.notFound')});
     setSearching(false);
   }, [code]);
 
@@ -106,7 +108,7 @@ const ScannerScreen = ({navigation}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
           <Icon name="arrow-left" size={20} color="#FFF" />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>Scanner</Text>
+        <Text style={s.hdrTitle}>{t('scanner.title')}</Text>
         <View style={{width: 20}} />
       </View>
 
@@ -116,9 +118,9 @@ const ScannerScreen = ({navigation}) => {
           <View style={s.frame}>
             <Icon name="barcode-scan" size={48} color={colors.success} />
           </View>
-          <Text style={s.hint}>Point your camera at a barcode or QR code</Text>
+          <Text style={s.hint}>{t('scanner.cameraHint')}</Text>
           <Text style={s.subHint}>
-            Camera scanning requires additional setup.{'\n'}Use manual entry below for now.
+            {t('scanner.cameraSubHint')}
           </Text>
         </View>
       ) : (
@@ -130,7 +132,7 @@ const ScannerScreen = ({navigation}) => {
               <TextInput
                 ref={inputRef}
                 style={s.input}
-                placeholder="Order # or package barcode..."
+                placeholder={t('scanner.placeholder')}
                 placeholderTextColor={colors.textMuted}
                 value={code}
                 onChangeText={setCode}
@@ -175,7 +177,7 @@ const ScannerScreen = ({navigation}) => {
                       {lastResult.order.order_number || lastResult.order.tracking_token}
                     </Text>
                     <Text style={s.resultSub}>
-                      Order · {(lastResult.order.status || '').replace(/_/g, ' ')}
+                      {t('scanner.order')} · {t('status.' + (lastResult.order.status || 'pending'), (lastResult.order.status || ''))}
                     </Text>
                   </>
                 ) : lastResult.success && lastResult.type === 'package' ? (
@@ -184,7 +186,7 @@ const ScannerScreen = ({navigation}) => {
                       {lastResult.pkg.barcode || lastResult.pkg.id}
                     </Text>
                     <Text style={s.resultSub}>
-                      Package · {lastResult.pkg.recipient_name || '---'} · {(lastResult.pkg.status || '').replace(/_/g, ' ')}
+                      {t('scanner.package')} · {lastResult.pkg.recipient_name || '---'} · {t('status.' + (lastResult.pkg.status || 'pending'), (lastResult.pkg.status || ''))}
                     </Text>
                   </>
                 ) : (
@@ -193,7 +195,7 @@ const ScannerScreen = ({navigation}) => {
               </View>
               {lastResult.success && (
                 <TouchableOpacity style={s.goBtn} onPress={goToResult} activeOpacity={0.7}>
-                  <Text style={s.goBtnTxt}>View</Text>
+                  <Text style={s.goBtnTxt}>{t('scanner.view')}</Text>
                   <Icon name="chevron-right" size={16} color={colors.primary} />
                 </TouchableOpacity>
               )}
@@ -205,7 +207,7 @@ const ScannerScreen = ({navigation}) => {
             <View style={s.tipWrap}>
               <Icon name="information-outline" size={16} color={colors.textMuted} />
               <Text style={s.tipTxt}>
-                Enter an order tracking number or package barcode to search.
+                {t('scanner.tip')}
               </Text>
             </View>
           )}
@@ -220,7 +222,7 @@ const ScannerScreen = ({navigation}) => {
             onPress={() => setMode('scan')}
             activeOpacity={0.7}>
             <Icon name="camera-outline" size={18} color={mode === 'scan' ? '#FFF' : 'rgba(255,255,255,0.5)'} />
-            <Text style={[s.tabTxt, mode === 'scan' && s.tabTxtActive]}>Camera</Text>
+            <Text style={[s.tabTxt, mode === 'scan' && s.tabTxtActive]}>{t('scanner.camera')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[s.tabBtn, mode === 'manual' && s.tabActive]}
@@ -230,7 +232,7 @@ const ScannerScreen = ({navigation}) => {
             }}
             activeOpacity={0.7}>
             <Icon name="keyboard-outline" size={18} color={mode === 'manual' ? '#FFF' : 'rgba(255,255,255,0.5)'} />
-            <Text style={[s.tabTxt, mode === 'manual' && s.tabTxtActive]}>Manual</Text>
+            <Text style={[s.tabTxt, mode === 'manual' && s.tabTxtActive]}>{t('scanner.manual')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -242,9 +244,9 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#1A1A2E'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52,
+    paddingHorizontal: 20, height: 52, gap: 8,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: '#FFF'},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: '#FFF', textAlign: 'auto'},
 
   /* Camera body */
   body: {flex: 1, justifyContent: 'center', alignItems: 'center'},

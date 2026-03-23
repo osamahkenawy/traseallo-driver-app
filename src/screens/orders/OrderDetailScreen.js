@@ -15,7 +15,6 @@ import {
   Alert,
   RefreshControl,
   Share,
-  Animated,
   Platform,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -24,22 +23,14 @@ import {colors, getStatusColor, getStatusBgColor} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {routeNames} from '../../constants/routeNames';
 import useOrderStore from '../../store/orderStore';
+import useSettingsStore from '../../store/settingsStore';
 import Icon from '../../utils/LucideIcon';
 import {showMessage} from 'react-native-flash-message';
+import {useTranslation} from 'react-i18next';
 
 /* ── Helpers ──────────────────────────────────────────────── */
 const STATUS_FLOW = ['pending', 'confirmed', 'assigned', 'picked_up', 'in_transit', 'delivered'];
-const STATUS_LABELS = {
-  pending: 'Pending',
-  confirmed: 'Confirmed',
-  assigned: 'Assigned',
-  picked_up: 'Picked Up',
-  in_transit: 'In Transit',
-  delivered: 'Delivered',
-  failed: 'Failed',
-  returned: 'Returned',
-  cancelled: 'Cancelled',
-};
+// STATUS_LABELS now uses t('status.*') inside component
 const STATUS_ICONS = {
   pending: 'clock-outline',
   confirmed: 'check-circle-outline',
@@ -97,7 +88,9 @@ const cleanPhone = (p) => (p || '').replace(/[\s\-()]/g, '');
 
 /* ── Main Component ───────────────────────────────────────── */
 const OrderDetailScreen = ({navigation, route}) => {
+  const {t} = useTranslation();
   const ins = useSafeAreaInsets();
+  const currency = useSettingsStore(s => s.currency);
   const {token, trackingToken, orderId: paramOrderId} = route.params || {};
   const tkn = token || trackingToken;
   const orderIdParam = paramOrderId;
@@ -187,23 +180,22 @@ const OrderDetailScreen = ({navigation, route}) => {
 
   /* ── Actions ─── */
   const handleCall = useCallback(() => {
-    if (!phone) return Alert.alert('No Phone', 'No phone number available.');
+    if (!phone) return Alert.alert(t('orderDetail.noPhone'), t('orderDetail.noPhoneMsg'));
     Linking.openURL(`tel:${cleanPhone(phone)}`);
   }, [phone]);
 
   const handleWhatsApp = useCallback(() => {
-    if (!phone) return Alert.alert('No Phone', 'No phone number available.');
-    const num = cleanPhone(phone).replace(/^0/, '971');
+    if (!phone) return Alert.alert(t('orderDetail.noPhone'), t('orderDetail.noPhoneMsg'));
     const msg = encodeURIComponent(
       `Hi ${order?.recipient_name || ''}, your order ${order?.order_number || ''} is on its way! 🚚`,
     );
-    Linking.openURL(`https://wa.me/${num}?text=${msg}`).catch(() =>
-      Alert.alert('WhatsApp', 'Could not open WhatsApp.'),
+    Linking.openURL(`https://wa.me/${cleanPhone(phone)}?text=${msg}`).catch(() =>
+      Alert.alert(t('orderDetail.whatsapp'), t('orderDetail.whatsappError')),
     );
   }, [phone, order]);
 
   const handleSMS = useCallback(() => {
-    if (!phone) return Alert.alert('No Phone', 'No phone number available.');
+    if (!phone) return Alert.alert(t('orderDetail.noPhone'), t('orderDetail.noPhoneMsg'));
     const body = encodeURIComponent(
       `Hi ${order?.recipient_name || ''}, your order ${order?.order_number || ''} is on its way!`,
     );
@@ -219,7 +211,7 @@ const OrderDetailScreen = ({navigation, route}) => {
       Linking.openURL(url);
       return;
     }
-    if (!address) return Alert.alert('No Address', 'No delivery address available.');
+    if (!address) return Alert.alert(t('orderDetail.noAddress'), t('orderDetail.noDeliveryAddress'));
     Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(address)}`);
   }, [address, order]);
 
@@ -231,11 +223,11 @@ const OrderDetailScreen = ({navigation, route}) => {
       phone && `Phone: ${phone}`,
       address && `Address: ${address}`,
       order?.payment_method && `Payment: ${order.payment_method.toUpperCase()}`,
-      order?.total_amount && `Total: AED ${order.total_amount}`,
+      order?.total_amount && `Total: ${currency} ${order.total_amount}`,
     ].filter(Boolean).join('\n');
     if (info) {
       Clipboard.setString(info);
-      Alert.alert('Copied!', 'Order details copied to clipboard.');
+      Alert.alert(t('orderDetail.copied'), t('orderDetail.orderCopied'));
     }
   }, [order, phone, address]);
 
@@ -246,7 +238,7 @@ const OrderDetailScreen = ({navigation, route}) => {
       `👤 ${order?.recipient_name || '---'}`,
       `📞 ${phone || '---'}`,
       `📍 ${address || '---'}`,
-      `💰 ${order?.payment_method?.toUpperCase() || '---'} — AED ${order?.total_amount || '0.00'}`,
+      `💰 ${order?.payment_method?.toUpperCase() || '---'} — ${currency} ${order?.total_amount || '0.00'}`,
     ].join('\n');
     try {
       await Share.share({message: info, title: `Order ${order?.order_number}`});
@@ -255,7 +247,7 @@ const OrderDetailScreen = ({navigation, route}) => {
 
   const handleCallSender = useCallback(() => {
     const sp = order?.sender_phone;
-    if (!sp) return Alert.alert('No Phone', 'No sender phone available.');
+    if (!sp) return Alert.alert(t('orderDetail.noPhone'), t('orderDetail.noSenderPhone'));
     Linking.openURL(`tel:${cleanPhone(sp)}`);
   }, [order]);
 
@@ -269,26 +261,26 @@ const OrderDetailScreen = ({navigation, route}) => {
       return;
     }
     const sAddr = order?.sender_address;
-    if (!sAddr) return Alert.alert('No Address', 'No pickup address available.');
+    if (!sAddr) return Alert.alert(t('orderDetail.noAddress'), t('orderDetail.noPickupAddress'));
     Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(sAddr)}`);
   }, [order]);
 
   const handlePickupOrder = useCallback(async () => {
     Alert.alert(
-      'Confirm Pickup',
-      `Pick up order from ${order?.sender_name || 'sender'}?`,
+      t('orderDetail.confirmPickup'),
+      t('orderDetail.confirmPickupMsg', {sender: order?.sender_name || 'sender'}),
       [
-        {text: 'Cancel', style: 'cancel'},
+        {text: t('common.cancel'), style: 'cancel'},
         {
-          text: 'Confirm Pickup',
+          text: t('orderDetail.confirmPickupBtn'),
           onPress: async () => {
             if (!resolvedOrderId) return;
             const result = await startDeliveryAction(resolvedOrderId, {});
             if (result.success) {
-              showMessage({message: 'Order Picked Up!', description: 'You can now start delivering to stops.', type: 'success'});
+              showMessage({message: t('orderDetail.orderPickedUp'), description: t('orderDetail.orderPickedUpDesc'), type: 'success'});
               fetchOrderDetail(resolvedOrderId);
             } else {
-              Alert.alert('Error', result.error || 'Failed to update status');
+              Alert.alert(t('orderDetail.error'), result.error || t('orderDetail.failedToUpdate'));
             }
           },
         },
@@ -315,7 +307,7 @@ const OrderDetailScreen = ({navigation, route}) => {
     return (
       <View style={[$.loadWrap, {paddingTop: ins.top}]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={$.loadTxt}>Loading order...</Text>
+        <Text style={$.loadTxt}>{t('orderDetail.loadingOrder')}</Text>
       </View>
     );
   }
@@ -332,7 +324,7 @@ const OrderDetailScreen = ({navigation, route}) => {
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{flex: 1, alignItems: 'center'}}>
-          <Text style={$.hdrTitle}>Order Detail</Text>
+          <Text style={$.hdrTitle}>{t('orderDetail.title')}</Text>
           <Text style={$.hdrSub}>{order?.order_number || '---'}</Text>
         </View>
         <TouchableOpacity onPress={handleShare} style={$.hdrAction}>
@@ -353,7 +345,7 @@ const OrderDetailScreen = ({navigation, route}) => {
             <View style={[$.statusPill, {backgroundColor: getStatusBgColor(status)}]}>
               <Icon name={STATUS_ICONS[status] || 'package-variant'} size={13} color={getStatusColor(status)} />
               <Text style={[$.statusTxt, {color: getStatusColor(status)}]}>
-                {(STATUS_LABELS[status] || status).toUpperCase()}
+                {(t('status.' + status) || status).toUpperCase()}
               </Text>
             </View>
             {order?.category && (
@@ -374,7 +366,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                 style={$.awbRow}
                 onPress={() => {
                   Clipboard.setString(order.awb_number);
-                  Alert.alert('Copied!', 'AWB number copied.');
+                  Alert.alert(t('orderDetail.copied'), t('orderDetail.awbCopied'));
                 }}>
                 <Icon name="barcode" size={13} color={colors.textMuted} />
                 <Text style={$.awbTxt}>{order.awb_number}</Text>
@@ -392,7 +384,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               accent={isCOD ? colors.warning : colors.info}
             />
             {order?.order_type && (
-              <HeroPill icon="flash-outline" text={order.order_type === 'express' ? 'Express' : 'Standard'} />
+              <HeroPill icon="flash-outline" text={order.order_type === 'express' ? t('orderDetail.express') : t('orderDetail.standard')} />
             )}
           </View>
         </View>
@@ -404,8 +396,8 @@ const OrderDetailScreen = ({navigation, route}) => {
               <Icon name="cash" size={18} color={colors.warning} />
             </View>
             <View style={{flex: 1}}>
-              <Text style={$.codLabel}>Collect Cash on Delivery</Text>
-              <Text style={$.codAmt}>AED {parseFloat(order.cod_amount).toFixed(2)}</Text>
+              <Text style={$.codLabel}>{t('orderDetail.collectCOD')}</Text>
+              <Text style={$.codAmt}>{currency} {parseFloat(order.cod_amount).toFixed(2)}</Text>
             </View>
             <Icon name="alert-circle-outline" size={16} color={colors.warning} />
           </View>
@@ -414,21 +406,21 @@ const OrderDetailScreen = ({navigation, route}) => {
         {/* ── Financial Summary ── */}
         <View style={$.finCard}>
           <View style={$.finRow}>
-            <Text style={$.finLabel}>Delivery Fee</Text>
-            <Text style={$.finVal}>AED {parseFloat(order?.delivery_fee || 0).toFixed(2)}</Text>
+            <Text style={$.finLabel}>{t('orderDetail.deliveryFee')}</Text>
+            <Text style={$.finVal}>{currency} {parseFloat(order?.delivery_fee || 0).toFixed(2)}</Text>
           </View>
           {isCOD && (
             <View style={$.finRow}>
-              <Text style={$.finLabel}>COD Amount</Text>
+              <Text style={$.finLabel}>{t('orderDetail.codAmount')}</Text>
               <Text style={[$.finVal, {color: colors.warning}]}>
-                AED {parseFloat(order?.cod_amount || 0).toFixed(2)}
+                {currency} {parseFloat(order?.cod_amount || 0).toFixed(2)}
               </Text>
             </View>
           )}
           <View style={$.finDiv} />
           <View style={$.finRow}>
-            <Text style={$.finTotalLabel}>Total</Text>
-            <Text style={$.finTotalVal}>AED {parseFloat(order?.total_amount || 0).toFixed(2)}</Text>
+            <Text style={$.finTotalLabel}>{t('orderDetail.total')}</Text>
+            <Text style={$.finTotalVal}>{currency} {parseFloat(order?.total_amount || 0).toFixed(2)}</Text>
           </View>
         </View>
 
@@ -440,17 +432,17 @@ const OrderDetailScreen = ({navigation, route}) => {
             </View>
             <View style={{flex: 1}}>
               <Text style={$.secH}>
-                {needsPickup ? '① Pickup from Client' : 'Pickup Location'}
+                {needsPickup ? `① ${t('orderDetail.pickupFromClient')}` : t('orderDetail.pickupLocation')}
               </Text>
               {isPickedUp && (
                 <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.success, marginTop: 1}}>
-                  ✓ Picked Up
+                  ✓ {t('orderDetail.pickedUp')}
                 </Text>
               )}
             </View>
             {needsPickup && (
               <View style={{backgroundColor: '#E3F2FD', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10}}>
-                <Text style={{fontFamily: fontFamily.bold, fontSize: 9, color: '#1565C0'}}>PICK UP FIRST</Text>
+                <Text style={{fontFamily: fontFamily.bold, fontSize: 9, color: '#1565C0'}}>{t('orderDetail.pickUpFirst')}</Text>
               </View>
             )}
           </View>
@@ -462,7 +454,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                 {(order?.sender_name || order?.client_name || 'S').charAt(0).toUpperCase()}
               </Text>
             </View>
-            <View style={{flex: 1, marginLeft: 12}}>
+            <View style={{flex: 1, marginStart: 12}}>
               <Text style={$.personName}>{order?.sender_name || order?.client_name || '---'}</Text>
               {order?.sender_phone && (
                 <TouchableOpacity onPress={handleCallSender} activeOpacity={0.6}>
@@ -490,7 +482,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                 onPress={handleNavigateToSender}
                 activeOpacity={0.75}>
                 <Icon name="navigation-variant" size={15} color="#FFF" />
-                <Text style={{fontFamily: fontFamily.bold, fontSize: 12, color: '#FFF'}}>Navigate to Pickup</Text>
+                <Text style={{fontFamily: fontFamily.bold, fontSize: 12, color: '#FFF'}}>{t('orderDetail.navigateToPickup')}</Text>
               </TouchableOpacity>
               {order?.sender_phone && (
                 <TouchableOpacity
@@ -516,10 +508,10 @@ const OrderDetailScreen = ({navigation, route}) => {
               </View>
               <View style={{flex: 1}}>
                 <Text style={$.secH}>
-                  {isPickedUp ? '② Delivery Stops' : 'Delivery Stops'}
+                  {isPickedUp ? `② ${t('orderDetail.deliveryStops')}` : t('orderDetail.deliveryStops')}
                 </Text>
                 <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginTop: 1}}>
-                  {stops.length > 0 ? `${stops.length} stops` : `${new Set(packages.map(p => p.recipient_name)).size} recipients`}
+                  {stops.length > 0 ? t('orderDetail.stopsCount', {count: stops.length}) : t('orderDetail.recipientsCount', {count: new Set(packages.map(p => p.recipient_name)).size})}
                 </Text>
               </View>
               {(() => {
@@ -560,7 +552,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                           <View style={{
                             width: 24, height: 24, borderRadius: 12,
                             backgroundColor: isCompleted ? colors.success : isFailed ? colors.danger : '#1565C0',
-                            justifyContent: 'center', alignItems: 'center', marginRight: 8,
+                            justifyContent: 'center', alignItems: 'center', marginEnd: 8,
                           }}>
                             <Text style={{fontFamily: fontFamily.bold, fontSize: 11, color: '#FFF'}}>
                               {isCompleted ? '✓' : isFailed ? '✗' : idx + 1}
@@ -568,7 +560,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                           </View>
                           <View style={{flex: 1}}>
                             <Text style={{fontFamily: fontFamily.semiBold, fontSize: 13, color: stopColor}}>
-                              {stop.contact_name || `Stop ${idx + 1}`}
+                              {stop.contact_name || t('orderDetail.stopFallback', {idx: idx + 1})}
                             </Text>
                             {stop.contact_phone && (
                               <Text style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted}}>
@@ -584,7 +576,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                               fontFamily: fontFamily.bold, fontSize: 9, textTransform: 'uppercase',
                               color: isCompleted ? colors.success : isFailed ? colors.danger : '#0369A1',
                             }}>
-                              {(stop.status || 'pending').replace(/_/g, ' ')}
+                              {t('status.' + (stop.status || 'pending'), (stop.status || 'pending'))}
                             </Text>
                           </View>
                         </View>
@@ -606,7 +598,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                           <View style={{flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2}}>
                             <Icon name="cash" size={12} color={colors.warning} />
                             <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.warning}}>
-                              COD: AED {parseFloat(stop.cod_amount).toFixed(2)}
+                              COD: {currency} {parseFloat(stop.cod_amount).toFixed(2)}
                             </Text>
                           </View>
                         )}
@@ -644,7 +636,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                       const anyFailed = r.packages.some(p => p.status === 'failed');
                       const stopColor = allDelivered ? colors.success : anyFailed ? colors.danger : colors.textPrimary;
                       return (
-                        <View key={idx} style={{
+                        <View key={`rcpt-${r.name || idx}`} style={{
                           backgroundColor: allDelivered ? '#F0FFF4' : '#F8F9FA',
                           borderRadius: 12, padding: 12, marginBottom: 8,
                           borderWidth: 1, borderColor: allDelivered ? '#C6F6D5' : '#EEF1F5',
@@ -653,7 +645,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                             <View style={{
                               width: 24, height: 24, borderRadius: 12,
                               backgroundColor: allDelivered ? colors.success : '#1565C0',
-                              justifyContent: 'center', alignItems: 'center', marginRight: 8,
+                              justifyContent: 'center', alignItems: 'center', marginEnd: 8,
                             }}>
                               <Text style={{fontFamily: fontFamily.bold, fontSize: 11, color: '#FFF'}}>
                                 {allDelivered ? '✓' : idx + 1}
@@ -661,7 +653,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                             </View>
                             <View style={{flex: 1}}>
                               <Text style={{fontFamily: fontFamily.semiBold, fontSize: 13, color: stopColor}}>
-                                {r.name || `Recipient ${idx + 1}`}
+                                {r.name || t('orderDetail.recipientFallback', {idx: idx + 1})}
                               </Text>
                               {r.phone && (
                                 <Text style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted}}>
@@ -670,7 +662,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                               )}
                             </View>
                             <Text style={{fontFamily: fontFamily.semiBold, fontSize: 10, color: colors.textMuted}}>
-                              {r.packages.filter(p => p.status === 'delivered').length}/{r.packages.length} pkgs
+                              {r.packages.filter(p => p.status === 'delivered').length}/{r.packages.length} {t('orderDetail.packages').toLowerCase()}
                             </Text>
                           </View>
 
@@ -694,7 +686,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                                 paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8,
                               }}>
                                 <Text style={{fontFamily: fontFamily.bold, fontSize: 8, color: getStatusColor(pkg.status), textTransform: 'uppercase'}}>
-                                  {(pkg.status || '').replace(/_/g, ' ')}
+                                  {t('status.' + (pkg.status || 'pending'), (pkg.status || ''))}
                                 </Text>
                               </View>
                             </View>
@@ -715,7 +707,7 @@ const OrderDetailScreen = ({navigation, route}) => {
             <View style={[$.secIc, {backgroundColor: '#E8F5E9'}]}>
               <Icon name="account-outline" size={16} color="#2E7D32" />
             </View>
-            <Text style={$.secH}>Recipient</Text>
+            <Text style={$.secH}>{t('orderDetail.recipient')}</Text>
           </View>
           <View style={$.secDiv} />
 
@@ -725,7 +717,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                 {(order?.recipient_name || 'R').charAt(0).toUpperCase()}
               </Text>
             </View>
-            <View style={{flex: 1, marginLeft: 12}}>
+            <View style={{flex: 1, marginStart: 12}}>
               <Text style={$.personName}>{order?.recipient_name || '---'}</Text>
               {order?.recipient_email && (
                 <Text style={$.personEmail}>{order.recipient_email}</Text>
@@ -761,11 +753,11 @@ const OrderDetailScreen = ({navigation, route}) => {
 
         {/* ── Quick Actions — 5 buttons ── */}
         <View style={$.actCard}>
-          <ActionCircle icon="phone" color="#244066" bg="#EEF1F5" label="Call" onPress={handleCall} />
-          <ActionCircle icon="whatsapp" color="#25D366" bg="#E8F8EE" label="WhatsApp" onPress={handleWhatsApp} />
-          <ActionCircle icon="message-text-outline" color="#10A6BA" bg="#E6FAFB" label="SMS" onPress={handleSMS} />
-          <ActionCircle icon="navigation-variant" color="#15C7AE" bg="#E6FBF7" label="Navigate" onPress={handleNavigate} />
-          <ActionCircle icon="content-copy" color="#787A7D" bg="#F1F3F5" label="Copy" onPress={handleCopy} />
+          <ActionCircle icon="phone" color="#244066" bg="#EEF1F5" label={t('orderDetail.call')} onPress={handleCall} />
+          <ActionCircle icon="whatsapp" color="#25D366" bg="#E8F8EE" label={t('orderDetail.whatsapp')} onPress={handleWhatsApp} />
+          <ActionCircle icon="message-text-outline" color="#10A6BA" bg="#E6FAFB" label={t('orderDetail.sms')} onPress={handleSMS} />
+          <ActionCircle icon="navigation-variant" color="#15C7AE" bg="#E6FBF7" label={t('orderDetail.navigate')} onPress={handleNavigate} />
+          <ActionCircle icon="content-copy" color="#787A7D" bg="#F1F3F5" label={t('orderDetail.copy')} onPress={handleCopy} />
         </View>
 
         {/* ── Packages Section ── */}
@@ -778,7 +770,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               <View style={[$.secIc, {backgroundColor: '#EDE7F6'}]}>
                 <Icon name="package-variant" size={16} color="#7B1FA2" />
               </View>
-              <Text style={[$.secH, {flex: 1}]}>Packages ({packages.length})</Text>
+              <Text style={[$.secH, {flex: 1}]}>{t('orderDetail.packages')} ({packages.length})</Text>
               {/* Progress pill */}
               {(() => {
                 const delivered = packages.filter(p => p.status === 'delivered').length;
@@ -840,10 +832,10 @@ const OrderDetailScreen = ({navigation, route}) => {
                           fontFamily: fontFamily.semiBold,
                           fontSize: 12,
                           color: colors.textPrimary,
-                          marginLeft: 6,
+                          marginStart: 6,
                           flex: 1,
                         }}>
-                        {pkg.barcode || `Package ${idx + 1}`}
+                        {pkg.barcode || t('orderDetail.pkgFallback', {idx: idx + 1})}
                       </Text>
                       <View
                         style={{
@@ -859,7 +851,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                             color: pkgStatusColor,
                             textTransform: 'uppercase',
                           }}>
-                          {(pkg.status || '').replace(/_/g, ' ')}
+                          {t('status.' + (pkg.status || 'pending'), (pkg.status || ''))}
                         </Text>
                       </View>
                     </View>
@@ -896,7 +888,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                           <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
                             <Icon name="cash" size={12} color={colors.warning} />
                             <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.warning}}>
-                              AED {parseFloat(pkg.cod_amount).toFixed(2)}
+                              {currency} {parseFloat(pkg.cod_amount).toFixed(2)}
                             </Text>
                           </View>
                         )}
@@ -925,7 +917,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                           activeOpacity={0.75}>
                           <Icon name="check-circle-outline" size={14} color="#FFF" />
                           <Text style={{fontFamily: fontFamily.bold, fontSize: 11, color: '#FFF'}}>
-                            Deliver
+                            {t('orderDetail.deliver')}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -946,7 +938,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                           activeOpacity={0.75}>
                           <Icon name="close-circle-outline" size={14} color={colors.danger} />
                           <Text style={{fontFamily: fontFamily.bold, fontSize: 11, color: colors.danger}}>
-                            Fail
+                            {t('orderDetail.fail')}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -964,17 +956,17 @@ const OrderDetailScreen = ({navigation, route}) => {
               <View style={[$.secIc, {backgroundColor: '#FFF3E0'}]}>
                 <Icon name="package-variant-closed" size={16} color="#E65100" />
               </View>
-              <Text style={$.secH}>Package Details</Text>
+              <Text style={$.secH}>{t('orderDetail.packageDetails')}</Text>
             </View>
             <View style={$.secDiv} />
             {order?.category && (
-              <InfoRow icon="shape-outline" label="Category" value={order.category} />
+              <InfoRow icon="shape-outline" label={t('orderDetail.category')} value={order.category} />
             )}
             {order?.weight_kg && (
-              <InfoRow icon="weight-kilogram" label="Weight" value={`${order.weight_kg} kg`} />
+              <InfoRow icon="weight-kilogram" label={t('orderDetail.weight')} value={`${order.weight_kg} kg`} />
             )}
             {order?.dimensions && (
-              <InfoRow icon="ruler-square" label="Dimensions" value={order.dimensions} />
+              <InfoRow icon="ruler-square" label={t('orderDetail.dimensions')} value={order.dimensions} />
             )}
             {order?.special_instructions && (
               <View style={$.instrBox}>
@@ -1006,7 +998,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               <View style={[$.secIc, {backgroundColor: '#EDE7F6'}]}>
                 <Icon name="timeline-clock-outline" size={16} color="#7B1FA2" />
               </View>
-              <Text style={$.secH}>Tracking Timeline</Text>
+              <Text style={$.secH}>{t('orderDetail.trackingTimeline')}</Text>
             </View>
             <View style={$.secDiv} />
 
@@ -1022,13 +1014,13 @@ const OrderDetailScreen = ({navigation, route}) => {
                   <View style={[$.tlContent, !isLast && {paddingBottom: 16}]}>
                     <View style={$.tlHdr}>
                       <Text style={[$.tlStatus, isLast && {color: logColor}]}>
-                        {STATUS_LABELS[log.status] || log.status}
+                        {t('status.' + log.status) || log.status}
                       </Text>
                       <Text style={$.tlTime}>{fmtTime(log.created_at)}</Text>
                     </View>
                     {log.note && <Text style={$.tlNote}>{log.note}</Text>}
                     {log.changed_by_name && (
-                      <Text style={$.tlBy}>by {log.changed_by_name}</Text>
+                      <Text style={$.tlBy}>{t('orderDetail.by', {name: log.changed_by_name})}</Text>
                     )}
                   </View>
                 </View>
@@ -1040,7 +1032,7 @@ const OrderDetailScreen = ({navigation, route}) => {
         {/* ── Status Progress Bar ── */}
         {status !== 'failed' && status !== 'cancelled' && status !== 'returned' && (
           <View style={$.progressCard}>
-            <Text style={$.progressLabel}>Delivery Progress</Text>
+            <Text style={$.progressLabel}>{t('orderDetail.deliveryProgress')}</Text>
             <View style={$.progressBar}>
               <View
                 style={[
@@ -1064,7 +1056,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                     ]}
                   />
                   <Text style={[$.progressDotLabel, i <= statusIdx && {color: colors.textPrimary}]}>
-                    {STATUS_LABELS[s]?.split(' ')[0] || s}
+                    {t('status.' + s)?.split(' ')[0] || s}
                   </Text>
                 </View>
               ))}
@@ -1102,7 +1094,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               }}
               activeOpacity={0.75}>
               <Icon name="close-circle-outline" size={17} color={colors.danger} />
-              <Text style={$.ctaFailTxt}>Report Failure</Text>
+              <Text style={$.ctaFailTxt}>{t('orderDetail.reportFailure')}</Text>
             </TouchableOpacity>
           )}
 
@@ -1116,7 +1108,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               activeOpacity={0.75}>
               <Icon name="package-variant" size={18} color="#FFF" />
               <Text style={$.ctaTxt}>
-                {isUpdatingStatus ? 'Picking Up...' : 'Pick Up Order from Client'}
+                {isUpdatingStatus ? t('orderDetail.pickingUp') : t('orderDetail.pickUpFromClient')}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -1150,10 +1142,10 @@ const OrderDetailScreen = ({navigation, route}) => {
               activeOpacity={0.75}>
               <Text style={$.ctaTxt}>
                 {packages.length > 0
-                  ? `Deliver Next Package (${packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length} left)`
+                  ? t('orderDetail.deliverNextPkg', {count: packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length})
                   : status === 'in_transit'
-                    ? 'Confirm Delivery'
-                    : 'Start Delivery'}
+                    ? t('orderDetail.confirmDelivery')
+                    : t('orderDetail.startDelivery')}
               </Text>
               <Icon name="arrow-right" size={18} color="#FFF" />
             </TouchableOpacity>
@@ -1197,14 +1189,14 @@ const $ = StyleSheet.create({
 
   /* Header */
   hdr: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52, gap: 8,
   },
   hdrBack: {
     width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF',
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: '#EEF1F5',
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary, textAlign: 'auto'},
   hdrSub: {fontFamily: fontFamily.medium, fontSize: 10, color: colors.textMuted, marginTop: 1},
   hdrAction: {
     width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF',
@@ -1223,24 +1215,24 @@ const $ = StyleSheet.create({
   },
   heroTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12},
   statusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
   statusTxt: {fontFamily: fontFamily.bold, fontSize: 10, letterSpacing: 0.6},
   catBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14,
   },
   catTxt: {fontFamily: fontFamily.semiBold, fontSize: 10},
   heroMid: {marginBottom: 12},
   heroNum: {fontFamily: fontFamily.bold, fontSize: 18, color: colors.textPrimary, letterSpacing: 0.3},
   awbRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4,
   },
   awbTxt: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.textMuted},
   heroRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
   heroPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#F5F7FA', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
   },
   heroPillTxt: {fontFamily: fontFamily.medium, fontSize: 10, color: colors.textMuted},
@@ -1287,7 +1279,7 @@ const $ = StyleSheet.create({
 
   /* Person info */
   personInfo: {
-    flexDirection: 'row', alignItems: 'center', marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 12,
   },
   avatar: {
     width: 42, height: 42, borderRadius: 21, backgroundColor: '#E8F5E9',
@@ -1321,7 +1313,7 @@ const $ = StyleSheet.create({
   detailRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6,
   },
-  detailLabel: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, flex: 0.4, marginLeft: 2},
+  detailLabel: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, flex: 0.4, marginStart: 2},
   detailVal: {fontFamily: fontFamily.medium, fontSize: 12, color: colors.textPrimary, flex: 0.55, textAlign: 'right'},
 
   /* Instructions box */
@@ -1348,7 +1340,7 @@ const $ = StyleSheet.create({
   tlLine: {
     width: 2, flex: 1, backgroundColor: '#E0E0E0', marginTop: 3,
   },
-  tlContent: {flex: 1, marginLeft: 10},
+  tlContent: {flex: 1, marginStart: 10},
   tlHdr: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
   tlStatus: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textPrimary},
   tlTime: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted},

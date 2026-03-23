@@ -6,20 +6,24 @@
 
 import React from 'react';
 import {View, StyleSheet, Text, TouchableOpacity} from 'react-native';
-import {MapPin} from 'lucide-react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
+import {showMessage} from 'react-native-flash-message';
+import {MapPin, Copy} from 'lucide-react-native';
 import {colors, getStatusColor} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
+import {useTranslation} from 'react-i18next';
 
 const TaskCard = ({order, onPress}) => {
+  const {t, i18n} = useTranslation();
   const st = order?.status || 'assigned';
   const stColor = getStatusColor(st);
-  const stLabel = (st || '').replace(/_/g, ' ').toUpperCase();
+  const stLabel = t('status.' + st, st).toUpperCase();
 
-  const orderName = order?.package_name || order?.order_name || order?.recipient_name || 'Order';
+  const orderName = order?.package_name || order?.order_name || order?.recipient_name || t('dashboard.order');
   const company = order?.sender_name || order?.company_name || order?.merchant_name || '';
   const orderNum = order?.order_number ? `#${order.order_number}` : '';
-  const weight = order?.weight ? `${order.weight} lbs` : '';
-  const packageType = order?.package_type || order?.vehicle_type || 'Container';
+  const weight = order?.weight ? t('common.weightLbs', {weight: order.weight}) : '';
+  const packageType = order?.package_type || order?.vehicle_type || t('dashboard.container');
 
   const pickupAddress = order?.pickup_address || order?.sender_address || '';
   const pickupArea = order?.pickup_area || order?.sender_area || order?.sender_emirate || '';
@@ -30,30 +34,37 @@ const TaskCard = ({order, onPress}) => {
   const eta = order?.estimated_time || order?.eta || '';
 
   const dateStr = order?.created_at
-    ? formatDate(order.created_at)
-    : order?.scheduled_date || 'Today';
-
-  const isPickup = st === 'confirmed' || st === 'assigned' || st === 'pending';
+    ? formatDate(order.created_at, t, i18n.language)
+    : order?.scheduled_date || t('dashboard.today');
 
   return (
     <TouchableOpacity style={$.card} onPress={onPress} activeOpacity={0.7}>
-      {/* Top row: name + status badge */}
+      {/* Top row: status badge + name */}
       <View style={$.topRow}>
-        <View style={$.titleArea}>
-          <Text style={$.orderName} numberOfLines={1}>{orderName}</Text>
-          <View style={$.companyRow}>
-            {company ? (
-              <Text style={$.company} numberOfLines={1}>{company}</Text>
-            ) : null}
-            {orderNum ? (
-              <Text style={$.orderNum}>{orderNum}</Text>
-            ) : null}
-          </View>
-        </View>
         <View style={[$.statusBadge, {backgroundColor: stColor + '15'}]}>
           <Text style={[$.statusTxt, {color: stColor}]}>{stLabel}</Text>
         </View>
+        <Text style={$.orderName} numberOfLines={1}>{orderName}</Text>
       </View>
+
+      {/* Order number row — copyable */}
+      {orderNum ? (
+        <TouchableOpacity
+          style={$.orderNumRow}
+          onPress={() => {
+            Clipboard.setString(orderNum);
+            showMessage({message: t('common.copied'), type: 'success', duration: 1500});
+          }}
+          activeOpacity={0.6}>
+          <Text style={$.orderNum}>{orderNum}</Text>
+          <Copy size={12} color={colors.textMuted} strokeWidth={2} />
+        </TouchableOpacity>
+      ) : null}
+
+      {/* Company / sender */}
+      {company ? (
+        <Text style={$.company} numberOfLines={1}>{company}</Text>
+      ) : null}
 
       {/* Meta row: date + package info */}
       <View style={$.metaRow}>
@@ -83,9 +94,9 @@ const TaskCard = ({order, onPress}) => {
             <View style={$.routeLine} />
           </View>
           <View style={$.routeContent}>
-            <Text style={$.routeLabel}>{pickupArea || 'Pickup'}</Text>
+            <Text style={$.routeLabel}>{pickupArea || t('dashboard.pickup')}</Text>
             <Text style={$.routeAddr} numberOfLines={1}>
-              {pickupAddress || 'Warehouse Pickup'}
+              {pickupAddress || t('dashboard.warehousePickup')}
             </Text>
           </View>
         </View>
@@ -111,9 +122,9 @@ const TaskCard = ({order, onPress}) => {
             </View>
           </View>
           <View style={$.routeContent}>
-            <Text style={$.routeLabel}>{destArea || 'Destination'}</Text>
+            <Text style={$.routeLabel}>{destArea || t('dashboard.destination')}</Text>
             <Text style={$.routeAddr} numberOfLines={1}>
-              {destAddress || 'Delivery Address'}
+              {destAddress || t('dashboard.deliveryAddress')}
             </Text>
           </View>
         </View>
@@ -122,16 +133,16 @@ const TaskCard = ({order, onPress}) => {
   );
 };
 
-function formatDate(dateStr) {
+function formatDate(dateStr, t, lang) {
   try {
     const d = new Date(dateStr);
     const now = new Date();
     const isToday = d.toDateString() === now.toDateString();
-    if (isToday) return 'Today';
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return `${days[d.getDay()]} · ${d.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}`;
+    if (isToday) return t('dashboard.today');
+    const locale = lang === 'ar' ? 'ar-AE' : 'en-US';
+    return d.toLocaleDateString(locale, {weekday: 'long', month: 'short', day: 'numeric', year: 'numeric'});
   } catch {
-    return 'Today';
+    return t('dashboard.today');
   }
 }
 
@@ -152,32 +163,9 @@ const $ = StyleSheet.create({
   // Top row
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 6,
-  },
-  titleArea: {flex: 1, marginRight: 10},
-  orderName: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 16,
-    color: colors.textPrimary,
-    lineHeight: 22,
-  },
-  companyRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
-  },
-  company: {
-    fontFamily: fontFamily.regular,
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  orderNum: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 12,
-    color: colors.secondary,
+    gap: 10,
+    marginBottom: 4,
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -188,6 +176,30 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 10,
     letterSpacing: 0.5,
+  },
+  orderName: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 16,
+    color: colors.textPrimary,
+    lineHeight: 22,
+    flex: 1,
+  },
+  orderNumRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  orderNum: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 12,
+    color: colors.secondary,
+  },
+  company: {
+    fontFamily: fontFamily.regular,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 2,
   },
 
   // Meta
@@ -216,6 +228,7 @@ const $ = StyleSheet.create({
   routeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 10,
   },
   routeIconCol: {
     width: 28,
@@ -236,7 +249,6 @@ const $ = StyleSheet.create({
   },
   routeContent: {
     flex: 1,
-    marginLeft: 10,
     paddingBottom: 4,
   },
   routeLabel: {
@@ -255,8 +267,8 @@ const $ = StyleSheet.create({
 
   // Distance pill
   distPillWrap: {
-    paddingLeft: 28,
-    marginLeft: 10,
+    paddingStart: 28,
+    marginStart: 10,
     marginVertical: 2,
   },
   distPill: {

@@ -56,7 +56,7 @@ const useRouteStore = create((set, get) => ({
       set({progress: data || null});
       return data;
     } catch (error) {
-      console.warn('[RouteStore] fetchProgress error:', error?.message);
+      if (__DEV__) console.warn('[RouteStore] fetchProgress error:', error?.message);
       return null;
     }
   },
@@ -90,7 +90,7 @@ const useRouteStore = create((set, get) => ({
       return data;
     } catch (error) {
       set({isLoadingHistory: false});
-      console.warn('[RouteStore] fetchHistory error:', error?.message);
+      if (__DEV__) console.warn('[RouteStore] fetchHistory error:', error?.message);
       return null;
     }
   },

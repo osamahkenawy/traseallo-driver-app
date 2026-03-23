@@ -23,9 +23,11 @@ import {showMessage} from 'react-native-flash-message';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {ordersApi, packagesApi} from '../../api';
+import {useTranslation} from 'react-i18next';
 
 const LoadVerifyScreen = ({navigation}) => {
   const ins = useSafeAreaInsets();
+  const {t} = useTranslation();
   const inputRef = useRef(null);
 
   // ─── State ─────────────────────────────────────
@@ -40,17 +42,21 @@ const LoadVerifyScreen = ({navigation}) => {
 
   // ─── Load expected packages from active orders ──
   useEffect(() => {
+    let cancelled = false;
     const loadManifest = async () => {
       try {
         const res = await ordersApi.getOrders({status: 'active'});
+        if (cancelled) return;
         const data = res.data?.data || res.data;
         const orders = data?.orders || data || [];
 
         const allPkgs = [];
         for (const order of orders) {
+          if (cancelled) return;
           if (!order.id) continue;
           try {
             const pkgRes = await packagesApi.getOrderPackages(order.id);
+            if (cancelled) return;
             const pkgData = pkgRes.data?.data || pkgRes.data;
             const pkgs = Array.isArray(pkgData?.packages) ? pkgData.packages
               : Array.isArray(pkgData) ? pkgData : [];
@@ -68,14 +74,15 @@ const LoadVerifyScreen = ({navigation}) => {
             // skip orders with no packages
           }
         }
-        setExpectedPackages(allPkgs);
+        if (!cancelled) setExpectedPackages(allPkgs);
       } catch (err) {
-        showMessage({message: 'Failed to load manifest', type: 'danger', icon: 'auto'});
+        if (!cancelled) showMessage({message: t('loadVerify.failedManifest'), type: 'danger', icon: 'auto'});
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     loadManifest();
+    return () => { cancelled = true; };
   }, []);
 
   // ─── Scan handler ──────────────────────────────
@@ -89,7 +96,7 @@ const LoadVerifyScreen = ({navigation}) => {
 
       if (!pkg || !pkg.id) {
         Vibration.vibrate([0, 100, 50, 100]);
-        showMessage({message: 'Package not found', type: 'danger', icon: 'auto'});
+        showMessage({message: t('loadVerify.pkgNotFound'), type: 'danger', icon: 'auto'});
         setScanning(false);
         return;
       }
@@ -109,7 +116,7 @@ const LoadVerifyScreen = ({navigation}) => {
         Vibration.vibrate(100);
         setScannedIds(prev => new Set([...prev, expected.id]));
         showMessage({
-          message: `Verified: ${code}`,
+          message: `${t('loadVerify.verified')}: ${code}`,
           description: `${pkg.recipient_name || ''} — ${pkg.order_number || ''}`,
           type: 'success',
           icon: 'auto',
@@ -123,8 +130,8 @@ const LoadVerifyScreen = ({navigation}) => {
           return [...prev, {...pkg, barcode: code}];
         });
         showMessage({
-          message: `Unexpected: ${code}`,
-          description: 'Not in your assigned orders',
+          message: `${t('loadVerify.unexpected')}: ${code}`,
+          description: t('loadVerify.notInOrders'),
           type: 'warning',
           icon: 'auto',
           duration: 2000,
@@ -133,8 +140,8 @@ const LoadVerifyScreen = ({navigation}) => {
     } catch (err) {
       Vibration.vibrate([0, 100, 50, 100]);
       showMessage({
-        message: 'Scan failed',
-        description: err?.response?.data?.message || 'Package not found',
+        message: t('loadVerify.scanFailed'),
+        description: err?.response?.data?.message || t('loadVerify.pkgNotFound'),
         type: 'danger',
         icon: 'auto',
       });
@@ -150,12 +157,12 @@ const LoadVerifyScreen = ({navigation}) => {
     const missing = expectedPackages.filter(p => !scannedIds.has(p.id));
     if (missing.length > 0) {
       Alert.alert(
-        'Missing Packages',
-        `${missing.length} package(s) haven't been scanned. Complete anyway?`,
+        t('loadVerify.missingPkgs'),
+        t('loadVerify.missingPkgsMsg', {count: missing.length}),
         [
-          {text: 'Cancel', style: 'cancel'},
+          {text: t('common.cancel'), style: 'cancel'},
           {
-            text: 'Complete',
+            text: t('loadVerify.complete'),
             onPress: async () => {
               await finishLoad();
             },
@@ -184,8 +191,8 @@ const LoadVerifyScreen = ({navigation}) => {
       }
 
       showMessage({
-        message: 'Load verification complete!',
-        description: `${scannedIds.size}/${expectedPackages.length} packages verified, ${loggedCount} scans logged`,
+        message: t('loadVerify.loadComplete'),
+        description: t('loadVerify.loadCompleteDesc', {scanned: scannedIds.size, total: expectedPackages.length, logged: loggedCount}),
         type: 'success',
         icon: 'auto',
         duration: 3000,
@@ -210,7 +217,7 @@ const LoadVerifyScreen = ({navigation}) => {
     return (
       <View style={[s.root, {paddingTop: ins.top, justifyContent: 'center', alignItems: 'center'}]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={s.loadTxt}>Loading manifest...</Text>
+        <Text style={s.loadTxt}>{t('loadVerify.loadingManifest')}</Text>
       </View>
     );
   }
@@ -223,8 +230,8 @@ const LoadVerifyScreen = ({navigation}) => {
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={{flex: 1, alignItems: 'center'}}>
-          <Text style={s.hdrTitle}>Load Verification</Text>
-          <Text style={s.hdrSub}>{expectedPackages.length} packages expected</Text>
+          <Text style={s.hdrTitle}>{t('loadVerify.title')}</Text>
+          <Text style={s.hdrSub}>{t('loadVerify.packagesExpected', {count: expectedPackages.length})}</Text>
         </View>
         <View style={{width: 36}} />
       </View>
@@ -244,7 +251,7 @@ const LoadVerifyScreen = ({navigation}) => {
           />
         </View>
         <Text style={s.progressTxt}>
-          {scannedIds.size}/{expectedPackages.length} scanned
+          {scannedIds.size}/{expectedPackages.length} {t('loadVerify.scanned')}
         </Text>
       </View>
 
@@ -255,7 +262,7 @@ const LoadVerifyScreen = ({navigation}) => {
           <TextInput
             ref={inputRef}
             style={s.input}
-            placeholder="Scan or enter barcode..."
+            placeholder={t('loadVerify.scanPlaceholder')}
             placeholderTextColor={colors.textMuted}
             value={barcode}
             onChangeText={setBarcode}
@@ -287,21 +294,21 @@ const LoadVerifyScreen = ({navigation}) => {
       {/* Tabs */}
       <View style={s.tabRow}>
         {[
-          {key: 'all', label: 'All', count: expectedPackages.length, color: colors.primary},
-          {key: 'scanned', label: 'Scanned', count: scannedPackages.length, color: colors.success},
-          {key: 'missing', label: 'Missing', count: missingPackages.length, color: colors.danger},
-          {key: 'unexpected', label: 'Extra', count: unexpectedScans.length, color: colors.warning},
-        ].map(t => (
+          {key: 'all', label: t('loadVerify.all'), count: expectedPackages.length, color: colors.primary},
+          {key: 'scanned', label: t('loadVerify.scannedTab'), count: scannedPackages.length, color: colors.success},
+          {key: 'missing', label: t('loadVerify.missing'), count: missingPackages.length, color: colors.danger},
+          {key: 'unexpected', label: t('loadVerify.extra'), count: unexpectedScans.length, color: colors.warning},
+        ].map(tabItem => (
           <TouchableOpacity
-            key={t.key}
-            style={[s.tab, tab === t.key && {borderColor: t.color, backgroundColor: t.color + '10'}]}
-            onPress={() => setTab(t.key)}
+            key={tabItem.key}
+            style={[s.tab, tab === tabItem.key && {borderColor: tabItem.color, backgroundColor: tabItem.color + '10'}]}
+            onPress={() => setTab(tabItem.key)}
             activeOpacity={0.7}>
-            <Text style={[s.tabCount, {color: tab === t.key ? t.color : colors.textMuted}]}>
-              {t.count}
+            <Text style={[s.tabCount, {color: tab === tabItem.key ? tabItem.color : colors.textMuted}]}>
+              {tabItem.count}
             </Text>
-            <Text style={[s.tabLabel, {color: tab === t.key ? t.color : colors.textMuted}]}>
-              {t.label}
+            <Text style={[s.tabLabel, {color: tab === tabItem.key ? tabItem.color : colors.textMuted}]}>
+              {tabItem.label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -310,17 +317,17 @@ const LoadVerifyScreen = ({navigation}) => {
       {/* Package List */}
       <FlatList
         data={filteredList}
-        keyExtractor={(item, idx) => String(item.id || idx)}
+        keyExtractor={(item, idx) => `pkg-${item.id || item.tracking_number || idx}`}
         contentContainerStyle={s.list}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={s.emptyWrap}>
             <Icon name="package-variant-closed" size={32} color={colors.textLight} />
             <Text style={s.emptyTxt}>
-              {tab === 'scanned' ? 'No packages scanned yet' :
-               tab === 'unexpected' ? 'No unexpected scans' :
-               tab === 'missing' ? 'All packages scanned!' :
-               'No packages to verify'}
+              {tab === 'scanned' ? t('loadVerify.noPkgsScanned') :
+               tab === 'unexpected' ? t('loadVerify.noUnexpected') :
+               tab === 'missing' ? t('loadVerify.allScanned') :
+               t('loadVerify.noPkgsToVerify')}
             </Text>
           </View>
         }
@@ -340,7 +347,7 @@ const LoadVerifyScreen = ({navigation}) => {
                 />
               </View>
               <View style={{flex: 1}}>
-                <Text style={s.pkgBarcode}>{item.barcode || 'No barcode'}</Text>
+                <Text style={s.pkgBarcode}>{item.barcode || t('loadVerify.noBarcode')}</Text>
                 <Text style={s.pkgInfo}>
                   {item.recipient_name || '---'} · {item.order_number || ''}
                 </Text>
@@ -365,7 +372,7 @@ const LoadVerifyScreen = ({navigation}) => {
             <Icon name="check-all" size={18} color="#FFF" />
           )}
           <Text style={s.completeTxt}>
-            {completing ? 'Completing...' : `Complete Load (${scannedIds.size}/${expectedPackages.length})`}
+            {completing ? t('loadVerify.completing') : t('loadVerify.completeLoad', {scanned: scannedIds.size, total: expectedPackages.length})}
           </Text>
         </TouchableOpacity>
       </View>
@@ -377,14 +384,14 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   loadTxt: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textMuted, marginTop: 10},
   hdr: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52, gap: 8,
   },
   hdrBack: {
     width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF',
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: '#EEF1F5',
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary, textAlign: 'auto'},
   hdrSub: {fontFamily: fontFamily.medium, fontSize: 10, color: colors.textMuted, marginTop: 1},
 
   /* Progress */
