@@ -171,7 +171,7 @@ const EarningsScreen = ({navigation}) => {
         <View style={[s.txIcon, {backgroundColor: (isEarning ? colors.success : statusColor) + '12'}]}>
           <Icon name={statusIcon} size={18} color={isEarning ? colors.success : statusColor} />
         </View>
-        <View style={{flex: 1}}>
+        <View style={{flex: 1, marginHorizontal: 12}}>
           <Text style={s.txTitle} numberOfLines={1}>
             {item.order_number || t('orders.orderNumber', {num: item.order_id || item.id})}
           </Text>
@@ -216,7 +216,7 @@ const EarningsScreen = ({navigation}) => {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={s.periodScroll}
-          contentContainerStyle={{gap: 8}}>
+          contentContainerStyle={{paddingEnd: 0}}>
           {PERIODS.map((p, idx) => (
             <TouchableOpacity
               key={p}
@@ -238,7 +238,7 @@ const EarningsScreen = ({navigation}) => {
                 <Icon name="arrow-up-bold" size={10} color={colors.success} />
                 <Text style={s.heroPillTxt}>{currency} {formatAmount(earningSummary.total_paid)} {t('earnings.paid')}</Text>
               </View>
-              <View style={[s.heroPill, {backgroundColor: colors.warning + '12'}]}>
+              <View style={[s.heroPill, {backgroundColor: colors.warning + '12', marginStart: 8}]}>
                 <Icon name="clock-outline" size={10} color={colors.warning} />
                 <Text style={[s.heroPillTxt, {color: colors.warning}]}>{currency} {formatAmount(earningSummary.total_pending)} {t('earnings.pendingLabel')}</Text>
               </View>
@@ -251,7 +251,7 @@ const EarningsScreen = ({navigation}) => {
 
         {/* Summary cards */}
         <View style={s.row}>
-          <View style={s.sumCard}>
+          <View style={[s.sumCard, {marginEnd: 5}]}>
             <View style={[s.sumIc, {backgroundColor: colors.orange + '0D'}]}>
               <Icon name="wallet-outline" size={18} color={colors.orange} />
             </View>
@@ -260,7 +260,7 @@ const EarningsScreen = ({navigation}) => {
             </Text>
             <Text style={s.sumLabel}>{t('earnings.codCollected')}</Text>
           </View>
-          <View style={s.sumCard}>
+          <View style={[s.sumCard, {marginStart: 5}]}>
             <View style={[s.sumIc, {backgroundColor: colors.success + '0D'}]}>
               <Icon name="cash-multiple" size={18} color={colors.success} />
             </View>
@@ -330,9 +330,9 @@ const cs = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#EEF1F5',
   },
-  chartTotalItem: {flexDirection: 'row', alignItems: 'center', gap: 4},
-  chartTotalVal: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textPrimary},
-  chartTotalLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted},
+  chartTotalItem: {flexDirection: 'row', alignItems: 'center'},
+  chartTotalVal: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textPrimary, marginStart: 4},
+  chartTotalLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginStart: 4},
 });
 
 // ─── Main Styles ─────────────────────────────────────
@@ -348,7 +348,7 @@ const s = StyleSheet.create({
   periodScroll: {marginBottom: 16},
   periodPill: {
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEF1F5',
+    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#EEF1F5', marginEnd: 8,
   },
   periodActive: {backgroundColor: colors.primary, borderColor: colors.primary},
   periodTxt: {fontFamily: fontFamily.medium, fontSize: 12, color: colors.textSecondary},
@@ -357,26 +357,26 @@ const s = StyleSheet.create({
   earningsHero: {alignItems: 'center', marginBottom: 20},
   earningsLabel: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, marginBottom: 4},
   earningsVal: {fontFamily: fontFamily.bold, fontSize: 34, color: colors.textPrimary},
-  heroMeta: {flexDirection: 'row', gap: 8, marginTop: 10},
+  heroMeta: {flexDirection: 'row', marginTop: 10},
   heroPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.success + '12', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
   },
-  heroPillTxt: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.success},
+  heroPillTxt: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.success, marginStart: 4},
 
-  row: {flexDirection: 'row', gap: 10, marginBottom: 20},
+  row: {flexDirection: 'row', marginBottom: 20},
   sumCard: {
     flex: 1, backgroundColor: '#FFF', borderRadius: 14, padding: 16,
-    alignItems: 'center', borderWidth: 1, borderColor: '#EEF1F5', gap: 4,
+    alignItems: 'center', borderWidth: 1, borderColor: '#EEF1F5',
   },
   sumIc: {width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 4},
-  sumVal: {fontFamily: fontFamily.bold, fontSize: 18},
-  sumLabel: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted},
+  sumVal: {fontFamily: fontFamily.bold, fontSize: 18, marginTop: 4},
+  sumLabel: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 4},
 
   secTitle: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.textPrimary, marginBottom: 10},
 
   txCard: {backgroundColor: '#FFF', borderRadius: 14, borderWidth: 1, borderColor: '#EEF1F5', padding: 14},
-  txRow: {flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6},
+  txRow: {flexDirection: 'row', alignItems: 'center', paddingVertical: 6},
   txIcon: {width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center'},
   txTitle: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary},
   txDate: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 2},

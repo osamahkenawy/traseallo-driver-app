@@ -138,11 +138,11 @@ const useLocationStore = create((set, get) => ({
     if (existing) clearInterval(existing);
 
     // Send initial ping
-    get().sendPing();
+    get().sendPing().catch(() => {});
 
     // Set interval for every 30 seconds
     const intervalId = setInterval(() => {
-      get().sendPing();
+      get().sendPing().catch(() => {});
     }, 30000);
 
     set({isTracking: true, trackingIntervalId: intervalId});

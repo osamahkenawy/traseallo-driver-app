@@ -33,8 +33,8 @@ const useSocket = () => {
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = setTimeout(() => {
-      fetchOrders();
-      fetchDashboard();
+      fetchOrders().catch(() => {});
+      fetchDashboard().catch(() => {});
       refreshTimerRef.current = null;
     }, 500);
   }, [fetchOrders, fetchDashboard]);
@@ -166,9 +166,9 @@ const useSocket = () => {
     if (isAuthenticated && token) {
       connect();
       // Poll unread notification count every 60 seconds
-      fetchUnreadCount();
+      fetchUnreadCount().catch(() => {});
       pollRef.current = setInterval(() => {
-        fetchUnreadCount();
+        fetchUnreadCount().catch(() => {});
       }, 60000);
     } else {
       disconnect();

@@ -360,7 +360,7 @@ const $ = StyleSheet.create({
   },
 
   /* List */
-  list: {paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, flexGrow: 1},
+  list: {paddingHorizontal: 20, paddingTop: 4, paddingBottom: 100, flexGrow: 1},
 
   /* Card */
   card: {

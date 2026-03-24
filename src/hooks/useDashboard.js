@@ -202,7 +202,7 @@ const useDashboard = () => {
 
   // Pull-to-refresh
   const onRefresh = useCallback(() => {
-    fetchAll(true);
+    fetchAll(true).catch(() => {});
   }, [fetchAll]);
 
   const isLoading = isDashLoading || isOrdersLoading;

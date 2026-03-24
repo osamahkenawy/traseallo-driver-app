@@ -156,7 +156,7 @@ const useLocation = (enabled = true) => {
       startTracking();
     };
 
-    init();
+    init().catch(() => {});
 
     return () => {
       stopTracking();
@@ -174,8 +174,8 @@ const useLocation = (enabled = true) => {
         driverStatus !== 'offline'
       ) {
         // App came to foreground — send immediate ping & flush offline buffer
-        sendPing();
-        flushLocationBuffer();
+        sendPing().catch(() => {});
+        flushLocationBuffer().catch(() => {});
       }
       appState.current = nextAppState;
     };

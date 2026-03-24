@@ -16,7 +16,7 @@ import {initOfflineQueueListener} from './src/utils/offlineQueue';
 enableScreens(true);
 
 // Initialize i18n on app start
-initI18n();
+initI18n().catch(() => {});
 
 const App = () => {
   const initAuthExpiredHandler = useAuthStore(

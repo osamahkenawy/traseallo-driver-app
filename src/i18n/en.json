@@ -9,6 +9,7 @@
     "done": "Done",
     "delete": "Delete",
     "close": "Close",
+    "goBack": "Go Back",
     "search": "Search",
     "noResults": "No results found",
     "pullToRefresh": "Pull to refresh",
@@ -539,7 +540,8 @@
     "call": "Call",
     "sms": "SMS",
     "navigate": "Navigate",
-    "copy": "Copy"
+    "copy": "Copy",
+    "orderNotFound": "Order not found"
   },
   "deliveryConfirm": {
     "title": "Confirm Delivery",

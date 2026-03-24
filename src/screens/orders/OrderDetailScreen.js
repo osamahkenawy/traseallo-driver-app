@@ -103,8 +103,8 @@ const OrderDetailScreen = ({navigation, route}) => {
   const fetchPackages = useOrderStore(st => st.fetchPackages);
   const clearPackages = useOrderStore(st => st.clearPackages);
   const startDeliveryAction = useOrderStore(st => st.startDelivery);
-  const acceptOrderAction = useOrderStore(st => st.acceptOrder);
   const isUpdatingStatus = useOrderStore(st => st.isUpdatingStatus);
+  const storeError = useOrderStore(st => st.error);
   const [refreshing, setRefreshing] = useState(false);
   const [pkgExpanded, setPkgExpanded] = useState(false);
   const [stopsExpanded, setStopsExpanded] = useState(true);
@@ -308,6 +308,21 @@ const OrderDetailScreen = ({navigation, route}) => {
     );
   }
 
+  if (!isLoading && !order) {
+    return (
+      <View style={[$.loadWrap, {paddingTop: ins.top}]}>
+        <Icon name="alert-circle-outline" size={48} color={colors.textMuted} />
+        <Text style={[$.loadTxt, {fontSize: 15, marginTop: 14}]}>{storeError || t('orderDetail.orderNotFound')}</Text>
+        <TouchableOpacity
+          style={{marginTop: 16, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 10}}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.75}>
+          <Text style={{fontFamily: fontFamily.bold, fontSize: 13, color: '#FFF'}}>{t('common.goBack')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const isCOD = order?.payment_method === 'cod';
   const hasCOD = isCOD && parseFloat(order?.cod_amount) > 0;
   const logs = order?.status_logs || [];
@@ -319,7 +334,7 @@ const OrderDetailScreen = ({navigation, route}) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={$.hdrBack}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <View style={{flex: 1, alignItems: 'center'}}>
+        <View style={{flex: 1, alignItems: 'center', marginHorizontal: 8}}>
           <Text style={$.hdrTitle}>{t('orderDetail.title')}</Text>
           <Text style={$.hdrSub}>{order?.order_number || '---'}</Text>
         </View>
@@ -395,7 +410,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               <Text style={$.codLabel}>{t('orderDetail.collectCOD')}</Text>
               <Text style={$.codAmt}>{currency} {parseFloat(order.cod_amount).toFixed(2)}</Text>
             </View>
-            <Icon name="alert-circle-outline" size={16} color={colors.warning} />
+            <Icon name="alert-circle-outline" size={16} color={colors.warning} style={{marginStart: 12}} />
           </View>
         )}
 
@@ -472,17 +487,17 @@ const OrderDetailScreen = ({navigation, route}) => {
 
           {/* Pickup action buttons */}
           {needsPickup && (
-            <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+            <View style={{flexDirection: 'row', marginTop: 8}}>
               <TouchableOpacity
-                style={{flex: 1, height: 40, backgroundColor: '#1565C0', borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6}}
+                style={{flex: 1, height: 40, backgroundColor: '#1565C0', borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row'}}
                 onPress={handleNavigateToSender}
                 activeOpacity={0.75}>
                 <Icon name="navigation-variant" size={15} color="#FFF" />
-                <Text style={{fontFamily: fontFamily.bold, fontSize: 12, color: '#FFF'}}>{t('orderDetail.navigateToPickup')}</Text>
+                <Text style={{fontFamily: fontFamily.bold, fontSize: 12, color: '#FFF', marginStart: 6}}>{t('orderDetail.navigateToPickup')}</Text>
               </TouchableOpacity>
               {order?.sender_phone && (
                 <TouchableOpacity
-                  style={{width: 40, height: 40, borderRadius: 10, backgroundColor: '#E3F1FD', justifyContent: 'center', alignItems: 'center'}}
+                  style={{width: 40, height: 40, borderRadius: 10, backgroundColor: '#E3F1FD', justifyContent: 'center', alignItems: 'center', marginStart: 8}}
                   onPress={handleCallSender}
                   activeOpacity={0.75}>
                   <Icon name="phone" size={16} color="#1565C0" />
@@ -516,7 +531,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                   : packages.filter(p => p.status === 'delivered').length;
                 const total = stops.length > 0 ? stops.length : new Set(packages.map(p => p.recipient_name)).size;
                 return (
-                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
                     <Text style={{fontFamily: fontFamily.semiBold, fontSize: 11, color: colors.success}}>
                       {completed}/{total}
                     </Text>
@@ -524,6 +539,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                       name={stopsExpanded ? 'chevron-up' : 'chevron-down'}
                       size={16}
                       color={colors.textMuted}
+                      style={{marginStart: 6}}
                     />
                   </View>
                 );
@@ -581,9 +597,9 @@ const OrderDetailScreen = ({navigation, route}) => {
                           <TouchableOpacity
                             onPress={() => handleNavigateToStop(stop)}
                             activeOpacity={0.6}
-                            style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4}}>
+                            style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
                             <Icon name="map-marker-outline" size={13} color={colors.textMuted} />
-                            <Text style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, flex: 1}} numberOfLines={2}>
+                            <Text style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, flex: 1, marginHorizontal: 6}} numberOfLines={2}>
                               {stop.address}
                             </Text>
                             <Icon name="navigation-variant" size={12} color={colors.primary} />
@@ -591,18 +607,18 @@ const OrderDetailScreen = ({navigation, route}) => {
                         )}
 
                         {parseFloat(stop.cod_amount) > 0 && (
-                          <View style={{flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2}}>
+                          <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 2}}>
                             <Icon name="cash" size={12} color={colors.warning} />
-                            <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.warning}}>
+                            <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.warning, marginStart: 4}}>
                               COD: {currency} {parseFloat(stop.cod_amount).toFixed(2)}
                             </Text>
                           </View>
                         )}
 
                         {stop.special_instructions && (
-                          <View style={{flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3}}>
+                          <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 3}}>
                             <Icon name="information-outline" size={12} color={colors.textMuted} />
-                            <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted}} numberOfLines={2}>
+                            <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginStart: 4}} numberOfLines={2}>
                               {stop.special_instructions}
                             </Text>
                           </View>
@@ -663,18 +679,18 @@ const OrderDetailScreen = ({navigation, route}) => {
                           </View>
 
                           {r.address && (
-                            <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4}}>
+                            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
                               <Icon name="map-marker-outline" size={13} color={colors.textMuted} />
-                              <Text style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, flex: 1}} numberOfLines={2}>
+                              <Text style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, flex: 1, marginStart: 6}} numberOfLines={2}>
                                 {r.address}
                               </Text>
                             </View>
                           )}
 
                           {r.packages.map((pkg, pi) => (
-                            <View key={pkg.id || pi} style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3}}>
+                            <View key={pkg.id || pi} style={{flexDirection: 'row', alignItems: 'center', marginTop: 3}}>
                               <Icon name="barcode" size={11} color={colors.textLight} />
-                              <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, flex: 1}}>
+                              <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, flex: 1, marginHorizontal: 6}}>
                                 {pkg.barcode || `Pkg ${pi+1}`}
                               </Text>
                               <View style={{
@@ -771,7 +787,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               {(() => {
                 const delivered = packages.filter(p => p.status === 'delivered').length;
                 return (
-                  <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
                     <Text style={{fontFamily: fontFamily.semiBold, fontSize: 11, color: colors.success}}>
                       {delivered}/{packages.length}
                     </Text>
@@ -779,6 +795,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                       name={pkgExpanded ? 'chevron-up' : 'chevron-down'}
                       size={16}
                       color={colors.textMuted}
+                      style={{marginStart: 4}}
                     />
                   </View>
                 );
@@ -853,37 +870,37 @@ const OrderDetailScreen = ({navigation, route}) => {
                     </View>
 
                     {pkg.recipient_name && (
-                      <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3}}>
+                      <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 3}}>
                         <Icon name="account-outline" size={12} color={colors.textMuted} />
-                        <Text style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted}}>
+                        <Text style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginStart: 6}}>
                           {pkg.recipient_name}
                         </Text>
                       </View>
                     )}
                     {pkg.recipient_address && (
-                      <View style={{flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3}}>
+                      <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 3}}>
                         <Icon name="map-marker-outline" size={12} color={colors.textMuted} />
                         <Text
-                          style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, flex: 1}}
+                          style={{fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, flex: 1, marginStart: 6}}
                           numberOfLines={1}>
                           {pkg.recipient_address}
                         </Text>
                       </View>
                     )}
                     {(pkg.weight_kg || pkg.cod_amount) && (
-                      <View style={{flexDirection: 'row', gap: 12, marginTop: 2}}>
+                      <View style={{flexDirection: 'row', marginTop: 2}}>
                         {pkg.weight_kg && (
-                          <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                          <View style={{flexDirection: 'row', alignItems: 'center'}}>
                             <Icon name="weight-kilogram" size={12} color={colors.textMuted} />
-                            <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted}}>
+                            <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginStart: 4}}>
                               {pkg.weight_kg} kg
                             </Text>
                           </View>
                         )}
                         {parseFloat(pkg.cod_amount) > 0 && (
-                          <View style={{flexDirection: 'row', alignItems: 'center', gap: 4}}>
+                          <View style={{flexDirection: 'row', alignItems: 'center', marginStart: 12}}>
                             <Icon name="cash" size={12} color={colors.warning} />
-                            <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.warning}}>
+                            <Text style={{fontFamily: fontFamily.regular, fontSize: 10, color: colors.warning, marginStart: 4}}>
                               {currency} {parseFloat(pkg.cod_amount).toFixed(2)}
                             </Text>
                           </View>
@@ -893,11 +910,11 @@ const OrderDetailScreen = ({navigation, route}) => {
 
                     {/* Per-package CTA buttons */}
                     {!isTerminal && (status === 'in_transit' || status === 'picked_up') && (
-                      <View style={{flexDirection: 'row', gap: 8, marginTop: 8}}>
+                      <View style={{flexDirection: 'row', marginTop: 8}}>
                         <TouchableOpacity
                           style={{
                             flex: 1, height: 34, backgroundColor: colors.success, borderRadius: 8,
-                            justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 4,
+                            justifyContent: 'center', alignItems: 'center', flexDirection: 'row',
                           }}
                           onPress={() =>
                             navigation.navigate(routeNames.PackageDeliver, {
@@ -912,15 +929,15 @@ const OrderDetailScreen = ({navigation, route}) => {
                           }
                           activeOpacity={0.75}>
                           <Icon name="check-circle-outline" size={14} color="#FFF" />
-                          <Text style={{fontFamily: fontFamily.bold, fontSize: 11, color: '#FFF'}}>
+                          <Text style={{fontFamily: fontFamily.bold, fontSize: 11, color: '#FFF', marginStart: 4}}>
                             {t('orderDetail.deliver')}
                           </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={{
                             flex: 1, height: 34, borderRadius: 8,
-                            justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 4,
-                            borderWidth: 1.5, borderColor: colors.danger,
+                            justifyContent: 'center', alignItems: 'center', flexDirection: 'row',
+                            borderWidth: 1.5, borderColor: colors.danger, marginStart: 8,
                           }}
                           onPress={() =>
                             navigation.navigate(routeNames.PackageFail, {
@@ -933,7 +950,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                           }
                           activeOpacity={0.75}>
                           <Icon name="close-circle-outline" size={14} color={colors.danger} />
-                          <Text style={{fontFamily: fontFamily.bold, fontSize: 11, color: colors.danger}}>
+                          <Text style={{fontFamily: fontFamily.bold, fontSize: 11, color: colors.danger, marginStart: 4}}>
                             {t('orderDetail.fail')}
                           </Text>
                         </TouchableOpacity>
@@ -1103,7 +1120,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               disabled={isUpdatingStatus}
               activeOpacity={0.75}>
               <Icon name="package-variant" size={18} color="#FFF" />
-              <Text style={$.ctaTxt}>
+              <Text style={[$.ctaTxt, {marginStart: 8}]}>
                 {isUpdatingStatus ? t('orderDetail.pickingUp') : t('orderDetail.pickUpFromClient')}
               </Text>
             </TouchableOpacity>
@@ -1143,7 +1160,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                     ? t('orderDetail.confirmDelivery')
                     : t('orderDetail.startDelivery')}
               </Text>
-              <Icon name="arrow-right" size={18} color="#FFF" />
+              <Icon name="arrow-right" size={18} color="#FFF" style={{marginStart: 8}} />
             </TouchableOpacity>
           )}
         </View>
@@ -1185,7 +1202,7 @@ const $ = StyleSheet.create({
 
   /* Header */
   hdr: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52, gap: 8,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 52,
   },
   hdrBack: {
     width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF',
@@ -1211,37 +1228,38 @@ const $ = StyleSheet.create({
   },
   heroTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12},
   statusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
-  statusTxt: {fontFamily: fontFamily.bold, fontSize: 10, letterSpacing: 0.6},
+  statusTxt: {fontFamily: fontFamily.bold, fontSize: 10, letterSpacing: 0.6, marginStart: 6},
   catBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14,
   },
-  catTxt: {fontFamily: fontFamily.semiBold, fontSize: 10},
+  catTxt: {fontFamily: fontFamily.semiBold, fontSize: 10, marginStart: 6},
   heroMid: {marginBottom: 12},
   heroNum: {fontFamily: fontFamily.bold, fontSize: 18, color: colors.textPrimary, letterSpacing: 0.3},
   awbRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4,
+    flexDirection: 'row', alignItems: 'center', marginTop: 4,
   },
-  awbTxt: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.textMuted},
-  heroRow: {flexDirection: 'row', flexWrap: 'wrap', gap: 8},
+  awbTxt: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.textMuted, marginHorizontal: 6},
+  heroRow: {flexDirection: 'row', flexWrap: 'wrap'},
   heroPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#F5F7FA', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+    marginEnd: 8, marginBottom: 4,
   },
-  heroPillTxt: {fontFamily: fontFamily.medium, fontSize: 10, color: colors.textMuted},
+  heroPillTxt: {fontFamily: fontFamily.medium, fontSize: 10, color: colors.textMuted, marginStart: 6},
 
   /* COD Banner */
   codBanner: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FFF7E6', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: '#FFE0B2', marginBottom: 10, gap: 12,
+    borderWidth: 1, borderColor: '#FFE0B2', marginBottom: 10,
   },
   codIc: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF',
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center', marginEnd: 12,
   },
   codLabel: {fontFamily: fontFamily.medium, fontSize: 11, color: '#E65100'},
   codAmt: {fontFamily: fontFamily.bold, fontSize: 18, color: '#E65100', marginTop: 1},
@@ -1266,16 +1284,17 @@ const $ = StyleSheet.create({
     shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.03, shadowRadius: 6,
     elevation: 1,
   },
-  secHdrRow: {flexDirection: 'row', alignItems: 'center', gap: 14},
+  secHdrRow: {flexDirection: 'row', alignItems: 'center'},
   secIc: {
     width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center',
+    marginEnd: 14,
   },
   secH: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.textPrimary},
   secDiv: {height: 1, backgroundColor: '#EEF1F5', marginVertical: 12},
 
   /* Person info */
   personInfo: {
-    flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 12,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 12,
   },
   avatar: {
     width: 42, height: 42, borderRadius: 21, backgroundColor: '#E8F5E9',
@@ -1287,10 +1306,10 @@ const $ = StyleSheet.create({
 
   /* Info rows */
   infoRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#F8F9FA', borderRadius: 10, padding: 11, marginBottom: 6,
   },
-  infoTxt: {flex: 1, fontFamily: fontFamily.medium, fontSize: 12, color: colors.textPrimary},
+  infoTxt: {flex: 1, fontFamily: fontFamily.medium, fontSize: 12, color: colors.textPrimary, marginHorizontal: 10},
 
   /* Action buttons */
   actCard: {
@@ -1299,33 +1318,33 @@ const $ = StyleSheet.create({
     shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.03, shadowRadius: 6,
     elevation: 1,
   },
-  actBtn: {alignItems: 'center', gap: 5, flex: 1},
+  actBtn: {alignItems: 'center', flex: 1},
   actIc: {
     width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center',
   },
-  actLabel: {fontFamily: fontFamily.medium, fontSize: 9, color: colors.textSecondary},
+  actLabel: {fontFamily: fontFamily.medium, fontSize: 9, color: colors.textSecondary, marginTop: 5},
 
   /* Detail rows */
   detailRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6,
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 6,
   },
-  detailLabel: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, flex: 0.4, marginStart: 2},
+  detailLabel: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, flex: 0.4, marginStart: 12},
   detailVal: {fontFamily: fontFamily.medium, fontSize: 12, color: colors.textPrimary, flex: 0.55, textAlign: 'right'},
 
   /* Instructions box */
   instrBox: {
-    flexDirection: 'row', gap: 8,
+    flexDirection: 'row',
     backgroundColor: '#FFF7E6', borderRadius: 8, padding: 10, marginTop: 6,
   },
-  instrTxt: {flex: 1, fontFamily: fontFamily.regular, fontSize: 11, color: '#E65100', lineHeight: 16},
+  instrTxt: {flex: 1, fontFamily: fontFamily.regular, fontSize: 11, color: '#E65100', lineHeight: 16, marginStart: 8},
 
   /* Notes card */
   noteCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    flexDirection: 'row', alignItems: 'flex-start',
     backgroundColor: '#FFFDE7', borderRadius: 12, padding: 14,
     borderWidth: 1, borderColor: '#FFF9C4', marginBottom: 10,
   },
-  noteTxt: {flex: 1, fontFamily: fontFamily.regular, fontSize: 12, color: '#827717', lineHeight: 17},
+  noteTxt: {flex: 1, fontFamily: fontFamily.regular, fontSize: 12, color: '#827717', lineHeight: 17, marginStart: 10},
 
   /* Timeline */
   tlRow: {flexDirection: 'row'},
@@ -1367,14 +1386,14 @@ const $ = StyleSheet.create({
   },
   ctaFail: {
     height: 44, borderRadius: 12,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     borderWidth: 1.5, borderColor: colors.danger, marginBottom: 8,
     backgroundColor: '#FFF',
   },
-  ctaFailTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.danger},
+  ctaFailTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.danger, marginStart: 6},
   cta: {
     height: 50, backgroundColor: colors.primary, borderRadius: 14,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     shadowColor: colors.primary, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.25, shadowRadius: 8,
   },
   ctaTxt: {fontFamily: fontFamily.bold, fontSize: 14, color: '#FFF'},

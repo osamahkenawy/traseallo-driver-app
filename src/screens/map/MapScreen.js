@@ -305,21 +305,28 @@ const MapScreen = ({navigation}) => {
 
     let cancelled = false;
     (async () => {
-      // Try optimized route first (TSP), then fall back to ordered route
-      let result = routeWaypoints.length <= 25
-        ? await fetchOptimizedRoute(routeWaypoints)
-        : null;
-      if (!result) {
-        result = await fetchRoadRouteChunked(routeWaypoints);
-      }
-      if (cancelled) return;
-      if (result) {
-        setRoadCoords(result.coordinates);
-        setRouteInfo({distance: result.distance, duration: result.duration});
-      } else {
-        // Fallback to straight lines if OSRM fails
-        setRoadCoords(routeWaypoints);
-        setRouteInfo(null);
+      try {
+        // Try optimized route first (TSP), then fall back to ordered route
+        let result = routeWaypoints.length <= 25
+          ? await fetchOptimizedRoute(routeWaypoints)
+          : null;
+        if (!result) {
+          result = await fetchRoadRouteChunked(routeWaypoints);
+        }
+        if (cancelled) return;
+        if (result) {
+          setRoadCoords(result.coordinates);
+          setRouteInfo({distance: result.distance, duration: result.duration});
+        } else {
+          // Fallback to straight lines if OSRM fails
+          setRoadCoords(routeWaypoints);
+          setRouteInfo(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setRoadCoords(routeWaypoints);
+          setRouteInfo(null);
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -607,7 +614,7 @@ const MapScreen = ({navigation}) => {
                   {duration: 200},
                 );
               }
-            });
+            }).catch(() => {});
           }}
           activeOpacity={0.8}>
           <Icon name="plus" size={20} color={colors.primary} />
@@ -628,7 +635,7 @@ const MapScreen = ({navigation}) => {
                   {duration: 200},
                 );
               }
-            });
+            }).catch(() => {});
           }}
           activeOpacity={0.8}>
           <Icon name="minus" size={20} color={colors.primary} />
