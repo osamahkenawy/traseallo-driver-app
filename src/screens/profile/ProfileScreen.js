@@ -163,8 +163,6 @@ const ProfileScreen = ({navigation}) => {
         <View style={[s.menuCard, {marginTop: 14}]}>
           <MenuItem icon="logout" label={t('profile.logout')} onPress={logout} danger />
         </View>
-
-        <Text style={s.version}>Traseallo v{appVersion || '1.0.0'}</Text>
       </ScrollView>
     </View>
   );

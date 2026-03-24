@@ -10,6 +10,7 @@ const useLocationStore = create((set, get) => ({
   currentPosition: {latitude: 24.4539, longitude: 54.3773, accuracy: 100, speed: 0, heading: 0}, // Default: Abu Dhabi
   isTracking: false,
   driverStatus: 'offline', // 'available' | 'busy' | 'offline' | 'on_break'
+  sessionStartTime: null, // ISO string — when the driver went online
   trackingIntervalId: null,
   lastPingTime: null,
   // Offline GPS buffer
@@ -35,7 +36,10 @@ const useLocationStore = create((set, get) => ({
       const pos = get().currentPosition;
       const data = pos ? {lat: pos.latitude, lng: pos.longitude} : {};
       await locationApi.goOnline(data);
-      set({driverStatus: 'available'});
+      set(state => ({
+        driverStatus: 'available',
+        sessionStartTime: state.sessionStartTime || new Date().toISOString(),
+      }));
       return {success: true};
     } catch (error) {
       return {success: false, error: error.response?.data?.message || 'Failed to go online'};
@@ -48,7 +52,7 @@ const useLocationStore = create((set, get) => ({
   goOffline: async () => {
     try {
       await locationApi.goOffline();
-      set({driverStatus: 'offline'});
+      set({driverStatus: 'offline', sessionStartTime: null});
       get().stopTracking();
       return {success: true};
     } catch (error) {

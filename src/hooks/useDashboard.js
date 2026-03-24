@@ -14,48 +14,37 @@ import useAuthStore from '../store/authStore';
 import {pickupApi, walletApi, ordersApi} from '../api';
 
 const useDashboard = () => {
-  // ─── Stores ─────────────────────────────────────
-  const {
-    driver: dashDriver,
-    today,
-    nextStops,
-    isLoading: isDashLoading,
-    isRefreshing: isDashRefreshing,
-    fetchDashboard,
-  } = useDashboardStore();
+  // ─── Stores (individual selectors to prevent over-rendering) ──
+  const dashDriver = useDashboardStore(s => s.driver);
+  const today = useDashboardStore(s => s.today);
+  const nextStops = useDashboardStore(s => s.nextStops);
+  const isDashLoading = useDashboardStore(s => s.isLoading);
+  const isDashRefreshing = useDashboardStore(s => s.isRefreshing);
+  const fetchDashboard = useDashboardStore(s => s.fetchDashboard);
 
-  const {
-    orders,
-    fetchOrders,
-    isLoading: isOrdersLoading,
-  } = useOrderStore();
+  const orders = useOrderStore(s => s.orders);
+  const fetchOrders = useOrderStore(s => s.fetchOrders);
+  const isOrdersLoading = useOrderStore(s => s.isLoading);
 
-  const {
-    route,
-    progress,
-    fetchRoute,
-    fetchProgress,
-  } = useRouteStore();
+  const route = useRouteStore(s => s.route);
+  const progress = useRouteStore(s => s.progress);
+  const fetchRoute = useRouteStore(s => s.fetchRoute);
+  const fetchProgress = useRouteStore(s => s.fetchProgress);
 
-  const {
-    driverStatus,
-    setDriverStatus,
-    goOnline,
-    goOffline,
-    onBreak,
-  } = useLocationStore();
+  // Only subscribe to what we need — NOT currentPosition
+  const driverStatus = useLocationStore(s => s.driverStatus);
+  const setDriverStatus = useLocationStore(s => s.setDriverStatus);
+  const goOnline = useLocationStore(s => s.goOnline);
+  const goOffline = useLocationStore(s => s.goOffline);
+  const onBreak = useLocationStore(s => s.onBreak);
 
-  const {
-    unreadCount,
-    notifications,
-    fetchNotifications,
-    fetchUnreadCount,
-  } = useNotificationStore();
+  const unreadCount = useNotificationStore(s => s.unreadCount);
+  const notifications = useNotificationStore(s => s.notifications);
+  const fetchNotifications = useNotificationStore(s => s.fetchNotifications);
+  const fetchUnreadCount = useNotificationStore(s => s.fetchUnreadCount);
 
-  const {user, displayName} = useAuthStore(s => ({
-    user: s.user,
-    displayName: s.user?.full_name || s.user?.name || s.user?.username || 'Driver',
-  }));
+  const user = useAuthStore(s => s.user);
+  const displayName = user?.full_name || user?.name || user?.username || 'Driver';
 
   // ─── Derived data ──────────────────────────────
 
@@ -116,6 +105,8 @@ const useDashboard = () => {
     completionPct: progress?.completion_pct ?? 0,
   }), [progress, todayStats]);
 
+  const sessionStartTime = useLocationStore(s => s.sessionStartTime);
+
   // Driver info merged from dashboard + auth
   const driverInfo = useMemo(() => ({
     name: dashDriver?.full_name || dashDriver?.name || displayName,
@@ -123,7 +114,8 @@ const useDashboard = () => {
     vehicleType: dashDriver?.vehicle_type || user?.vehicle_type || null,
     rating: dashDriver?.rating || user?.rating || null,
     status: driverStatus,
-  }), [dashDriver, displayName, user, driverStatus]);
+    sessionStartTime,
+  }), [dashDriver, displayName, user, driverStatus, sessionStartTime]);
 
   // Latest unread notifications (max 3)
   const latestNotifications = useMemo(
@@ -196,9 +188,13 @@ const useDashboard = () => {
   useEffect(() => {
     // Immediately sync status from auth user (set during login)
     if (user?.status) {
-      const currentStatus = useLocationStore.getState().driverStatus;
-      if (user.status !== currentStatus) {
+      const locStore = useLocationStore.getState();
+      if (user.status !== locStore.driverStatus) {
         setDriverStatus(user.status);
+      }
+      // Start session timer if driver is online but no sessionStartTime yet
+      if (user.status !== 'offline' && !locStore.sessionStartTime) {
+        useLocationStore.setState({sessionStartTime: new Date().toISOString()});
       }
     }
     fetchAll(false).catch(() => {});

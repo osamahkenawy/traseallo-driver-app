@@ -176,16 +176,16 @@ const MapScreen = ({navigation}) => {
         if (__DEV__) console.warn('Map loadAll error:', e?.message);
       } finally {
         if (isRefresh) setIsRefreshing(false);
-        if (initialLoad) setInitialLoad(false);
       }
     },
-    [fetchOrders, fetchRoute, fetchProgress, initialLoad],
+    [fetchOrders, fetchRoute, fetchProgress],
   );
 
   // Refetch on tab focus
   useFocusEffect(
     useCallback(() => {
       loadAll();
+      if (initialLoad) setInitialLoad(false);
     }, [loadAll]),
   );
 
@@ -725,7 +725,6 @@ const $ = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 16,
-    gap: 8,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
@@ -737,17 +736,18 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
     color: colors.textMuted,
+    marginStart: 8,
   },
 
   // FABs
   fabCol: {
     position: 'absolute',
     end: 14,
-    gap: 14,
   },
   fab: {
     width: 42,
     height: 42,
+    marginBottom: 14,
     borderRadius: 21,
     backgroundColor: colors.white,
     alignItems: 'center',
@@ -775,7 +775,6 @@ const $ = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 13,
     borderRadius: 26,
-    gap: 8,
     shadowColor: colors.success,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
@@ -786,6 +785,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: fontSize.base,
     color: colors.white,
+    marginStart: 8,
   },
 
   // Route summary banner
@@ -840,7 +840,6 @@ const $ = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    gap: 6,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.08,
@@ -851,6 +850,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: fontSize.sm,
     color: colors.textMuted,
+    marginStart: 6,
   },
 });
 

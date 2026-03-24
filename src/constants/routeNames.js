@@ -52,6 +52,7 @@ export const routeNames = {
 
   // ─── Support ──────────────────────────────────────
   Support: 'Support',
+  TicketDetail: 'TicketDetail',
   Help: 'Help',
 
   // ─── Profile Stack ────────────────────────────────

@@ -88,6 +88,11 @@ const authApi = {
    * @param {object} data - { vehicle_type?, vehicle_plate?, vehicle_model?, vehicle_color?, phone?, email? }
    */
   updateProfile: (data) => apiClient.put('/driver-app/profile', data),
+
+  /**
+   * Get driver's ratings, distribution, reviews, and performance stats
+   */
+  getRatings: () => apiClient.get('/driver-app/ratings'),
 };
 
 export default authApi;

@@ -17,6 +17,7 @@ const SOCKET_URL = 'https://api.traseallo.com';
 const useSocket = () => {
   const socketRef = useRef(null);
   const pollRef = useRef(null);
+  const refreshTimerRef = useRef(null);
   const token = useAuthStore((s) => s.token);
   const tenantId = useAuthStore((s) => s.tenantId);
   const user = useAuthStore((s) => s.user);
@@ -27,6 +28,16 @@ const useSocket = () => {
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
   const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
   const setPosition = useLocationStore((s) => s.setPosition);
+
+  // Debounced refresh — coalesces rapid socket events into a single fetch
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = setTimeout(() => {
+      fetchOrders();
+      fetchDashboard();
+      refreshTimerRef.current = null;
+    }, 500);
+  }, [fetchOrders, fetchDashboard]);
 
   /**
    * Connect to Socket.io server
@@ -62,8 +73,7 @@ const useSocket = () => {
     // ─── Listen for events ──────────────────────────
     socket.on('order:assigned', (data) => {
       if (__DEV__) console.log('📦 New order assigned:', data);
-      fetchOrders();
-      fetchDashboard();
+      scheduleRefresh();
       addNotification({
         id: `socket-assigned-${Date.now()}`,
         title: i18n.t('notifications.newOrderAssigned', 'New Order Assigned'),
@@ -77,8 +87,7 @@ const useSocket = () => {
 
     socket.on('order:status-changed', (data) => {
       if (__DEV__) console.log('📦 Order status changed:', data);
-      fetchOrders();
-      fetchDashboard();
+      scheduleRefresh();
       const statusLabel = i18n.t('status.' + (data?.status || ''), data?.status || '');
       addNotification({
         id: `socket-status-${Date.now()}`,
@@ -93,8 +102,7 @@ const useSocket = () => {
 
     socket.on('order:updated', (data) => {
       if (__DEV__) console.log('📦 Order updated:', data);
-      fetchOrders();
-      fetchDashboard();
+      scheduleRefresh();
     });
 
     socket.on('notification', (data) => {
@@ -105,14 +113,13 @@ const useSocket = () => {
     // ─── Package-level status changes ───────────
     socket.on('package:status-changed', (data) => {
       if (__DEV__) console.log('📦 Package status changed:', data);
-      // Refresh order detail if viewing the affected order
-      fetchOrders();
+      scheduleRefresh();
     });
 
     // ─── COD collection confirmation ────────────
     socket.on('order:cod-collected', (data) => {
       if (__DEV__) console.log('💵 COD collected:', data);
-      fetchDashboard();
+      scheduleRefresh();
       addNotification({
         id: `socket-cod-${Date.now()}`,
         title: i18n.t('notifications.codCollected', 'COD Collected'),
@@ -133,7 +140,7 @@ const useSocket = () => {
     });
 
     socketRef.current = socket;
-  }, [token, tenantId, user, isAuthenticated]);
+  }, [token, tenantId, user, isAuthenticated, scheduleRefresh, addNotification]);
 
   /**
    * Disconnect from Socket.io server
@@ -176,6 +183,10 @@ const useSocket = () => {
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;
+      }
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
       }
     };
   }, [isAuthenticated, token]);

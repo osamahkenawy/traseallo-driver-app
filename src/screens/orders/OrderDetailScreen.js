@@ -147,14 +147,10 @@ const OrderDetailScreen = ({navigation, route}) => {
   // Re-fetch packages when screen regains focus (after deliver/fail)
   useFocusEffect(
     useCallback(() => {
-      if (order?.id) fetchPackages(order.id);
-      // Also re-fetch order detail to pick up status changes
-      if (resolvedOrderId) {
-        fetchOrderDetail(resolvedOrderId);
-      } else if (tkn) {
-        fetchOrderDetail(tkn);
-      }
-    }, [order?.id, resolvedOrderId, tkn]),
+      // Only re-fetch if we already have an order (not the initial load)
+      if (!order?.id) return;
+      fetchPackages(order.id);
+    }, [order?.id]),
   );
 
   const phone = order?.recipient_phone;

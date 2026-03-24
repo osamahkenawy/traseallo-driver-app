@@ -43,7 +43,7 @@ const useEarningsStore = create((set, get) => ({
         error: null,
       }));
 
-      return data;
+      return items;
     } catch (error) {
       set({
         isLoading: false,

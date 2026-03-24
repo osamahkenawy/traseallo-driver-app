@@ -14,9 +14,17 @@ import {routeNames} from '../constants/routeNames';
 
 const {width: W} = Dimensions.get('window');
 
-const OnboardingScreen = ({navigation}) => {
+const OnboardingScreen = ({navigation, onComplete}) => {
   const ins = useSafeAreaInsets();
   const {t} = useTranslation();
+
+  const handleGetStarted = () => {
+    if (onComplete) {
+      onComplete();
+    } else {
+      navigation.replace(routeNames.Login);
+    }
+  };
 
   return (
     <View style={[s.root, {paddingTop: ins.top, paddingBottom: ins.bottom}]}>
@@ -56,7 +64,7 @@ const OnboardingScreen = ({navigation}) => {
         <TouchableOpacity
           style={s.btn}
           activeOpacity={0.8}
-          onPress={() => navigation.replace(routeNames.Login)}>
+          onPress={handleGetStarted}>
           <Text style={s.btnText}>{t('onboarding.getStarted')}</Text>
           <Icon name="arrow-right" size={18} color="#FFF" />
         </TouchableOpacity>
@@ -99,6 +107,7 @@ const s = StyleSheet.create({
   btn: {
     height: 50, backgroundColor: colors.primary, borderRadius: 14,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
+    width: '100%',
   },
   btnText: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF'},
 });

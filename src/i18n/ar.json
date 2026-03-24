@@ -424,7 +424,10 @@
     "noEarnings": "لا توجد بيانات أرباح بعد",
     "recentTransactions": "المعاملات الأخيرة",
     "noTransactions": "لا توجد معاملات بعد",
-    "noTransactionsDesc": "سيظهر سجل أرباحك هنا."
+    "noTransactionsDesc": "سيظهر سجل أرباحك هنا.",
+    "last7Days": "آخر 7 أيام",
+    "paid": "مدفوع",
+    "pendingLabel": "معلّق"
   },
   "ratings": {
     "title": "التقييمات",
@@ -647,7 +650,13 @@
     "noHistoryDesc": "ستظهر طلباتك المكتملة والسابقة هنا.",
     "filterAll": "الكل",
     "filterDelivered": "تم التسليم",
-    "filterFailed": "فشل"
+    "filterFailed": "فشل",
+    "selectPeriod": "اختر الفترة",
+    "dateToday": "اليوم",
+    "dateWeek": "آخر 7 أيام",
+    "dateMonth": "آخر 30 يوم",
+    "date3Months": "آخر 3 أشهر",
+    "dateAll": "كل الوقت"
   },
   "returnOrder": {
     "title": "إرجاع الطلب",
@@ -820,7 +829,15 @@
     "ticketStatusOpen": "مفتوحة",
     "ticketStatusResolved": "تم الحل",
     "ticketStatusClosed": "مغلقة",
-    "ticketStatusPending": "قيد الانتظار"
+    "ticketStatusPending": "قيد الانتظار",
+    "ticketStatusIn_progress": "قيد التنفيذ",
+    "supportAgent": "فريق الدعم",
+    "you": "أنت",
+    "typeReply": "اكتب ردك...",
+    "noRepliesYet": "لا توجد ردود بعد. سنرد قريباً.",
+    "ticketClosed": "تم إغلاق هذه التذكرة",
+    "ticketNotFound": "التذكرة غير موجودة",
+    "failedReply": "فشل إرسال الرد"
   },
   "help": {
     "title": "المساعدة والأسئلة الشائعة",

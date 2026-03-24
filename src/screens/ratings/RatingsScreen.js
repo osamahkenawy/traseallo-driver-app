@@ -31,10 +31,16 @@ const RatingsScreen = ({navigation}) => {
   const fetchRatings = useCallback(async (isRefresh = false) => {
     if (!isRefresh) setLoading(true);
     try {
-      const res = await authApi.getProfile();
-      const data = res.data?.data || res.data;
+      // Try dedicated ratings endpoint first, fall back to profile
+      let data;
+      try {
+        const res = await authApi.getRatings();
+        data = res.data?.data || res.data;
+      } catch {
+        const res = await authApi.getProfile();
+        data = res.data?.data || res.data;
+      }
       setRatingsData(data);
-      // Reviews may not exist in the profile response
       const reviewsArr = Array.isArray(data?.reviews) ? data.reviews
         : Array.isArray(data?.ratings) ? data.ratings
         : [];

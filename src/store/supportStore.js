@@ -9,10 +9,13 @@ const useSupportStore = create((set, get) => ({
   // ─── State ──────────────────────────────────────
   tickets: [],
   ticketsPagination: {page: 1, limit: 20, total: 0, hasMore: true},
+  currentTicket: null,
   help: null, // FAQ / help content
   isLoading: false,
   isLoadingTickets: false,
+  isLoadingDetail: false,
   isSubmitting: false,
+  isReplying: false,
   error: null,
 
   // ─── Actions ────────────────────────────────────
@@ -86,7 +89,7 @@ const useSupportStore = create((set, get) => ({
         isLoadingTickets: false,
       }));
 
-      return data;
+      return items;
     } catch (error) {
       set({isLoadingTickets: false});
       if (__DEV__) console.warn('[SupportStore] fetchTickets error:', error?.message);
@@ -125,6 +128,48 @@ const useSupportStore = create((set, get) => ({
         error: error.response?.data?.message || 'Failed to load help',
       });
       return null;
+    }
+  },
+
+  /**
+   * Fetch single ticket detail with replies
+   */
+  fetchTicketDetail: async (id) => {
+    set({isLoadingDetail: true, error: null});
+    try {
+      const res = await supportApi.getTicketDetail(id);
+      const ticket = res.data?.data || res.data;
+      set({currentTicket: ticket, isLoadingDetail: false});
+      return ticket;
+    } catch (error) {
+      set({isLoadingDetail: false, error: error.response?.data?.message || 'Failed to load ticket'});
+      return null;
+    }
+  },
+
+  /**
+   * Reply to a support ticket
+   */
+  replyToTicket: async (id, message) => {
+    set({isReplying: true, error: null});
+    try {
+      const res = await supportApi.replyToTicket(id, {message});
+      const reply = res.data?.data || res.data;
+
+      // Append reply to current ticket
+      set(state => {
+        const ct = state.currentTicket;
+        if (ct && ct.id === id) {
+          const replies = Array.isArray(ct.replies) ? [...ct.replies, reply] : [reply];
+          return {currentTicket: {...ct, replies}, isReplying: false};
+        }
+        return {isReplying: false};
+      });
+
+      return reply;
+    } catch (error) {
+      set({isReplying: false, error: error.response?.data?.message || 'Failed to send reply'});
+      throw error;
     }
   },
 

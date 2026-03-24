@@ -424,7 +424,10 @@
     "noEarnings": "No earnings data yet",
     "recentTransactions": "Recent Transactions",
     "noTransactions": "No transactions yet",
-    "noTransactionsDesc": "Your earnings history will appear here."
+    "noTransactionsDesc": "Your earnings history will appear here.",
+    "last7Days": "Last 7 days",
+    "paid": "paid",
+    "pendingLabel": "pending"
   },
   "ratings": {
     "title": "Ratings",
@@ -647,7 +650,13 @@
     "noHistoryDesc": "Your completed and past orders will appear here.",
     "filterAll": "All",
     "filterDelivered": "Delivered",
-    "filterFailed": "Failed"
+    "filterFailed": "Failed",
+    "selectPeriod": "Select Period",
+    "dateToday": "Today",
+    "dateWeek": "Last 7 Days",
+    "dateMonth": "Last 30 Days",
+    "date3Months": "Last 3 Months",
+    "dateAll": "All Time"
   },
   "returnOrder": {
     "title": "Return Order",
@@ -820,7 +829,15 @@
     "ticketStatusOpen": "Open",
     "ticketStatusResolved": "Resolved",
     "ticketStatusClosed": "Closed",
-    "ticketStatusPending": "Pending"
+    "ticketStatusPending": "Pending",
+    "ticketStatusIn_progress": "In Progress",
+    "supportAgent": "Support Agent",
+    "you": "You",
+    "typeReply": "Type your reply...",
+    "noRepliesYet": "No replies yet. We'll respond soon.",
+    "ticketClosed": "This ticket has been closed",
+    "ticketNotFound": "Ticket not found",
+    "failedReply": "Failed to send reply"
   },
   "help": {
     "title": "Help & FAQ",

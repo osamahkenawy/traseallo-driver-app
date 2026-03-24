@@ -44,9 +44,16 @@ const DashboardHeader = ({
     : null;
 
   const loginTimeFmt = useMemo(() => {
-    if (loginTime) return loginTime;
-    const h = now.getHours();
-    const m = now.getMinutes();
+    if (!loginTime) {
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+    }
+    const d = new Date(loginTime);
+    if (isNaN(d.getTime())) return '';
+    const h = d.getHours();
+    const m = d.getMinutes();
     const ampm = h >= 12 ? 'PM' : 'AM';
     return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
   }, [loginTime]);
@@ -188,10 +195,11 @@ const $ = StyleSheet.create({
   driverRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     paddingBottom: 14,
   },
+  driverInfo: {flex: 1, marginStart: 14},
   avatar: {
     width: 48,
     height: 48,
@@ -204,7 +212,6 @@ const $ = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  driverInfo: {flex: 1},
   driverName: {
     fontFamily: fontFamily.semiBold,
     fontSize: 16,
@@ -223,9 +230,8 @@ const $ = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
-    gap: 6,
   },
-  statusDot: {width: 7, height: 7, borderRadius: 3.5},
+  statusDot: {width: 7, height: 7, borderRadius: 3.5, marginEnd: 6},
   statusTxt: {fontFamily: fontFamily.bold, fontSize: 10, letterSpacing: 0.5},
 
   // Time bar
@@ -237,11 +243,12 @@ const $ = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  timeLeft: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  timeLeft: {flexDirection: 'row', alignItems: 'center'},
   timeLabel: {
     fontFamily: fontFamily.regular,
     fontSize: 11,
     color: colors.textMuted,
+    marginStart: 8,
   },
   elapsed: {
     fontFamily: fontFamily.semiBold,

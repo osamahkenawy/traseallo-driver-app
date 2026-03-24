@@ -24,6 +24,7 @@ import useSupportStore from '../../store/supportStore';
 import {useTranslation} from 'react-i18next';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
+import {routeNames} from '../../constants/routeNames';
 
 const ISSUE_TYPES = [
   {labelKey: 'support.orderIssue', value: 'order_issue'},
@@ -105,7 +106,10 @@ const SupportScreen = ({navigation}) => {
       const statusColor = STATUS_COLORS[raw] || colors.textMuted;
       const statusKey = 'support.ticketStatus' + raw.charAt(0).toUpperCase() + raw.slice(1);
       return (
-        <View style={s.ticketCard}>
+        <TouchableOpacity
+          style={s.ticketCard}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate(routeNames.TicketDetail, {ticketId: item.id})}>
           <View style={s.ticketRow}>
             <View style={[s.ticketDot, {backgroundColor: statusColor}]} />
             <View style={s.ticketBody}>
@@ -119,13 +123,16 @@ const SupportScreen = ({navigation}) => {
                 {item.created_at ? new Date(item.created_at).toLocaleDateString() : ''}
               </Text>
             </View>
-            <View style={[s.ticketBadge, {backgroundColor: statusColor + '18'}]}>
-              <Text style={[s.ticketBadgeText, {color: statusColor}]}>
-                {t(statusKey, raw).toUpperCase()}
-              </Text>
+            <View style={{alignItems: 'flex-end', gap: 8}}>
+              <View style={[s.ticketBadge, {backgroundColor: statusColor + '18'}]}>
+                <Text style={[s.ticketBadgeText, {color: statusColor}]}>
+                  {t(statusKey, raw).toUpperCase()}
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={14} color={colors.textLight} />
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       );
     },
     [t],

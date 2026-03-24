@@ -57,7 +57,7 @@ const TaskCard = ({order, onPress}) => {
           }}
           activeOpacity={0.6}>
           <Text style={$.orderNum}>{orderNum}</Text>
-          <Copy size={12} color={colors.textMuted} strokeWidth={2} />
+          <Copy size={12} color={colors.textMuted} strokeWidth={2} style={{marginStart: 8}} />
         </TouchableOpacity>
       ) : null}
 
@@ -164,13 +164,13 @@ const $ = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
     marginBottom: 4,
   },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
+    marginEnd: 10,
   },
   statusTxt: {
     fontFamily: fontFamily.bold,
@@ -187,7 +187,6 @@ const $ = StyleSheet.create({
   orderNumRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     marginBottom: 2,
   },
   orderNum: {
@@ -228,7 +227,6 @@ const $ = StyleSheet.create({
   routeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
   },
   routeIconCol: {
     width: 28,
@@ -250,6 +248,7 @@ const $ = StyleSheet.create({
   routeContent: {
     flex: 1,
     paddingBottom: 4,
+    marginStart: 12,
   },
   routeLabel: {
     fontFamily: fontFamily.semiBold,
