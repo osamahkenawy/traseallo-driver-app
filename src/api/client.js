@@ -7,7 +7,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Configuration ──────────────────────────────────
-const API_BASE_URL = 'http://localhost:4001/api';
+const API_BASE_URL = 'https://api.traseallo.com/api';
 
 const TIMEOUT = 30000; // 30 seconds
 

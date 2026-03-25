@@ -353,7 +353,7 @@ const TripPreview = ({
               const nextLegDist = !isLast ? (legDistances[idx + 1] ?? null) : null;
 
               return (
-                <View key={order.id} style={$.stopRow}>
+                <View key={`order-${order.id}-${idx}`} style={$.stopRow}>
                   {/* Timeline column */}
                   <View style={$.timeline}>
                     <View style={[$.timelineDot, idx === 0 && $.timelineDotFirst]}>

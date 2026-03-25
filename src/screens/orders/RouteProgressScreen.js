@@ -146,7 +146,7 @@ const RouteProgressScreen = () => {
       {/* Stops List */}
       <FlatList
         data={stops}
-        keyExtractor={(item, idx) => `stop-${item.id || item.stop_number || idx}`}
+        keyExtractor={(item, idx) => `stop-${item.id || item.stop_number || idx}-${idx}`}
         renderItem={renderStop}
         contentContainerStyle={styles.list}
         refreshControl={

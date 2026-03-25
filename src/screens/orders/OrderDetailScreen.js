@@ -555,7 +555,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                     const isFailed = stop.status === 'failed';
                     const stopColor = isCompleted ? colors.success : isFailed ? colors.danger : colors.textPrimary;
                     return (
-                      <View key={stop.id || idx} style={{
+                      <View key={`stop-${stop.id || idx}-${idx}`} style={{
                         backgroundColor: isCompleted ? '#F0FFF4' : isFailed ? '#FFF5F5' : '#F8F9FA',
                         borderRadius: 12, padding: 12, marginBottom: 8,
                         borderWidth: 1, borderColor: isCompleted ? '#C6F6D5' : isFailed ? '#FED7D7' : '#EEF1F5',
