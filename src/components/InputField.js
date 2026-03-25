@@ -38,6 +38,8 @@ const InputField = ({
           justifyContent: "space-between",
           ...theme.FONTS.Mulish_400Regular,
           fontSize: 16,
+          textAlign: 'auto',
+          writingDirection: 'auto',
         }}
         keyboardType={keyboardType}
         placeholder={placeholder}

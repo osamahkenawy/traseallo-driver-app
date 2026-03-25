@@ -49,9 +49,9 @@ import {routeNames} from '../../constants/routeNames';
 import useOrderStore from '../../store/orderStore';
 import useLocationStore from '../../store/locationStore';
 import useRouteStore from '../../store/routeStore';
-import {fetchRoadRouteChunked, fetchOptimizedRoute} from '../../utils/routing';
+import {fetchRoadRouteChunked, fetchOptimizedRoute, fetchNavigationRoute} from '../../utils/routing';
 
-import {DriverMarker, StopMarker, MapTopBar, OrderSheet, TripPreview} from './components';
+import {DriverMarker, StopMarker, MapTopBar, OrderSheet, TripPreview, NavigationOverlay} from './components';
 
 const {height: SH} = Dimensions.get('window');
 const SHEET_HEIGHT = 320;
@@ -127,6 +127,15 @@ const MapScreen = ({navigation}) => {
   const [roadCoords, setRoadCoords] = useState([]);
   const [routeInfo, setRouteInfo] = useState(null); // {distance, duration}
   const [showTripPreview, setShowTripPreview] = useState(false);
+
+  // ── Navigation mode state ───────────────────
+  const [navMode, setNavMode] = useState(false);
+  const [navStop, setNavStop] = useState(null);
+  const [navRoute, setNavRoute] = useState([]);
+  const [navSteps, setNavSteps] = useState([]);
+  const [navDistance, setNavDistance] = useState(0);
+  const [navDuration, setNavDuration] = useState(0);
+  const navRefreshTimer = useRef(null);
 
   // ── Bottom sheet animation ──────────────────
   const sheetY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
@@ -434,14 +443,14 @@ const MapScreen = ({navigation}) => {
   const handleStartOneOrder = useCallback(
     async (order) => {
       if (!currentPosition) return;
-      try {
-        await startDelivery(order.id, {
-          lat: currentPosition.latitude,
-          lng: currentPosition.longitude,
-        });
+      const result = await startDelivery(order.id, {
+        lat: currentPosition.latitude,
+        lng: currentPosition.longitude,
+      });
+      if (result?.success) {
         loadAll(true);
-      } catch (e) {
-        Alert.alert(t('common.error'), e?.message || t('map.failedStartDelivery'));
+      } else {
+        Alert.alert(t('common.error'), result?.error || t('map.failedStartDelivery'));
       }
     },
     [startDelivery, currentPosition, loadAll, t],
@@ -450,26 +459,29 @@ const MapScreen = ({navigation}) => {
   const handleStartAllOrders = useCallback(
     async (orderedList) => {
       if (!currentPosition) return;
-      try {
-        await Promise.all(
-          orderedList.map((o) =>
-            startDelivery(o.id, {
-              lat: currentPosition.latitude,
-              lng: currentPosition.longitude,
-            }),
-          ),
+      const results = await Promise.all(
+        orderedList.map((o) =>
+          startDelivery(o.id, {
+            lat: currentPosition.latitude,
+            lng: currentPosition.longitude,
+          }),
+        ),
+      );
+      const failed = results.filter(r => !r?.success);
+      setShowTripPreview(false);
+      loadAll(true);
+      if (failed.length > 0) {
+        Alert.alert(
+          t('common.error'),
+          t('map.someOrdersFailed', {count: failed.length}),
         );
-        setShowTripPreview(false);
-        loadAll(true);
-      } catch (e) {
-        Alert.alert(t('common.error'), e?.message || t('map.failedStartTrip'));
       }
     },
     [startDelivery, currentPosition, loadAll, t],
   );
 
   // ── Navigate to stop (external maps) ────────
-  const handleNavigate = useCallback(
+  const handleExternalNav = useCallback(
     (stop) => {
       const lat = toNum(stop.lat || stop.recipient_lat);
       const lng = toNum(stop.lng || stop.recipient_lng);
@@ -483,6 +495,97 @@ const MapScreen = ({navigation}) => {
     },
     [],
   );
+
+  // ── In-app Navigation mode ──────────────────
+  const fetchNavRoute = useCallback(
+    async (stop) => {
+      if (!currentPosition) return;
+      const lat = toNum(stop.lat || stop.recipient_lat);
+      const lng = toNum(stop.lng || stop.recipient_lng);
+      if (!isValidCoord(lat, lng)) return;
+
+      const result = await fetchNavigationRoute(
+        {latitude: currentPosition.latitude, longitude: currentPosition.longitude},
+        {latitude: lat, longitude: lng},
+      );
+      if (result) {
+        setNavRoute(result.coordinates);
+        setNavSteps(result.steps || []);
+        setNavDistance(result.distance || 0);
+        setNavDuration(result.duration || 0);
+      } else {
+        // Fallback to straight line
+        setNavRoute([
+          {latitude: currentPosition.latitude, longitude: currentPosition.longitude},
+          {latitude: lat, longitude: lng},
+        ]);
+        setNavSteps([]);
+        const dist = haversine(currentPosition.latitude, currentPosition.longitude, lat, lng);
+        setNavDistance(dist * 1000);
+        setNavDuration(estimateETA(dist) * 60);
+      }
+    },
+    [currentPosition],
+  );
+
+  const handleNavigate = useCallback(
+    (stop) => {
+      dismissSheet();
+      setNavStop(stop);
+      setNavMode(true);
+      fetchNavRoute(stop);
+
+      // Zoom to stop
+      const lat = toNum(stop.lat || stop.recipient_lat);
+      const lng = toNum(stop.lng || stop.recipient_lng);
+      if (mapRef.current && currentPosition && isValidCoord(lat, lng)) {
+        mapRef.current.fitToCoordinates(
+          [
+            {latitude: currentPosition.latitude, longitude: currentPosition.longitude},
+            {latitude: lat, longitude: lng},
+          ],
+          {edgePadding: {top: 180, right: 60, bottom: 280, left: 60}, animated: true},
+        );
+      }
+    },
+    [dismissSheet, fetchNavRoute, currentPosition],
+  );
+
+  const handleEndNav = useCallback(() => {
+    setNavMode(false);
+    setNavStop(null);
+    setNavRoute([]);
+    setNavSteps([]);
+    setNavDistance(0);
+    setNavDuration(0);
+    if (navRefreshTimer.current) clearInterval(navRefreshTimer.current);
+  }, []);
+
+  // Auto-update nav route as driver moves (every 15 s)
+  useEffect(() => {
+    if (!navMode || !navStop) return;
+    if (navRefreshTimer.current) clearInterval(navRefreshTimer.current);
+    navRefreshTimer.current = setInterval(() => {
+      fetchNavRoute(navStop);
+    }, 15000);
+    return () => {
+      if (navRefreshTimer.current) clearInterval(navRefreshTimer.current);
+    };
+  }, [navMode, navStop, fetchNavRoute]);
+
+  // Recenter on driver while in nav mode when position changes
+  useEffect(() => {
+    if (!navMode || !currentPosition || !mapRef.current) return;
+    mapRef.current.animateToRegion(
+      {
+        latitude: currentPosition.latitude,
+        longitude: currentPosition.longitude,
+        latitudeDelta: 0.008,
+        longitudeDelta: 0.008,
+      },
+      300,
+    );
+  }, [navMode, currentPosition?.latitude, currentPosition?.longitude]);
 
   // ── View order detail ───────────────────────
   const handleViewDetail = useCallback(
@@ -546,7 +649,7 @@ const MapScreen = ({navigation}) => {
         ))}
 
         {/* Road-following route polyline */}
-        {roadCoords.length >= 2 && (
+        {!navMode && roadCoords.length >= 2 && (
           <Polyline
             coordinates={roadCoords}
             strokeColor={colors.primary}
@@ -555,46 +658,60 @@ const MapScreen = ({navigation}) => {
             lineJoin="round"
           />
         )}
+
+        {/* Navigation mode route polyline */}
+        {navMode && navRoute.length >= 2 && (
+          <Polyline
+            coordinates={navRoute}
+            strokeColor={colors.success}
+            strokeWidth={6}
+            lineCap="round"
+            lineJoin="round"
+          />
+        )}
       </MapView>
 
-      {/* Top bar */}
-      <MapTopBar
-        driverStatus={driverStatus}
-        onStatusPress={cycleStatus}
-        activeCount={activeCount}
-        completedCount={completedCount}
-        totalCount={totalCount}
-        t={t}
-      />
+      {/* ── Normal mode overlays ── */}
+      {!navMode && (
+        <>
+          {/* Top bar */}
+          <MapTopBar
+            driverStatus={driverStatus}
+            onStatusPress={cycleStatus}
+            activeCount={activeCount}
+            completedCount={completedCount}
+            totalCount={totalCount}
+            t={t}
+          />
 
-      {/* Loading overlay */}
-      {(initialLoad || isRefreshing) && (
-        <View style={[$.loadOverlay, {top: ins.top + 52}]}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={$.loadText}>
-            {initialLoad ? t('map.loadingMap') : t('map.refreshing')}
-          </Text>
-        </View>
-      )}
+          {/* Loading overlay */}
+          {(initialLoad || isRefreshing) && (
+            <View style={[$.loadOverlay, {top: ins.top + 52}]}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={$.loadText}>
+                {initialLoad ? t('map.loadingMap') : t('map.refreshing')}
+              </Text>
+            </View>
+          )}
 
-      {/* FABs column */}
-      <View style={[$.fabCol, {top: ins.top + 56}]}>
-        <TouchableOpacity style={$.fab} onPress={recenter} activeOpacity={0.8}>
-          <Icon name="crosshairs-gps" size={18} color={colors.primary} />
-        </TouchableOpacity>
+          {/* FABs column */}
+          <View style={[$.fabCol, {top: ins.top + 56}]}>
+            <TouchableOpacity style={$.fab} onPress={recenter} activeOpacity={0.8}>
+              <Icon name="crosshairs-gps" size={18} color={colors.primary} />
+            </TouchableOpacity>
 
-        {mapStops.length > 0 && (
-          <TouchableOpacity style={$.fab} onPress={fitAll} activeOpacity={0.8}>
-            <Icon name="fit-to-screen-outline" size={18} color={colors.primary} />
-          </TouchableOpacity>
-        )}
+            {mapStops.length > 0 && (
+              <TouchableOpacity style={$.fab} onPress={fitAll} activeOpacity={0.8}>
+                <Icon name="fit-to-screen-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            )}
 
-        <TouchableOpacity
-          style={$.fab}
-          onPress={() => loadAll(true)}
-          activeOpacity={0.8}>
-          <Icon name="refresh" size={18} color={isRefreshing ? colors.textMuted : colors.primary} />
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={$.fab}
+              onPress={() => loadAll(true)}
+              activeOpacity={0.8}>
+              <Icon name="refresh" size={18} color={isRefreshing ? colors.textMuted : colors.primary} />
+            </TouchableOpacity>
 
         {/* Zoom controls */}
         <View style={$.zoomDivider} />
@@ -680,8 +797,8 @@ const MapScreen = ({navigation}) => {
         </View>
       )}
 
-      {/* Empty state */}
-      {!initialLoad && mapStops.length === 0 && !selectedStop && (
+      {/* Empty state — only show if no summary banner is already visible */}
+      {!initialLoad && mapStops.length === 0 && !selectedStop && !(summary && assignedCount === 0) && (
         <View style={[$.emptyBanner, {bottom: TAB_BAR_HEIGHT + 16}]}>
           <Icon name="map-marker-off-outline" size={18} color={colors.textMuted} />
           <Text style={$.emptyText}>{t('map.noDeliveries')}</Text>
@@ -701,6 +818,25 @@ const MapScreen = ({navigation}) => {
         estimateETA={estimateETA}
         t={t}
       />
+        </>
+      )}
+
+      {/* ── Navigation mode overlay ── */}
+      {navMode && (
+        <NavigationOverlay
+          stop={navStop}
+          steps={navSteps}
+          distance={navDistance}
+          duration={navDuration}
+          onEndNav={handleEndNav}
+          onOpenExternal={() => navStop && handleExternalNav(navStop)}
+          onViewDetail={(stop) => {
+            handleEndNav();
+            handleViewDetail(stop);
+          }}
+          t={t}
+        />
+      )}
 
       {/* Trip Preview Modal */}
       <TripPreview

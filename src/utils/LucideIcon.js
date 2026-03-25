@@ -13,6 +13,7 @@ import {
   PackageX,
   PackageCheck,
   Camera,
+  ImagePlus,
   RefreshCcw,
   CheckCircle,
   CheckCircle2,
@@ -74,6 +75,7 @@ import {
   ClipboardList,
   Ban,
   CornerDownLeft,
+  CornerDownRight,
   Star,
   ThumbsUp,
   Settings,
@@ -145,6 +147,7 @@ const ICON_MAP = {
 
   // Camera
   'camera-outline': Camera,
+  'camera-plus-outline': ImagePlus,
   'camera-retake-outline': RefreshCcw,
 
   // Checks
@@ -293,6 +296,8 @@ const ICON_MAP = {
 
   // Return
   'keyboard-return': CornerDownLeft,
+  'corner-down-left': CornerDownLeft,
+  'corner-down-right': CornerDownRight,
 
   // Star
   'star': Star,
@@ -464,12 +469,16 @@ const ICON_MAP = {
   'logout': LogOut,
 };
 
-/** Icons that should mirror horizontally in RTL mode */
+/** Icons that should swap to their mirror counterpart in RTL mode */
+const RTL_SWAP = {
+  'arrow-left': 'arrow-right',
+  'arrow-right': 'arrow-left',
+  'chevron-right': 'chevron-left',
+  'chevron-left': 'chevron-right',
+};
+
+/** Icons that should mirror horizontally via transform in RTL mode */
 const RTL_FLIP = new Set([
-  'arrow-left',
-  'arrow-right',
-  'chevron-right',
-  'chevron-left',
   'navigation-variant',
   'navigation-variant-outline',
   'navigation-outline',
@@ -477,7 +486,8 @@ const RTL_FLIP = new Set([
 ]);
 
 const LucideIcon = ({name, size = 24, color = '#000', strokeWidth, style, ...rest}) => {
-  const IconComponent = ICON_MAP[name] || HelpCircle;
+  const resolvedName = I18nManager.isRTL && RTL_SWAP[name] ? RTL_SWAP[name] : name;
+  const IconComponent = ICON_MAP[resolvedName] || HelpCircle;
   const flip = I18nManager.isRTL && RTL_FLIP.has(name);
   const mergedStyle = flip
     ? [{transform: [{scaleX: -1}]}, style].filter(Boolean)

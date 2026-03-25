@@ -34,7 +34,9 @@ const MenuItem = ({icon, iconColor, label, sub, onPress, danger}) => {
         <Text style={[s.miLabel, danger && {color: colors.danger}]}>{label}</Text>
         {sub ? <Text style={s.miSub}>{sub}</Text> : null}
       </View>
-      <Icon name="chevron-right" size={16} color={danger ? colors.danger + '60' : '#C5CAD1'} />
+      <View style={{marginStart: 12}}>
+        <Icon name="chevron-right" size={16} color={danger ? colors.danger + '60' : '#C5CAD1'} />
+      </View>
     </TouchableOpacity>
   );
 };
@@ -172,7 +174,7 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   scroll: {paddingHorizontal: 20, paddingBottom: 40},
   hdr: {paddingVertical: 14},
-  title: {fontFamily: fontFamily.bold, fontSize: 18, color: colors.textPrimary, textAlign: 'auto'},
+  title: {fontFamily: fontFamily.bold, fontSize: 18, color: colors.textPrimary, textAlign: 'auto', writingDirection: 'auto'},
 
   /* Profile card */
   profileCard: {
@@ -183,8 +185,8 @@ const s = StyleSheet.create({
     borderColor: '#EEF1F5',
     marginBottom: 22,
   },
-  avatarRow: {flexDirection: 'row', alignItems: 'center', gap: 14},
-  avatarWrap: {position: 'relative'},
+  avatarRow: {flexDirection: 'row', alignItems: 'center'},
+  avatarWrap: {position: 'relative', marginEnd: 14},
   avatar: {width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: colors.primary + '20'},
   onlineDot: {
     position: 'absolute',
@@ -208,11 +210,10 @@ const s = StyleSheet.create({
   statVal: {fontFamily: fontFamily.bold, fontSize: 15, color: colors.textPrimary},
   statLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginTop: 2, textTransform: 'capitalize'},
   statDiv: {width: 1, height: 24, backgroundColor: '#EEF1F5'},
-  name: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  name: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto', writingDirection: 'auto'},
   rolePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     alignSelf: 'flex-start',
     backgroundColor: colors.primary + '0D',
     paddingHorizontal: 8,
@@ -220,8 +221,8 @@ const s = StyleSheet.create({
     borderRadius: 8,
     marginTop: 3,
   },
-  roleText: {fontFamily: fontFamily.semiBold, fontSize: 10, color: colors.primary},
-  email: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 3},
+  roleText: {fontFamily: fontFamily.semiBold, fontSize: 10, color: colors.primary, marginStart: 6, textAlign: 'auto', writingDirection: 'auto'},
+  email: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 3, textAlign: 'auto', writingDirection: 'auto'},
   editBtn: {
     width: 36,
     height: 36,
@@ -229,6 +230,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.primary + '0D',
     justifyContent: 'center',
     alignItems: 'center',
+    marginStart: 14,
   },
 
   /* Section */
@@ -238,6 +240,7 @@ const s = StyleSheet.create({
     color: colors.textLight,
     letterSpacing: 1.2,
     textAlign: 'auto',
+    writingDirection: 'auto',
     marginBottom: 8,
     marginStart: 2,
   },
@@ -256,7 +259,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 13,
-    gap: 12,
   },
   miIc: {
     width: 32,
@@ -264,9 +266,10 @@ const s = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    marginEnd: 12,
   },
-  miLabel: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary},
-  miSub: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 1},
+  miLabel: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, textAlign: 'auto', writingDirection: 'auto'},
+  miSub: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 1, textAlign: 'auto', writingDirection: 'auto'},
   div: {height: 1, backgroundColor: '#EEF1F5', marginStart: 58},
 
   version: {

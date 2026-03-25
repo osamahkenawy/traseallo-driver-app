@@ -1083,6 +1083,18 @@ const OrderDetailScreen = ({navigation, route}) => {
       {/* ── Bottom CTA ── */}
       {(status === 'assigned' || status === 'confirmed' || status === 'picked_up' || status === 'in_transit') && (
         <View style={[$.bottom, {paddingBottom: ins.bottom + 10}]}>
+          {/* Navigate to recipient — shown after pickup */}
+          {!needsPickup && (
+            <TouchableOpacity
+              style={$.ctaNav}
+              onPress={handleNavigate}
+              activeOpacity={0.7}>
+              <Icon name="navigation-variant" size={17} color={colors.primary} />
+              <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToRecipient')}</Text>
+              <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
+            </TouchableOpacity>
+          )}
+
           {/* Report Failure button for in_transit */}
           {status === 'in_transit' && (
             <TouchableOpacity
@@ -1391,6 +1403,14 @@ const $ = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   ctaFailTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.danger, marginStart: 6},
+  ctaNav: {
+    height: 44, borderRadius: 12,
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1.5, borderColor: colors.primary, marginBottom: 8,
+    backgroundColor: colors.primary + '08',
+    paddingHorizontal: 16,
+  },
+  ctaNavTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.primary, marginStart: 8},
   cta: {
     height: 50, backgroundColor: colors.primary, borderRadius: 14,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',

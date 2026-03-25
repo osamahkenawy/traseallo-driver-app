@@ -134,6 +134,62 @@ export async function fetchRoadRouteChunked(waypoints, options = {}) {
 }
 
 /**
+ * Fetch a navigation route from driver to a single destination with
+ * step-by-step turn instructions from OSRM.
+ *
+ * @param {{latitude: number, longitude: number}} origin   Driver position
+ * @param {{latitude: number, longitude: number}} dest     Destination stop
+ * @param {Object} [options]
+ * @returns {Promise<{coordinates: Array, distance: number, duration: number, steps: Array} | null>}
+ *   steps: array of { instruction, distance, duration, maneuver, name }
+ */
+export async function fetchNavigationRoute(origin, dest, options = {}) {
+  if (!origin || !dest) return null;
+
+  const coordStr = `${origin.longitude},${origin.latitude};${dest.longitude},${dest.latitude}`;
+  const url = `${ROUTE_URL}/${coordStr}?overview=full&geometries=polyline&steps=true`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), options.timeout || 8000);
+
+  try {
+    const res = await fetch(url, {signal: controller.signal});
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    if (json.code !== 'Ok' || !json.routes || json.routes.length === 0) return null;
+
+    const route = json.routes[0];
+    const coordinates = decodePolyline(route.geometry);
+
+    // Extract human-readable steps
+    const steps = [];
+    for (const leg of route.legs || []) {
+      for (const s of leg.steps || []) {
+        if (s.maneuver) {
+          steps.push({
+            maneuver: s.maneuver.type,        // turn, depart, arrive, etc.
+            modifier: s.maneuver.modifier,     // left, right, straight, etc.
+            name: s.name || '',                // street name
+            distance: s.distance,              // meters
+            duration: s.duration,              // seconds
+            location: s.maneuver.location
+              ? {longitude: s.maneuver.location[0], latitude: s.maneuver.location[1]}
+              : null,
+          });
+        }
+      }
+    }
+
+    return {coordinates, distance: route.distance, duration: route.duration, steps};
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
+/**
  * Fetch an optimized route (TSP) using OSRM's /trip endpoint.
  * The first waypoint (driver position) is fixed as start; the rest are
  * reordered to minimize total travel distance.

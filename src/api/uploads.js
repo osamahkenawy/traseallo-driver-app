@@ -8,12 +8,13 @@
 import apiClient from './client';
 
 /**
- * Create a FormData object from a local file URI
+ * Create a FormData object from a local file URI with optional metadata
  * @param {string} uri - Local file URI
  * @param {string} fieldName - Form field name (default: 'file')
+ * @param {Object} [meta] - Extra fields to attach (photo_type, caption, lat, lng)
  * @returns {FormData}
  */
-const createFormData = (uri, fieldName = 'file') => {
+const createFormData = (uri, fieldName = 'file', meta) => {
   const formData = new FormData();
   const filename = uri.split('/').pop() || 'photo.jpg';
   const match = /\.(\w+)$/.exec(filename);
@@ -26,6 +27,13 @@ const createFormData = (uri, fieldName = 'file') => {
     type,
   });
 
+  if (meta) {
+    if (meta.photo_type) formData.append('photo_type', meta.photo_type);
+    if (meta.caption) formData.append('caption', meta.caption);
+    if (meta.lat != null) formData.append('lat', String(meta.lat));
+    if (meta.lng != null) formData.append('lng', String(meta.lng));
+  }
+
   return formData;
 };
 
@@ -33,19 +41,39 @@ const uploadsApi = {
   // ─── Order-Level POD ───────────────────────────
 
   /**
-   * Upload proof-of-delivery photo for an order
+   * Upload proof-of-delivery photo for an order (multi-photo)
    * @param {number|string} orderId
    * @param {string} uri - Local image file URI
+   * @param {Object} [meta] - {photo_type, caption, lat, lng}
    * @param {function} [onProgress]
    */
-  uploadOrderProofPhoto: (orderId, uri, onProgress) => {
-    const formData = createFormData(uri);
+  uploadOrderProofPhoto: (orderId, uri, meta, onProgress) => {
+    // Support old signature: (orderId, uri, onProgress)
+    if (typeof meta === 'function') {
+      onProgress = meta;
+      meta = undefined;
+    }
+    const formData = createFormData(uri, 'file', meta);
     return apiClient.post(`/driver-app/orders/${orderId}/proof-photo`, formData, {
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
     });
   },
+
+  /**
+   * Get all photos for an order
+   * @param {number|string} orderId
+   */
+  getOrderPhotos: (orderId) =>
+    apiClient.get(`/driver-app/orders/${orderId}/photos`),
+
+  /**
+   * Delete a proof photo
+   * @param {number|string} photoId
+   */
+  deletePhoto: (photoId) =>
+    apiClient.delete(`/driver-app/photos/${photoId}`),
 
   /**
    * Upload recipient signature for an order
@@ -70,19 +98,31 @@ const uploadsApi = {
   // ─── Stop-Level POD ────────────────────────────
 
   /**
-   * Upload proof photo for a specific delivery stop
+   * Upload proof photo for a specific delivery stop (multi-photo)
    * @param {number|string} stopId
    * @param {string} uri - Local image file URI
+   * @param {Object} [meta] - {photo_type, caption, lat, lng}
    * @param {function} [onProgress]
    */
-  uploadStopProofPhoto: (stopId, uri, onProgress) => {
-    const formData = createFormData(uri);
+  uploadStopProofPhoto: (stopId, uri, meta, onProgress) => {
+    if (typeof meta === 'function') {
+      onProgress = meta;
+      meta = undefined;
+    }
+    const formData = createFormData(uri, 'file', meta);
     return apiClient.post(`/driver-app/stops/${stopId}/proof-photo`, formData, {
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
     });
   },
+
+  /**
+   * Get all photos for a stop
+   * @param {number|string} stopId
+   */
+  getStopPhotos: (stopId) =>
+    apiClient.get(`/driver-app/stops/${stopId}/photos`),
 
   /**
    * Upload recipient signature for a specific delivery stop

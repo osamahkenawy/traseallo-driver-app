@@ -232,7 +232,6 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 8,
     marginEnd: 10,
   },
   seqBadge: {
@@ -241,6 +240,7 @@ const $ = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
+    marginEnd: 8,
   },
   seqText: {
     fontFamily: fontFamily.bold,
@@ -263,6 +263,7 @@ const $ = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
+    marginStart: 8,
   },
   statusText: {
     fontFamily: fontFamily.semiBold,
@@ -273,7 +274,6 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
-    gap: 10,
   },
   avatar: {
     width: 36,
@@ -281,6 +281,7 @@ const $ = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    marginEnd: 10,
   },
   avatarText: {
     fontFamily: fontFamily.bold,
@@ -299,7 +300,7 @@ const $ = StyleSheet.create({
   },
   contactBtns: {
     flexDirection: 'row',
-    gap: 6,
+    marginStart: 10,
   },
   miniBtn: {
     width: 32,
@@ -308,11 +309,11 @@ const $ = StyleSheet.create({
     backgroundColor: colors.bgGray,
     alignItems: 'center',
     justifyContent: 'center',
+    marginStart: 6,
   },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 6,
     marginBottom: 8,
     paddingStart: 2,
   },
@@ -322,26 +323,28 @@ const $ = StyleSheet.create({
     color: colors.textSecondary,
     flex: 1,
     lineHeight: 18,
+    marginStart: 6,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
     marginBottom: 10,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: colors.infoBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    marginEnd: 6,
+    marginBottom: 4,
   },
   chipText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
     color: colors.info,
+    marginStart: 4,
   },
   noteRow: {
     backgroundColor: '#FFF8E6',
@@ -357,7 +360,6 @@ const $ = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
-    gap: 10,
     paddingBottom: 6,
   },
   actionBtn: {
@@ -367,10 +369,10 @@ const $ = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 11,
     borderRadius: 12,
-    gap: 6,
   },
   navBtn: {
     backgroundColor: colors.primary,
+    marginEnd: 10,
   },
   detailBtn: {
     backgroundColor: colors.bgSoftBlue,
@@ -378,6 +380,7 @@ const $ = StyleSheet.create({
   actionText: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.sm,
+    marginStart: 6,
   },
 });
 

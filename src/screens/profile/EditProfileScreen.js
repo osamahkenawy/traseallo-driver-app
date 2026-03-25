@@ -65,8 +65,18 @@ const Field = ({label, icon, value, onChangeText, placeholder, editable = true, 
 const PhoneField = ({label, icon, countryCode, onCountryCodeChange, phone, onPhoneChange, codeLabel}) => (
   <View style={s.fieldGroup}>
     <Text style={s.fieldLabel}>{label}</Text>
-    <View style={s.phoneRow}>
-      <View style={s.codeBox}>
+    <View style={[s.phoneRow, {flexDirection: 'row', direction: 'ltr'}]}>
+      <View style={s.phoneBox}>
+        <TextInput
+          style={s.phoneInput}
+          value={phone}
+          onChangeText={onPhoneChange}
+          placeholder="5XX XXX XXXX"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="phone-pad"
+        />
+      </View>
+      <View style={[s.codeBox, {marginStart: 8}]}>
         <Icon name={icon} size={16} color={colors.primary} style={{marginStart: 10, marginEnd: 6}} />
         <TextInput
           style={s.codeInput}
@@ -76,16 +86,6 @@ const PhoneField = ({label, icon, countryCode, onCountryCodeChange, phone, onPho
           placeholderTextColor={colors.textMuted}
           keyboardType="phone-pad"
           maxLength={5}
-        />
-      </View>
-      <View style={s.phoneBox}>
-        <TextInput
-          style={s.phoneInput}
-          value={phone}
-          onChangeText={onPhoneChange}
-          placeholder="5XX XXX XXXX"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="phone-pad"
         />
       </View>
     </View>
@@ -108,7 +108,7 @@ const SectionHeader = ({icon, title, subtitle}) => (
     <View style={s.sectionIconWrap}>
       <Icon name={icon} size={16} color={colors.primary} />
     </View>
-    <View style={{flex: 1}}>
+    <View style={{flex: 1, marginStart: 12}}>
       <Text style={s.sectionTitle}>{title}</Text>
       {subtitle ? <Text style={s.sectionSubtitle}>{subtitle}</Text> : null}
     </View>
@@ -116,14 +116,14 @@ const SectionHeader = ({icon, title, subtitle}) => (
 );
 
 // ─── Status Pill ─────────────────────────────────────
-const StatusPill = ({option, isActive, onPress, animValue}) => {
+const StatusPill = ({option, isActive, onPress, animValue, isFirst}) => {
   const {t: tPill} = useTranslation();
   const scale = animValue.interpolate({
     inputRange: [0, 1],
     outputRange: [0.95, 1],
   });
   return (
-    <Animated.View style={{transform: [{scale: isActive ? scale : 1}], flex: 1}}>
+    <Animated.View style={{transform: [{scale: isActive ? scale : 1}], flex: 1, marginStart: isFirst ? 0 : 8}}>
       <TouchableOpacity
         style={[
           s.statusPill,
@@ -407,13 +407,14 @@ const EditProfileScreen = ({navigation}) => {
         <View style={s.card}>
           <SectionHeader icon="signal-variant" title={t('editProfile.availabilityStatus')} subtitle={t('editProfile.setAvailability')} />
           <View style={s.statusRow}>
-            {STATUS_OPTIONS.map(opt => (
+            {STATUS_OPTIONS.map((opt, idx) => (
               <StatusPill
                 key={opt.key}
                 option={opt}
                 isActive={driverStatus === opt.key}
                 onPress={handleStatusChange}
                 animValue={pulseAnim}
+                isFirst={idx === 0}
               />
             ))}
           </View>
@@ -571,7 +572,7 @@ const s = StyleSheet.create({
       android: {elevation: 2},
     }),
   },
-  sectionHdr: {flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 12},
+  sectionHdr: {flexDirection: 'row', alignItems: 'center', marginBottom: 18},
   sectionIconWrap: {
     width: 32,
     height: 32,
@@ -580,11 +581,11 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sectionTitle: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.textPrimary},
-  sectionSubtitle: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 1},
+  sectionTitle: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.textPrimary, textAlign: 'auto'},
+  sectionSubtitle: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 1, textAlign: 'auto'},
 
   // ─── Status Pills ─────────────────────────────────
-  statusRow: {flexDirection: 'row', gap: 8},
+  statusRow: {flexDirection: 'row'},
   statusPill: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -593,7 +594,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5,
     backgroundColor: '#FAFBFC',
   },
-  statusPillTxt: {fontFamily: fontFamily.semiBold, fontSize: 11, marginTop: 6},
+  statusPillTxt: {fontFamily: fontFamily.semiBold, fontSize: 11, marginTop: 6, textAlign: 'auto'},
   statusDot: {width: 5, height: 5, borderRadius: 3, marginTop: 5},
   statusLoadingRow: {
     flexDirection: 'row',
@@ -605,7 +606,7 @@ const s = StyleSheet.create({
 
   // ─── Fields ────────────────────────────────────────
   fieldGroup: {marginBottom: 16},
-  fieldLabel: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textSecondary, marginBottom: 6, marginStart: 2},
+  fieldLabel: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textSecondary, marginBottom: 6, marginStart: 2, textAlign: 'auto'},
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -623,12 +624,13 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
     paddingEnd: 14,
+    textAlign: 'auto',
+    writingDirection: 'auto',
   },
 
   // ─── Phone Split Field ─────────────────────────────
   phoneRow: {
     flexDirection: 'row',
-    gap: 8,
   },
   codeBox: {
     flexDirection: 'row',
@@ -647,6 +649,8 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
     paddingEnd: 8,
+    textAlign: 'auto',
+    writingDirection: 'auto',
   },
   phoneBox: {
     flex: 1,
@@ -666,6 +670,8 @@ const s = StyleSheet.create({
     color: colors.textPrimary,
     paddingStart: 14,
     paddingEnd: 14,
+    textAlign: 'auto',
+    writingDirection: 'auto',
   },
 
   // ─── Bottom Bar ────────────────────────────────────
@@ -695,8 +701,8 @@ const s = StyleSheet.create({
       android: {elevation: 4},
     }),
   },
-  saveBtnInner: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  saveTxt: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF'},
+  saveBtnInner: {flexDirection: 'row', alignItems: 'center'},
+  saveTxt: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF', textAlign: 'auto'},
 
   // ─── Fetch Overlay ─────────────────────────────────
   fetchOverlay: {

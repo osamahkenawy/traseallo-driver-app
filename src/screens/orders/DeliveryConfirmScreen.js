@@ -26,6 +26,7 @@ import {launchCamera} from 'react-native-image-picker';
 import useLocationStore from '../../store/locationStore';
 import useSettingsStore from '../../store/settingsStore';
 import {routeNames} from '../../constants/routeNames';
+import PhotoProofGrid from '../../components/PhotoProofGrid';
 
 const DeliveryConfirmScreen = ({navigation, route}) => {
   const {t} = useTranslation();
@@ -33,7 +34,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
   const {token, orderId, codAmount = 0} = route.params || {};
   const hasCod = Number(codAmount) > 0;
   const [notes, setNotes] = useState('');
-  const [photoUri, setPhotoUri] = useState(null);
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [codCollected, setCodCollected] = useState(hasCod ? String(codAmount) : '');
   const [signatureUri, setSignatureUri] = useState(null);
@@ -43,6 +44,8 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
   const requirePhoto = useSettingsStore(s => s.requirePhoto);
   const currency = useSettingsStore(s => s.currency);
   const deliverOrder = useOrderStore(s => s.deliverOrder);
+
+  const hasPhotos = photos.length > 0;
 
   // Check if order has packages — if so redirect to per-package flow
   React.useEffect(() => {
@@ -82,24 +85,13 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
     return () => { cancelled = true; };
   }, [orderId]);
 
-  const handleTakePhoto = () => {
-    launchCamera(
-      {mediaType: 'photo', cameraType: 'back', quality: 0.7, maxWidth: 1200, maxHeight: 1200},
-      (response) => {
-        if (response.didCancel || response.errorCode) return;
-        const uri = response.assets?.[0]?.uri;
-        if (uri) setPhotoUri(uri);
-      },
-    );
-  };
-
   const handleConfirm = async () => {
     if (!orderId) {
       Alert.alert(t('deliveryConfirm.error'), t('deliveryConfirm.noOrderId'));
       return;
     }
     // Enforce settings-driven requirements
-    if (requirePhoto && !photoUri) {
+    if (requirePhoto && !hasPhotos) {
       Alert.alert(t('deliveryConfirm.photoRequired'), t('deliveryConfirm.photoRequiredDesc'));
       return;
     }
@@ -109,12 +101,8 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
     }
     setLoading(true);
     try {
-      // Upload proof photo if taken
-      let proofUrl = null;
-      if (photoUri && orderId) {
-        const uploadRes = await uploadsApi.uploadOrderProofPhoto(orderId, photoUri);
-        proofUrl = uploadRes.data?.data?.url || uploadRes.data?.url || null;
-      }
+      // Photos are already uploaded via PhotoProofGrid — grab first photo URL for legacy field
+      const proofUrl = photos[0]?.photo_url || null;
 
       // Upload signature if captured
       let signatureUrl = null;
@@ -179,19 +167,11 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.secTitle}>{t('deliveryConfirm.takePhoto')} {requirePhoto ? t('common.required') : ''}</Text>
-        <TouchableOpacity style={s.photoBox} onPress={handleTakePhoto} activeOpacity={0.7}>
-          {photoUri ? (
-            <Image source={{uri: photoUri}} style={s.photoImg} resizeMode="cover" />
-          ) : (
-            <>
-              <View style={s.photoIc}>
-                <Icon name="camera-outline" size={24} color={colors.textMuted} />
-              </View>
-              <Text style={s.photoLabel}>{t('deliveryConfirm.takePhoto')}</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        <PhotoProofGrid
+          orderId={orderId}
+          t={t}
+          onPhotosChange={setPhotos}
+        />
 
         {/* Signature — shown if tenant requires it */}
         {requireSignature && (
@@ -256,7 +236,11 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
       </ScrollView>
 
       <View style={[s.bottom, {paddingBottom: ins.bottom + 10}]}>
-        <TouchableOpacity style={[s.confirmBtn, loading && {opacity: 0.65}]} onPress={handleConfirm} activeOpacity={0.75} disabled={loading}>
+        <TouchableOpacity
+          style={[s.confirmBtn, (loading || (requirePhoto && !hasPhotos)) && {opacity: 0.65}]}
+          onPress={handleConfirm}
+          activeOpacity={0.75}
+          disabled={loading || (requirePhoto && !hasPhotos)}>
           {loading ? (
             <ActivityIndicator size="small" color="#FFF" />
           ) : (
@@ -275,28 +259,11 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52, gap: 8,
+    paddingHorizontal: 20, height: 52,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto', writingDirection: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 120},
-  secTitle: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginBottom: 8, marginTop: 14},
-  photoBox: {
-    height: 180,
-    backgroundColor: '#FFF',
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E0E4EA',
-    borderStyle: 'dashed',
-    gap: 8,
-  },
-  photoIc: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#F0F2F5', justifyContent: 'center', alignItems: 'center',
-  },
-  photoLabel: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textMuted},
-  photoImg: {width: '100%', height: '100%', borderRadius: 14},
+  secTitle: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginBottom: 8, marginTop: 14, textAlign: 'auto', writingDirection: 'auto'},
   input: {
     backgroundColor: '#FFF',
     borderRadius: 12,
@@ -320,9 +287,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
-  confirmTxt: {fontFamily: fontFamily.bold, fontSize: 14, color: '#FFF'},
+  confirmTxt: {fontFamily: fontFamily.bold, fontSize: 14, color: '#FFF', marginStart: 8},
 
   /* COD */
   codCard: {
@@ -330,12 +296,12 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: '#EEF1F5',
   },
   codRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 12,
   },
-  codLabel: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, flex: 1},
+  codLabel: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, flex: 1, marginStart: 8},
   codExpected: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.orange},
   codInputRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#F8F9FA', borderRadius: 10,
     borderWidth: 1, borderColor: '#EEF1F5',
     height: 44, paddingHorizontal: 12,

@@ -295,7 +295,7 @@ const TripPreview = ({
               <Text style={$.summaryValue}>{tripSummary.totalCod}</Text>
               <Text style={$.summaryLabel}>{t ? t('map.codAed') : 'COD (AED)'}</Text>
             </View>
-            <View style={$.summaryCard}>
+            <View style={[$.summaryCard, {marginEnd: 0}]}>
               <Icon name="package-variant" size={14} color={colors.info} />
               <Text style={$.summaryValue}>{tripSummary.pkgCount}</Text>
               <Text style={$.summaryLabel}>{t ? t('map.packages') : 'Packages'}</Text>
@@ -318,7 +318,7 @@ const TripPreview = ({
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[$.controlBtn, !localOrder && !isOptimized && $.controlBtnActive]}
+              style={[$.controlBtn, {marginEnd: 0}, !localOrder && !isOptimized && $.controlBtnActive]}
               onPress={handleResetSort}
               activeOpacity={0.7}>
               <Icon
@@ -349,6 +349,9 @@ const TripPreview = ({
               const pkgs = parseInt(order.total_packages || order.package_count || 1, 10);
               const hasNotes = !!order.special_instructions;
 
+              // Leg distance to next stop (already computed in legDistances memo)
+              const nextLegDist = !isLast ? (legDistances[idx + 1] ?? null) : null;
+
               return (
                 <View key={order.id} style={$.stopRow}>
                   {/* Timeline column */}
@@ -358,22 +361,11 @@ const TripPreview = ({
                     </View>
                     {!isLast && (
                       <View style={$.timelineLine}>
-                        {idx < displayList.length - 1 && (() => {
-                          const next = displayList[idx + 1];
-                          const nLat = toNum(next?.recipient_lat);
-                          const nLng = toNum(next?.recipient_lng);
-                          const cLat = toNum(order.recipient_lat);
-                          const cLng = toNum(order.recipient_lng);
-                          if (cLat && cLng && nLat && nLng) {
-                            const d = haversine(cLat, cLng, nLat, nLng);
-                            return (
-                              <View style={$.legBadge}>
-                                <Text style={$.legText}>{d.toFixed(1)} km</Text>
-                              </View>
-                            );
-                          }
-                          return null;
-                        })()}
+                        {nextLegDist != null && (
+                          <View style={$.legBadge}>
+                            <Text style={$.legText}>{nextLegDist.toFixed(1)} km</Text>
+                          </View>
+                        )}
                       </View>
                     )}
                   </View>
@@ -542,7 +534,6 @@ const $ = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
   },
   headerIcon: {
     width: 36,
@@ -551,12 +542,14 @@ const $ = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginEnd: 10,
   },
   title: {
     fontFamily: fontFamily.bold,
     fontSize: 22,
     color: colors.textPrimary,
     textAlign: 'auto',
+    marginEnd: 10,
   },
   countBadge: {
     backgroundColor: colors.primary,
@@ -581,7 +574,6 @@ const $ = StyleSheet.create({
   // Summary
   summaryRow: {
     flexDirection: 'row',
-    gap: 8,
     marginBottom: 12,
   },
   summaryCard: {
@@ -591,7 +583,7 @@ const $ = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 6,
     alignItems: 'center',
-    gap: 4,
+    marginEnd: 8,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
@@ -602,6 +594,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 13,
     color: colors.textPrimary,
+    marginTop: 4,
   },
   summaryLabel: {
     fontFamily: fontFamily.regular,
@@ -609,12 +602,12 @@ const $ = StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
+    marginTop: 4,
   },
 
   // Controls
   controlRow: {
     flexDirection: 'row',
-    gap: 8,
     marginBottom: 12,
   },
   controlBtn: {
@@ -622,12 +615,12 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     backgroundColor: colors.white,
     paddingVertical: 9,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
+    marginEnd: 8,
   },
   controlBtnActive: {
     backgroundColor: colors.primary,
@@ -637,6 +630,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.xs,
     color: colors.primary,
+    marginStart: 6,
   },
   controlTextActive: {
     color: colors.white,
@@ -731,13 +725,13 @@ const $ = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: 'row',
-    gap: 4,
   },
   codBadge: {
     backgroundColor: colors.warningBg,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+    marginStart: 4,
   },
   codText: {
     fontFamily: fontFamily.bold,
@@ -751,6 +745,7 @@ const $ = StyleSheet.create({
     borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
+    marginStart: 4,
   },
   recipientName: {
     fontFamily: fontFamily.semiBold,
@@ -767,28 +762,28 @@ const $ = StyleSheet.create({
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
     backgroundColor: colors.infoBg,
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 6,
+    marginEnd: 6,
+    marginBottom: 4,
   },
   chipText: {
     fontFamily: fontFamily.medium,
     fontSize: 10,
     color: colors.info,
+    marginStart: 5,
   },
 
   // Card Actions
   cardActions: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
     marginStart: 8,
     width: 34,
   },
@@ -799,6 +794,7 @@ const $ = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.bgGray,
     borderRadius: 6,
+    marginBottom: 3,
   },
   arrowDisabled: {
     opacity: 0.3,
@@ -830,7 +826,6 @@ const $ = StyleSheet.create({
     backgroundColor: colors.success,
     paddingVertical: 15,
     borderRadius: 16,
-    gap: 10,
     shadowColor: colors.success,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
@@ -841,6 +836,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: fontSize.md,
     color: colors.white,
+    marginStart: 10,
   },
 });
 
