@@ -10,9 +10,10 @@ import useOrderStore from '../store/orderStore';
 import useNotificationStore from '../store/notificationStore';
 import useDashboardStore from '../store/dashboardStore';
 import useLocationStore from '../store/locationStore';
+import useRouteStore from '../store/routeStore';
 import i18n from '../i18n';
 
-const SOCKET_URL = 'https://api.traseallo.com';
+const SOCKET_URL = 'https://dispatch.traseallo.com';
 
 const useSocket = () => {
   const socketRef = useRef(null);
@@ -28,6 +29,8 @@ const useSocket = () => {
   const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
   const fetchDashboard = useDashboardStore((s) => s.fetchDashboard);
   const setPosition = useLocationStore((s) => s.setPosition);
+  const insertNewStops = useRouteStore((s) => s.insertNewStops);
+  const fetchRoute = useRouteStore((s) => s.fetchRoute);
 
   // Debounced refresh — coalesces rapid socket events into a single fetch
   const scheduleRefresh = useCallback(() => {
@@ -74,6 +77,15 @@ const useSocket = () => {
     socket.on('order:assigned', (data) => {
       if (__DEV__) console.log('📦 New order assigned:', data);
       scheduleRefresh();
+
+      // Insert new stops into current route for mid-trip integration
+      if (data?.stops && Array.isArray(data.stops)) {
+        insertNewStops(data.stops);
+      } else {
+        // Refresh route to pick up new order's stops
+        fetchRoute(true).catch(() => {});
+      }
+
       addNotification({
         id: `socket-assigned-${Date.now()}`,
         title: i18n.t('notifications.newOrderAssigned', 'New Order Assigned'),
@@ -140,7 +152,7 @@ const useSocket = () => {
     });
 
     socketRef.current = socket;
-  }, [token, tenantId, user, isAuthenticated, scheduleRefresh, addNotification]);
+  }, [token, tenantId, user, isAuthenticated, scheduleRefresh, addNotification, insertNewStops, fetchRoute]);
 
   /**
    * Disconnect from Socket.io server
@@ -165,8 +177,7 @@ const useSocket = () => {
   useEffect(() => {
     if (isAuthenticated && token) {
       connect();
-      // Poll unread notification count every 60 seconds
-      fetchUnreadCount().catch(() => {});
+      // Poll unread notification count every 60 seconds (initial fetch done by useDashboard)
       pollRef.current = setInterval(() => {
         fetchUnreadCount().catch(() => {});
       }, 60000);

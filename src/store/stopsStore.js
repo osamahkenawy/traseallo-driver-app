@@ -12,6 +12,7 @@ const useStopsStore = create((set, get) => ({
   isLoading: false,
   isActing: false, // for arrived/complete/fail/skip actions
   error: null,
+  needsReoptimize: false, // set after stop complete/fail/skip
 
   // ─── Actions ────────────────────────────────────
 
@@ -82,6 +83,7 @@ const useStopsStore = create((set, get) => ({
         ),
         currentStopId: null,
         isActing: false,
+        needsReoptimize: true,
       }));
 
       return res.data;
@@ -108,6 +110,7 @@ const useStopsStore = create((set, get) => ({
         ),
         currentStopId: null,
         isActing: false,
+        needsReoptimize: true,
       }));
 
       return res.data;
@@ -134,6 +137,7 @@ const useStopsStore = create((set, get) => ({
         ),
         currentStopId: null,
         isActing: false,
+        needsReoptimize: true,
       }));
 
       return res.data;
@@ -178,6 +182,11 @@ const useStopsStore = create((set, get) => ({
   setCurrentStop: stopId => set({currentStopId: stopId}),
 
   /**
+   * Clear reoptimize flag after route has been recalculated
+   */
+  clearReoptimize: () => set({needsReoptimize: false}),
+
+  /**
    * Reset stops state
    */
   resetStops: () =>
@@ -187,6 +196,7 @@ const useStopsStore = create((set, get) => ({
       isLoading: false,
       isActing: false,
       error: null,
+      needsReoptimize: false,
     }),
 }));
 

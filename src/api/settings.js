@@ -14,6 +14,12 @@ const settingsApi = {
    *             auto_cod_collect, navigation_provider, language, currency }
    */
   getSettings: () => apiClient.get('/driver-app/settings'),
+
+  /**
+   * Get service area zones
+   * @returns {Promise} { zones: [{ id, name, type, polygon, color }] }
+   */
+  getZones: () => apiClient.get('/zones'),
 };
 
 export default settingsApi;

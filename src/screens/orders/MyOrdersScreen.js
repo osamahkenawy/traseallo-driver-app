@@ -67,7 +67,7 @@ const MyOrdersScreen = ({navigation}) => {
   const currency = useSettingsStore(s => s.currency);
   const [tab, setTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('newest'); // newest | status
+  const [sortBy, setSortBy] = useState('newest'); // newest | status | distance
   const {orders, isLoading, isRefreshing, onRefresh} = useOrders();
 
   /* ── Client-side filter by tab ── */
@@ -94,6 +94,12 @@ const MyOrdersScreen = ({navigation}) => {
     const arr = [...searchFiltered];
     if (sortBy === 'newest') {
       arr.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    } else if (sortBy === 'distance') {
+      arr.sort((a, b) => {
+        const da = parseFloat(a.route_distance_km) || Infinity;
+        const db = parseFloat(b.route_distance_km) || Infinity;
+        return da - db;
+      });
     } else {
       const priority = {in_transit: 0, picked_up: 1, assigned: 2, delivered: 3, failed: 4};
       arr.sort((a, b) => (priority[a.status] ?? 5) - (priority[b.status] ?? 5));
@@ -131,14 +137,14 @@ const MyOrdersScreen = ({navigation}) => {
         <TouchableOpacity
           style={$.sortBtn}
           activeOpacity={0.6}
-          onPress={() => setSortBy(p => p === 'newest' ? 'status' : 'newest')}>
+          onPress={() => setSortBy(p => p === 'newest' ? 'status' : p === 'status' ? 'distance' : 'newest')}>
           <Icon
-            name={sortBy === 'newest' ? 'sort-clock-descending-outline' : 'sort-variant'}
+            name={sortBy === 'newest' ? 'sort-clock-descending-outline' : sortBy === 'distance' ? 'map-marker-distance' : 'sort-variant'}
             size={18}
             color={colors.primary}
           />
           <Text style={$.sortTxt}>
-            {sortBy === 'newest' ? t('orders.newest') : t('orders.priority')}
+            {sortBy === 'newest' ? t('orders.newest') : sortBy === 'distance' ? t('orders.nearest', 'Nearest') : t('orders.priority')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -247,6 +253,8 @@ const OrderCard = ({order, onPress, t, currency}) => {
   const stBg = getStatusBgColor(st);
   const isCOD = order?.payment_method === 'cod' && parseFloat(order?.cod_amount) > 0;
   const time = timeAgo(order?.created_at || order?.scheduled_date, t);
+  const routeDistKm = order?.route_distance_km ? parseFloat(order.route_distance_km) : null;
+  const routeDurMin = order?.route_duration_min ? Math.round(parseFloat(order.route_duration_min)) : null;
 
   return (
     <TouchableOpacity style={$.card} onPress={onPress} activeOpacity={0.55}>
@@ -297,8 +305,18 @@ const OrderCard = ({order, onPress, t, currency}) => {
           </View>
         </View>
 
-        {/* Bottom row: location + emirate + packages + stops */}
+        {/* Bottom row: location + emirate + packages + stops + distance/ETA */}
         <View style={$.cardBottom}>
+          {(routeDistKm != null || routeDurMin != null) && (
+            <View style={[$.infoChip, {backgroundColor: '#E6F4EA'}]}>
+              <Icon name="map-marker-distance" size={12} color={colors.success} />
+              <Text style={[$.infoChipTxt, {color: colors.success}]}>
+                {routeDistKm != null ? `${routeDistKm.toFixed(1)} km` : ''}
+                {routeDistKm != null && routeDurMin != null ? ' · ' : ''}
+                {routeDurMin != null ? `${routeDurMin} min` : ''}
+              </Text>
+            </View>
+          )}
           {!!(order?.recipient_emirate || order?.recipient_address) && (
             <View style={$.infoChip}>
               <Icon name="map-marker-outline" size={12} color={colors.textMuted} />

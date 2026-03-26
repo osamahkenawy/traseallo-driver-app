@@ -1,4 +1,4 @@
 /**
  * App configuration
  */
-export const API_BASE_URL = 'https://delivery.traseallo.com/api';
+export const API_BASE_URL = 'https://dispatch.traseallo.com/api';

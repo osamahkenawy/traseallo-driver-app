@@ -7,7 +7,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Configuration ──────────────────────────────────
-const API_BASE_URL = 'https://api.traseallo.com/api';
+const API_BASE_URL = 'https://dispatch.traseallo.com/api';
 
 const TIMEOUT = 30000; // 30 seconds
 
@@ -160,6 +160,21 @@ apiClient.interceptors.response.use(
 
     if (__DEV__) {
       console.log(`❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} → ${status}`, message);
+    }
+
+    // 429 Too Many Requests → retry after the server-specified delay
+    if (status === 429) {
+      const retryCount = error.config._retryCount || 0;
+      if (retryCount < 2) {
+        const retryAfter = parseInt(error.response?.headers?.['retry-after'], 10);
+        const delaySec = Number.isFinite(retryAfter) ? Math.min(retryAfter, 30) : (retryCount + 1) * 5;
+        if (__DEV__) {
+          console.log(`⏳ 429 rate-limited, retrying in ${delaySec}s (attempt ${retryCount + 1}/2)`);
+        }
+        await new Promise(r => setTimeout(r, delaySec * 1000));
+        error.config._retryCount = retryCount + 1;
+        return apiClient(error.config);
+      }
     }
 
     // 401 Unauthorized → token expired → redirect to login

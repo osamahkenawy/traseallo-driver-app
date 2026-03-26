@@ -9,10 +9,10 @@ import {colors} from '../../../theme/colors';
 import {fontFamily, fontSize} from '../../../theme/fonts';
 
 const STATUS_META = {
-  available: {icon: 'wifi', color: colors.success, label: 'Online', bg: colors.successBg},
-  busy: {icon: 'truck-fast-outline', color: colors.warning, label: 'Busy', bg: colors.warningBg},
-  on_break: {icon: 'coffee-outline', color: colors.orange, label: 'Break', bg: 'rgba(216, 141, 13, 0.12)'},
-  offline: {icon: 'wifi-off', color: colors.textMuted, label: 'Offline', bg: colors.bgMuted},
+  available: {icon: 'wifi', color: colors.success, label: 'Online'},
+  busy: {icon: 'truck-fast-outline', color: colors.warning, label: 'Busy'},
+  on_break: {icon: 'coffee-outline', color: '#D88D0D', label: 'Break'},
+  offline: {icon: 'wifi-off', color: colors.textMuted, label: 'Offline'},
 };
 
 const MapTopBar = ({
@@ -31,14 +31,14 @@ const MapTopBar = ({
     <View style={[$.root, {top: ins.top + 8}]}>
       {/* Status chip */}
       <TouchableOpacity
-        style={[$.statusChip, {backgroundColor: meta.bg}]}
+        style={$.statusChip}
         onPress={onStatusPress}
         activeOpacity={0.7}>
         <View style={[$.statusDot, {backgroundColor: meta.color}]} />
-        <Text style={[$.statusText, {color: meta.color}]}>
+        <Text style={$.statusLabel}>
           {t ? t(`status.${driverStatus}`) : meta.label}
         </Text>
-        <Icon name="chevron-down" size={12} color={meta.color} />
+        <Icon name="chevron-down" size={12} color={colors.textSecondary} />
       </TouchableOpacity>
 
       {/* Right side: Progress chip */}
@@ -76,24 +76,26 @@ const $ = StyleSheet.create({
   statusChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
+    backgroundColor: colors.white,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 22,
+    gap: 7,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 3,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
   },
-  statusText: {
+  statusLabel: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.sm,
+    color: colors.textPrimary,
   },
   rightGroup: {
     flexDirection: 'row',

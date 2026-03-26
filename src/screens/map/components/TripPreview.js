@@ -25,6 +25,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily, fontSize} from '../../../theme/fonts';
+import {routeApi, stopsApi} from '../../../api';
 
 const toNum = (v) => {
   const n = typeof v === 'string' ? parseFloat(v) : v;
@@ -88,6 +89,8 @@ const TripPreview = ({
   const [startingAll, setStartingAll] = useState(false);
   const [localOrder, setLocalOrder] = useState(null);
   const [isOptimized, setIsOptimized] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizeSummary, setOptimizeSummary] = useState(null);
 
   // Assigned orders with distance from driver
   const assignedWithDist = useMemo(() => {
@@ -140,14 +143,18 @@ const TripPreview = ({
       pkgCount += parseInt(o.total_packages || o.package_count || 1, 10);
     }
     return {
-      totalDist: totalDist.toFixed(1),
-      totalTime: estimateETA(totalDist),
+      totalDist: optimizeSummary?.distance != null
+        ? parseFloat(optimizeSummary.distance).toFixed(1)
+        : totalDist.toFixed(1),
+      totalTime: optimizeSummary?.duration != null
+        ? Math.round(optimizeSummary.duration)
+        : estimateETA(totalDist),
       totalCod: totalCod.toFixed(0),
       codCount,
       pkgCount,
       stopCount: displayList.length,
     };
-  }, [displayList, driverPosition]);
+  }, [displayList, driverPosition, optimizeSummary]);
 
   // ── Leg distances (between consecutive stops) ─────
   const legDistances = useMemo(() => {
@@ -198,33 +205,91 @@ const TripPreview = ({
     [localOrder, assignedWithDist],
   );
 
-  // ── Optimize ──────────────────────────────
-  const handleOptimize = useCallback(() => {
+  // ── Optimize (backend API with local fallback) ──
+  const handleOptimize = useCallback(async () => {
     if (!driverPosition) return;
-    const optimized = optimizeRoute(
-      [...(localOrder || assignedWithDist)],
-      driverPosition.latitude,
-      driverPosition.longitude,
-    );
-    const withDist = optimized.map((o) => {
-      const lat = toNum(o.recipient_lat);
-      const lng = toNum(o.recipient_lng);
-      return {
-        ...o,
-        _distance:
-          driverPosition && lat && lng
-            ? haversine(driverPosition.latitude, driverPosition.longitude, lat, lng)
-            : null,
-      };
-    });
-    setLocalOrder(withDist);
-    setIsOptimized(true);
+    const list = [...(localOrder || assignedWithDist)];
+    setIsOptimizing(true);
+
+    try {
+      // Build stops payload for backend
+      const stops = list
+        .map((o) => ({
+          lat: toNum(o.recipient_lat),
+          lng: toNum(o.recipient_lng),
+          id: o.id,
+        }))
+        .filter((s) => s.lat && s.lng);
+
+      const res = await routeApi.optimizeStops(
+        driverPosition.latitude,
+        driverPosition.longitude,
+        stops,
+      );
+      const data = res.data?.data || res.data;
+      const optimizedOrder = data?.optimized_order;
+
+      if (optimizedOrder && Array.isArray(optimizedOrder)) {
+        // Build an id→order lookup
+        const byId = {};
+        for (const o of list) byId[o.id] = o;
+        // Reorder using backend result
+        const reordered = optimizedOrder
+          .map((id) => byId[id])
+          .filter(Boolean);
+        // Append any orders not in the optimized result
+        const inResult = new Set(optimizedOrder);
+        for (const o of list) {
+          if (!inResult.has(o.id)) reordered.push(o);
+        }
+
+        const withDist = reordered.map((o) => {
+          const lat = toNum(o.recipient_lat);
+          const lng = toNum(o.recipient_lng);
+          return {
+            ...o,
+            _distance:
+              driverPosition && lat && lng
+                ? haversine(driverPosition.latitude, driverPosition.longitude, lat, lng)
+                : null,
+          };
+        });
+        setLocalOrder(withDist);
+        setIsOptimized(true);
+        setOptimizeSummary({
+          distance: data.total_distance_km,
+          duration: data.total_duration_min,
+        });
+      } else {
+        throw new Error('Invalid backend response');
+      }
+    } catch {
+      // Fallback to local nearest-neighbor heuristic
+      const optimized = optimizeRoute(list, driverPosition.latitude, driverPosition.longitude);
+      const withDist = optimized.map((o) => {
+        const lat = toNum(o.recipient_lat);
+        const lng = toNum(o.recipient_lng);
+        return {
+          ...o,
+          _distance:
+            driverPosition && lat && lng
+              ? haversine(driverPosition.latitude, driverPosition.longitude, lat, lng)
+              : null,
+        };
+      });
+      setLocalOrder(withDist);
+      setIsOptimized(true);
+      setOptimizeSummary(null);
+    } finally {
+      setIsOptimizing(false);
+    }
   }, [localOrder, assignedWithDist, driverPosition]);
 
   // ── Reset to nearest-first ────────────────
   const handleResetSort = useCallback(() => {
     setLocalOrder(null);
     setIsOptimized(false);
+    setOptimizeSummary(null);
   }, []);
 
   // ── Start handlers ────────────────────────
@@ -243,11 +308,26 @@ const TripPreview = ({
   const handleStartAll = useCallback(async () => {
     setStartingAll(true);
     try {
+      // Persist optimized/manual sequence to backend before starting
+      if (localOrder || isOptimized) {
+        const orderGroups = {};
+        for (let i = 0; i < displayList.length; i++) {
+          const o = displayList[i];
+          const orderId = o.order_id || o.id;
+          if (!orderGroups[orderId]) orderGroups[orderId] = [];
+          orderGroups[orderId].push({stop_id: o.stop_id || o.id, sequence: i + 1});
+        }
+        await Promise.all(
+          Object.entries(orderGroups).map(([orderId, stopOrder]) =>
+            stopsApi.updateStopSequence(orderId, stopOrder).catch(() => {}),
+          ),
+        );
+      }
       await onStartAll(displayList);
     } finally {
       setStartingAll(false);
     }
-  }, [onStartAll, displayList]);
+  }, [onStartAll, displayList, localOrder, isOptimized]);
 
   if (!visible) return null;
 
@@ -307,14 +387,19 @@ const TripPreview = ({
             <TouchableOpacity
               style={[$.controlBtn, isOptimized && $.controlBtnActive]}
               onPress={handleOptimize}
+              disabled={isOptimizing}
               activeOpacity={0.7}>
-              <Icon
-                name="sparkles"
-                size={13}
-                color={isOptimized ? colors.white : colors.primary}
-              />
+              {isOptimizing ? (
+                <ActivityIndicator size="small" color={colors.primary} style={{marginEnd: 4}} />
+              ) : (
+                <Icon
+                  name="sparkles"
+                  size={13}
+                  color={isOptimized ? colors.white : colors.primary}
+                />
+              )}
               <Text style={[$.controlText, isOptimized && $.controlTextActive]}>
-                {t ? (isOptimized ? t('map.optimized') : t('map.optimizeRoute')) : (isOptimized ? 'Optimized' : 'Optimize Route')}
+                {t ? (isOptimizing ? t('map.optimizing', 'Optimizing…') : isOptimized ? t('map.optimized') : t('map.optimizeRoute')) : (isOptimizing ? 'Optimizing…' : isOptimized ? 'Optimized' : 'Optimize Route')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity

@@ -12,12 +12,13 @@ import { API_BASE_URL } from '../config';
 
 const OSRM_SELF_HOSTED = API_BASE_URL
   ? `${API_BASE_URL.replace(/\/api\/?$/, '')}/osrm`
-  : 'https://delivery.traseallo.com/osrm';
+  : 'https://api.traseallo.com/osrm';
 const OSRM_PUBLIC = 'https://router.project-osrm.org';
-const ROUTE_URL = `${OSRM_SELF_HOSTED}/route/v1/driving`;
-const ROUTE_URL_FALLBACK = `${OSRM_PUBLIC}/route/v1/driving`;
-const TRIP_URL = `${OSRM_SELF_HOSTED}/trip/v1/driving`;
-const TRIP_URL_FALLBACK = `${OSRM_PUBLIC}/trip/v1/driving`;
+// Public OSRM is more reliable (self-hosted may require auth or be unreachable)
+const ROUTE_URL = `${OSRM_PUBLIC}/route/v1/driving`;
+const ROUTE_URL_FALLBACK = `${OSRM_SELF_HOSTED}/route/v1/driving`;
+const TRIP_URL = `${OSRM_PUBLIC}/trip/v1/driving`;
+const TRIP_URL_FALLBACK = `${OSRM_SELF_HOSTED}/trip/v1/driving`;
 
 /**
  * Decode Google-encoded polyline string into array of {latitude, longitude}.
@@ -83,11 +84,11 @@ export async function fetchRoadRoute(waypoints, options = {}) {
 
   for (const url of urls) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeout || 8000);
+    const timer = setTimeout(() => controller.abort(), options.timeout || 6000);
 
     try {
       const res = await fetch(url, {signal: controller.signal});
-      clearTimeout(timeout);
+      clearTimeout(timer);
 
       if (!res.ok) continue;
 
@@ -105,7 +106,7 @@ export async function fetchRoadRoute(waypoints, options = {}) {
         duration: route.duration, // seconds
       };
     } catch {
-      clearTimeout(timeout);
+      clearTimeout(timer);
       continue;
     }
   }
@@ -171,11 +172,11 @@ export async function fetchNavigationRoute(origin, dest, options = {}) {
 
   for (const url of urls) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeout || 8000);
+    const timer = setTimeout(() => controller.abort(), options.timeout || 6000);
 
     try {
       const res = await fetch(url, {signal: controller.signal});
-      clearTimeout(timeout);
+      clearTimeout(timer);
       if (!res.ok) continue;
 
       const json = await res.json();
@@ -205,7 +206,7 @@ export async function fetchNavigationRoute(origin, dest, options = {}) {
 
       return {coordinates, distance: route.distance, duration: route.duration, steps};
     } catch {
-      clearTimeout(timeout);
+      clearTimeout(timer);
       continue;
     }
   }
@@ -237,11 +238,11 @@ export async function fetchOptimizedRoute(waypoints, options = {}) {
 
   for (const url of urls) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), options.timeout || 10000);
+    const timer = setTimeout(() => controller.abort(), options.timeout || 8000);
 
     try {
       const res = await fetch(url, {signal: controller.signal});
-      clearTimeout(timeout);
+      clearTimeout(timer);
 
       if (!res.ok) continue;
 
@@ -264,7 +265,7 @@ export async function fetchOptimizedRoute(waypoints, options = {}) {
         optimizedOrder,
       };
     } catch {
-      clearTimeout(timeout);
+      clearTimeout(timer);
       continue;
     }
   }

@@ -15,6 +15,8 @@ const useLocationStore = create((set, get) => ({
   lastPingTime: null,
   // Offline GPS buffer
   locationBuffer: [],
+  // ETA to next stop (minutes), set by MapScreen during navigation
+  etaNextStopMin: null,
 
   // ─── Actions ────────────────────────────────────
 
@@ -27,6 +29,11 @@ const useLocationStore = create((set, get) => ({
    * Set driver status locally
    */
   setDriverStatus: (status) => set({driverStatus: status}),
+
+  /**
+   * Set ETA to next stop (in minutes) — called from MapScreen nav mode
+   */
+  setEtaNextStop: (minutes) => set({etaNextStopMin: minutes}),
 
   /**
    * Go Online — POST /driver-app/go-online
@@ -88,6 +95,12 @@ const useLocationStore = create((set, get) => ({
       speed: position.speed,
       heading: position.heading,
     };
+
+    // Include ETA to next stop if available
+    const eta = get().etaNextStopMin;
+    if (eta != null) {
+      payload.eta_next_stop_min = Math.round(eta);
+    }
 
     try {
       await locationApi.sendLocation(payload);

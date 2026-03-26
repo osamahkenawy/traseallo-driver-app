@@ -37,7 +37,7 @@ import {
   Linking,
   Platform,
 } from 'react-native';
-import MapView, {Polyline} from 'react-native-maps';
+import MapView, {Polyline, Polygon} from 'react-native-maps';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from '../../utils/LucideIcon';
 import {useFocusEffect} from '@react-navigation/native';
@@ -49,7 +49,9 @@ import {routeNames} from '../../constants/routeNames';
 import useOrderStore from '../../store/orderStore';
 import useLocationStore from '../../store/locationStore';
 import useRouteStore from '../../store/routeStore';
+import useStopsStore from '../../store/stopsStore';
 import {fetchRoadRouteChunked, fetchOptimizedRoute, fetchNavigationRoute} from '../../utils/routing';
+import {settingsApi} from '../../api';
 
 import {DriverMarker, StopMarker, MapTopBar, OrderSheet, TripPreview, NavigationOverlay} from './components';
 
@@ -114,11 +116,19 @@ const MapScreen = ({navigation}) => {
   const goOnline = useLocationStore((s) => s.goOnline);
   const goOffline = useLocationStore((s) => s.goOffline);
   const onBreak = useLocationStore((s) => s.onBreak);
+  const setEtaNextStop = useLocationStore((s) => s.setEtaNextStop);
 
   const route = useRouteStore((s) => s.route);
   const progress = useRouteStore((s) => s.progress);
   const fetchRoute = useRouteStore((s) => s.fetchRoute);
   const fetchProgress = useRouteStore((s) => s.fetchProgress);
+  const reoptimize = useRouteStore((s) => s.reoptimize);
+  const optimizedCoords = useRouteStore((s) => s.optimizedCoords);
+  const optimizedRouteInfo = useRouteStore((s) => s.optimizedRouteInfo);
+  const clearOptimized = useRouteStore((s) => s.clearOptimized);
+
+  const needsReoptimize = useStopsStore((s) => s.needsReoptimize);
+  const clearReoptimize = useStopsStore((s) => s.clearReoptimize);
 
   // ── Local state ─────────────────────────────
   const [selectedStop, setSelectedStop] = useState(null);
@@ -136,6 +146,10 @@ const MapScreen = ({navigation}) => {
   const [navDistance, setNavDistance] = useState(0);
   const [navDuration, setNavDuration] = useState(0);
   const navRefreshTimer = useRef(null);
+
+  // ── Zone polygons ──────────────────────────
+  const [zones, setZones] = useState([]);
+  const [showZones, setShowZones] = useState(false);
 
   // ── Bottom sheet animation ──────────────────
   const sheetY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
@@ -197,6 +211,15 @@ const MapScreen = ({navigation}) => {
       if (initialLoad) setInitialLoad(false);
     }, [loadAll]),
   );
+
+  // Fetch zones once
+  useEffect(() => {
+    settingsApi.getZones().then((res) => {
+      const data = res.data?.data || res.data;
+      const items = data?.zones || data || [];
+      setZones(Array.isArray(items) ? items : []);
+    }).catch(() => {});
+  }, []);
 
   // ── Build an order lookup for enriching route stops ──
   const orderById = useMemo(() => {
@@ -297,6 +320,25 @@ const MapScreen = ({navigation}) => {
     return coords.length >= 2 ? coords : [];
   }, [mapStops, currentPosition]);
 
+  // ── Check for stored route polyline from backend (avoids OSRM call) ──
+  const storedPolyline = useMemo(() => {
+    // Look for route_polyline in any active order
+    const activeOrders = orders.filter((o) =>
+      ['assigned', 'picked_up', 'in_transit'].includes(o.status),
+    );
+    // For single active order, use its stored polyline directly
+    if (activeOrders.length === 1 && activeOrders[0].route_polyline) {
+      const poly = activeOrders[0].route_polyline;
+      if (Array.isArray(poly) && poly.length >= 2) {
+        return poly.map((p) => ({
+          latitude: p.lat || p[0] || p.latitude,
+          longitude: p.lng || p[1] || p.longitude,
+        })).filter((c) => isValidCoord(c.latitude, c.longitude));
+      }
+    }
+    return null;
+  }, [orders]);
+
   // ── Fetch optimized road-following route from OSRM ──
   const lastWpKey = useRef('');
   useEffect(() => {
@@ -305,6 +347,14 @@ const MapScreen = ({navigation}) => {
       setRouteInfo(null);
       return;
     }
+
+    // Use stored polyline from backend if available (instant load)
+    if (storedPolyline && storedPolyline.length >= 2) {
+      setRoadCoords(storedPolyline);
+      // RouteInfo not available from stored polyline, keep previous or null
+      return;
+    }
+
     // Build a cache key so we only refetch when waypoints actually change
     const key = routeWaypoints
       .map((w) => `${w.latitude.toFixed(4)},${w.longitude.toFixed(4)}`)
@@ -340,6 +390,31 @@ const MapScreen = ({navigation}) => {
     })();
     return () => { cancelled = true; };
   }, [routeWaypoints]);
+
+  // ── Re-optimize when a stop is completed/failed/skipped ──
+  useEffect(() => {
+    if (!needsReoptimize || !currentPosition) return;
+
+    // Get remaining pending waypoints (exclude driver position at index 0)
+    const remaining = routeWaypoints.slice(1);
+    if (remaining.length >= 1) {
+      reoptimize(currentPosition, remaining);
+    }
+    clearReoptimize();
+  }, [needsReoptimize, currentPosition, routeWaypoints, reoptimize, clearReoptimize]);
+
+  // Apply reoptimized route from store
+  useEffect(() => {
+    if (optimizedCoords && optimizedCoords.length >= 2) {
+      setRoadCoords(optimizedCoords);
+      if (optimizedRouteInfo) {
+        setRouteInfo(optimizedRouteInfo);
+      }
+      clearOptimized();
+      // Reset waypoint key so normal waypoint changes still trigger fresh fetch
+      lastWpKey.current = '';
+    }
+  }, [optimizedCoords, optimizedRouteInfo, clearOptimized]);
 
   // ── Stats ───────────────────────────────────
   const activeCount = useMemo(
@@ -513,6 +588,8 @@ const MapScreen = ({navigation}) => {
         setNavSteps(result.steps || []);
         setNavDistance(result.distance || 0);
         setNavDuration(result.duration || 0);
+        // Broadcast ETA to backend via location pings
+        setEtaNextStop((result.duration || 0) / 60);
       } else {
         // Fallback to straight line
         setNavRoute([
@@ -523,9 +600,10 @@ const MapScreen = ({navigation}) => {
         const dist = haversine(currentPosition.latitude, currentPosition.longitude, lat, lng);
         setNavDistance(dist * 1000);
         setNavDuration(estimateETA(dist) * 60);
+        setEtaNextStop(estimateETA(dist));
       }
     },
-    [currentPosition],
+    [currentPosition, setEtaNextStop],
   );
 
   const handleNavigate = useCallback(
@@ -558,8 +636,9 @@ const MapScreen = ({navigation}) => {
     setNavSteps([]);
     setNavDistance(0);
     setNavDuration(0);
+    setEtaNextStop(null);
     if (navRefreshTimer.current) clearInterval(navRefreshTimer.current);
-  }, []);
+  }, [setEtaNextStop]);
 
   // Auto-update nav route as driver moves (every 15 s)
   useEffect(() => {
@@ -636,7 +715,7 @@ const MapScreen = ({navigation}) => {
         {/* Delivery/Pickup stop markers */}
         {mapStops.map((stop, idx) => (
           <StopMarker
-            key={`stop-${stop.stop_type || 'd'}-${stop.order_id || stop.id || idx}-${idx}`}
+            key={`stop-${idx}-${stop.stop_id || stop.id}-${stop.stop_type || 'd'}`}
             stop={stop}
             index={idx}
             isSelected={
@@ -669,6 +748,30 @@ const MapScreen = ({navigation}) => {
             lineJoin="round"
           />
         )}
+
+        {/* Zone polygons */}
+        {showZones && zones.map((zone) => {
+          const coords = (zone.polygon || zone.coordinates || [])
+            .map((p) => ({
+              latitude: p.lat || p[0] || p.latitude,
+              longitude: p.lng || p[1] || p.longitude,
+            }))
+            .filter((c) => isValidCoord(c.latitude, c.longitude));
+          if (coords.length < 3) return null;
+          const zoneColor = zone.color || (zone.type === 'restricted' ? '#FF000040' : '#4CAF5040');
+          const strokeColor = zone.color
+            ? zone.color.replace(/[0-9a-f]{2}$/i, 'AA')
+            : (zone.type === 'restricted' ? '#FF0000AA' : '#4CAF50AA');
+          return (
+            <Polygon
+              key={`zone-${zone.id}`}
+              coordinates={coords}
+              fillColor={zoneColor}
+              strokeColor={strokeColor}
+              strokeWidth={1.5}
+            />
+          );
+        })}
       </MapView>
 
       {/* ── Normal mode overlays ── */}
@@ -712,6 +815,15 @@ const MapScreen = ({navigation}) => {
               activeOpacity={0.8}>
               <Icon name="refresh" size={18} color={isRefreshing ? colors.textMuted : colors.primary} />
             </TouchableOpacity>
+
+            {zones.length > 0 && (
+              <TouchableOpacity
+                style={[$.fab, showZones && {backgroundColor: colors.primary}]}
+                onPress={() => setShowZones(prev => !prev)}
+                activeOpacity={0.8}>
+                <Icon name="layers-outline" size={18} color={showZones ? colors.white : colors.primary} />
+              </TouchableOpacity>
+            )}
 
         {/* Zoom controls */}
         <View style={$.zoomDivider} />

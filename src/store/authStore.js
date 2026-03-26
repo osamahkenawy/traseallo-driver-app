@@ -35,16 +35,19 @@ const useAuthStore = create((set, get) => ({
    * Tenant slug 'trasealla' is hardcoded for the driver app.
    */
   login: async (username, password) => {
-    const DEFAULT_TENANT_SLUG = 'traseallo';
+    const DEFAULT_TENANT_SLUG = 'swiftdrop';
     set({isLoading: true, loginError: null});
     try {
       // Pre-set tenant slug so the request interceptor sends x-tenant-slug header
       await setTenantSlug(DEFAULT_TENANT_SLUG);
       const res = await authApi.login(username, password);
-      // API returns { success, token, user: { tenant: {...}, ...}, driver: {...} }
       const body = res.data?.data || res.data;
       const token = body.token;
-      const rawUser = body.user || {};
+
+      // Handle both response formats:
+      // 1) /driver-app/login: { token, user: {...}, driver: {...} }
+      // 2) /auth/login: flat { token, id, full_name, role, tenant: {...}, driver_id, ... }
+      const rawUser = body.user || body;
       const driver = body.driver || {};
       const tenant = rawUser.tenant || body.tenant || {};
 
@@ -71,7 +74,7 @@ const useAuthStore = create((set, get) => ({
         vehicle_color: driver.vehicle_color,
         rating: driver.rating,
         status: driver.status,
-        driver_id: driver.id,
+        driver_id: driver.id || body.driver_id,
         tenant_id: rawUser.tenant_id || tenant.id,
       };
 
@@ -82,7 +85,7 @@ const useAuthStore = create((set, get) => ({
       set({
         user,
         token,
-        driverId: driver.id || null,
+        driverId: driver.id || body.driver_id || null,
         tenantId: tenant?.id || null,
         tenantSlug: tenant?.slug || DEFAULT_TENANT_SLUG,
         isAuthenticated: true,

@@ -37,6 +37,14 @@ const stopsApi = {
    */
   skipStop: (stopId, data = {}) =>
     apiClient.post(`/driver-app/stops/${stopId}/skip`, data),
+
+  /**
+   * Update stop sequence (reorder) for an order
+   * @param {number|string} orderId
+   * @param {Array<{stop_id: number|string, sequence: number}>} stopOrder
+   */
+  updateStopSequence: (orderId, stopOrder) =>
+    apiClient.post(`/multi-stop/orders/${orderId}/stops/optimize`, {stop_order: stopOrder}),
 };
 
 export default stopsApi;

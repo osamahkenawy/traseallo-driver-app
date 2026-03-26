@@ -30,8 +30,12 @@ const TaskCard = ({order, onPress}) => {
   const destAddress = order?.delivery_address || order?.recipient_address || '';
   const destArea = order?.delivery_area || order?.recipient_area || order?.recipient_emirate || '';
 
-  const distance = order?.estimated_distance || order?.distance || '';
-  const eta = order?.estimated_time || order?.eta || '';
+  const distance = order?.route_distance_km
+    ? `${parseFloat(order.route_distance_km).toFixed(1)} km`
+    : order?.estimated_distance || order?.distance || '';
+  const eta = order?.route_duration_min
+    ? `${Math.round(parseFloat(order.route_duration_min))} min`
+    : order?.estimated_time || order?.eta || '';
 
   const dateStr = order?.created_at
     ? formatDate(order.created_at, t, i18n.language)

@@ -15,7 +15,7 @@ const authApi = {
    * @returns {Promise} { token, user, tenant }
    */
   login: (username, password) =>
-    apiClient.post('/driver-app/login', {username, password}),
+    apiClient.post('/auth/login', {username, password}),
 
   /**
    * Logout — sets driver offline, deactivates push tokens

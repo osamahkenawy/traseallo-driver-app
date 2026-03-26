@@ -83,7 +83,7 @@ const LoginScreen = ({navigation}) => {
     let cancelled = false;
     const fetchBranding = async () => {
       try {
-        const res = await authApi.getBranding('traseallo');
+        const res = await authApi.getBranding('swiftdrop');
         const data = res.data?.data || res.data;
         if (!cancelled && data) setBranding(data);
       } catch {
