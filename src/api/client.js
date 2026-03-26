@@ -156,13 +156,16 @@ apiClient.interceptors.response.use(
   async (error) => {
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message;
+    const requestUrl = error.config?.url || '';
 
     if (__DEV__) {
       console.log(`❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} → ${status}`, message);
     }
 
     // 401 Unauthorized → token expired → redirect to login
-    if (status === 401) {
+    // Skip for login/auth endpoints — those handle their own errors
+    const isAuthEndpoint = requestUrl.includes('/login') || requestUrl.includes('/forgot-password') || requestUrl.includes('/reset-password');
+    if (status === 401 && !isAuthEndpoint) {
       await clearToken();
       if (onAuthExpired) {
         onAuthExpired();
