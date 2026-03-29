@@ -1,8 +1,8 @@
 /**
- * Pickup Detail Screen — Status-based pickup workflow with CTAs
+ * Pickup Detail Screen — Modern pickup workflow with rich status UI
  */
 
-import React, {useState} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -13,33 +13,41 @@ import {
   Linking,
   ActivityIndicator,
   TextInput,
+  Animated,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Icon from '../../utils/LucideIcon';
 import {colors, getStatusColor, getStatusBgColor} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import usePickupStore from '../../store/pickupStore';
 import {useTranslation} from 'react-i18next';
+import {showMessage} from 'react-native-flash-message';
 
-const InfoRow = ({icon, label, value}) => (
-  <View style={s.infoRow}>
-    <View style={s.infoIconWrap}>
-      <Icon name={icon} size={16} color={colors.textMuted} />
-    </View>
-    <View style={{flex: 1}}>
-      <Text style={s.infoLabel}>{label}</Text>
-      <Text style={s.infoValue}>{value || '—'}</Text>
-    </View>
-  </View>
-);
+/* ── Steps config ── */
+const STEPS = [
+  {key: 'pending', label: 'Pending', icon: 'clock-outline'},
+  {key: 'en_route', label: 'En Route', icon: 'truck-fast-outline'},
+  {key: 'arrived', label: 'Arrived', icon: 'map-marker-check-outline'},
+  {key: 'picked_up', label: 'Picked Up', icon: 'check-circle-outline'},
+];
+
+const stepIndex = (status) => {
+  const map = {
+    none: 0, pending: 0, assigned: 0, pending_pickup: 0, pickup_scheduled: 0, accepted: 0,
+    en_route: 1, en_route_to_pickup: 1,
+    arrived: 2, at_pickup: 2, driver_arrived: 2,
+    picked_up: 3, completed: 3,
+  };
+  return map[status] ?? 0;
+};
 
 const PickupDetailScreen = ({navigation, route}) => {
   const ins = useSafeAreaInsets();
   const {t, i18n} = useTranslation();
   const pickup = route.params?.pickup || {};
-  const {enRoute, markArrived, confirmPickup, failPickup, isActing} = usePickupStore();
+  const {enRoute, markArrived, confirmPickup, failPickup} = usePickupStore();
 
-  // Normalize status — API uses pickup_status, OrderDetail passes status
   const [status, setStatus] = useState(
     pickup.status || pickup.pickup_status || 'pending',
   );
@@ -49,10 +57,23 @@ const PickupDetailScreen = ({navigation, route}) => {
 
   const orderId = pickup.id || pickup.order_id;
   const statusColor = getStatusColor(status);
-  const formatLabel = (st) =>
-    t('status.' + (st || 'pending'), (st || 'pending'));
+  const currentStep = stepIndex(status);
+  const formatLabel = (st) => t('status.' + (st || 'pending'), (st || 'pending'));
 
-  // Normalize field names — handle both order fields and dedicated pickup fields
+  // Pulse animation for active step
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {toValue: 1.25, duration: 800, useNativeDriver: true}),
+        Animated.timing(pulseAnim, {toValue: 1, duration: 800, useNativeDriver: true}),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
+
+  // Normalize fields
   const merchantName = pickup.merchant_name || pickup.store_name || pickup.sender_name || pickup.client_name;
   const pickupAddress = pickup.pickup_address || pickup.address || pickup.sender_address;
   const pickupLat = pickup.latitude || pickup.lat || pickup.sender_lat;
@@ -62,13 +83,15 @@ const PickupDetailScreen = ({navigation, route}) => {
   const contactName = pickup.contact_name || pickup.sender_name;
   const contactPhone = pickup.contact_phone || pickup.sender_phone;
   const notes = pickup.notes || pickup.pickup_notes || pickup.special_instructions;
+  const orderNumber = pickup.order_number || '';
 
+  /* ── Handlers ── */
   const handleEnRoute = async () => {
     setActionLoading(true);
     try {
       await enRoute(orderId);
       setStatus('en_route');
-      Alert.alert(t('pickup.success'), t('pickup.enRouteMsg'));
+      showMessage({message: t('pickup.enRouteMsg'), type: 'success'});
     } catch (err) {
       Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedUpdate'));
     } finally {
@@ -81,7 +104,7 @@ const PickupDetailScreen = ({navigation, route}) => {
     try {
       await markArrived(orderId);
       setStatus('arrived');
-      Alert.alert(t('pickup.success'), t('pickup.arrivalConfirmed'));
+      showMessage({message: t('pickup.arrivalConfirmed'), type: 'success'});
     } catch (err) {
       Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedArrival'));
     } finally {
@@ -99,7 +122,7 @@ const PickupDetailScreen = ({navigation, route}) => {
           try {
             await confirmPickup(orderId);
             setStatus('picked_up');
-            Alert.alert(t('pickup.success'), t('pickup.pickupConfirmed'));
+            showMessage({message: t('pickup.pickupConfirmed'), type: 'success'});
           } catch (err) {
             Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedConfirm'));
           } finally {
@@ -120,7 +143,7 @@ const PickupDetailScreen = ({navigation, route}) => {
       await failPickup(orderId, {reason: failReason.trim()});
       setStatus('failed');
       setShowFail(false);
-      Alert.alert(t('pickup.reported'), t('pickup.pickupFailed'));
+      showMessage({message: t('pickup.pickupFailed'), type: 'warning'});
     } catch (err) {
       Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedReport'));
     } finally {
@@ -138,107 +161,233 @@ const PickupDetailScreen = ({navigation, route}) => {
     }
   };
 
+  const handleCall = () => {
+    if (contactPhone) Linking.openURL(`tel:${contactPhone}`);
+  };
+
+  const handleWhatsApp = () => {
+    if (contactPhone) {
+      const phone = contactPhone.replace(/[\s\-()]/g, '');
+      Linking.openURL(`https://wa.me/${phone}`);
+    }
+  };
+
+  const handleCopyOrder = () => {
+    if (orderNumber) {
+      Clipboard.setString(orderNumber);
+      showMessage({message: 'Order number copied', type: 'info', duration: 1500});
+    }
+  };
+
   const isTerminal = status === 'picked_up' || status === 'completed' || status === 'failed' || status === 'pickup_failed';
 
+  /* ── CTA config per status ── */
+  const getCTA = () => {
+    if (isTerminal) return null;
+    const s0 = ['pending', 'assigned', 'none', 'pending_pickup', 'pickup_scheduled', 'accepted'];
+    if (s0.includes(status)) return {icon: 'truck-fast-outline', label: t('pickup.enRoute'), sub: 'Heading to pickup location', color: '#1565C0', onPress: handleEnRoute};
+    if (status === 'en_route' || status === 'en_route_to_pickup') return {icon: 'map-marker-check-outline', label: t('pickup.arrived'), sub: 'Confirm your arrival', color: '#00796B', onPress: handleArrived};
+    if (status === 'arrived' || status === 'at_pickup' || status === 'driver_arrived') return {icon: 'check-circle-outline', label: t('pickup.confirmPickup'), sub: 'All packages collected', color: '#2E7D32', onPress: handleConfirm};
+    return null;
+  };
+  const cta = getCTA();
+
   return (
-    <View style={[s.root, {paddingTop: ins.top}]}>
-      <View style={s.hdr}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+    <View style={[$.root, {paddingTop: ins.top}]}>
+      {/* ── Header ── */}
+      <View style={$.hdr}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={$.hdrBack}>
           <Icon name="arrow-left" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={s.hdrTitle}>{t('pickup.detail')}</Text>
-        <View style={{width: 20}} />
+        <View style={{flex: 1, alignItems: 'center'}}>
+          <Text style={$.hdrTitle}>{t('pickup.detail')}</Text>
+          {orderNumber ? <Text style={$.hdrSub}>#{orderNumber}</Text> : null}
+        </View>
+        <View style={{width: 36}} />
       </View>
 
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        {/* Status Badge */}
-        <View style={s.statusRow}>
-          <View style={[s.statusBadge, {backgroundColor: getStatusBgColor(status)}]}>
-            <Icon name="package-variant" size={14} color={statusColor} />
-            <Text style={[s.statusText, {color: statusColor}]}>{formatLabel(status)}</Text>
+      <ScrollView contentContainerStyle={$.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* ── Status Hero Card ── */}
+        <View style={[$.heroCard, {borderLeftColor: statusColor}]}>
+          <View style={$.heroTop}>
+            <View style={[$.heroBadge, {backgroundColor: getStatusBgColor(status)}]}>
+              <Icon name="package-variant" size={13} color={statusColor} />
+              <Text style={[$.heroBadgeText, {color: statusColor}]}>{formatLabel(status)}</Text>
+            </View>
+            {orderNumber ? (
+              <TouchableOpacity onPress={handleCopyOrder} activeOpacity={0.6} style={$.copyBtn}>
+                <Text style={$.copyText}>#{orderNumber}</Text>
+                <Icon name="content-copy" size={12} color={colors.textMuted} />
+              </TouchableOpacity>
+            ) : null}
           </View>
-          {pickup.order_number ? (
-            <Text style={s.orderNum}>#{pickup.order_number}</Text>
+          {merchantName ? (
+            <Text style={$.heroMerchant}>{merchantName}</Text>
+          ) : null}
+          {pickupAddress ? (
+            <View style={$.heroAddressRow}>
+              <Icon name="map-marker-outline" size={14} color={colors.textMuted} />
+              <Text style={$.heroAddress} numberOfLines={2}>{pickupAddress}</Text>
+            </View>
           ) : null}
         </View>
 
-        {/* Pickup Info Card */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>{t('pickup.pickupInfo')}</Text>
-          <InfoRow
-            icon="store-outline"
-            label={t('pickup.merchant')}
-            value={merchantName}
-          />
-          <View style={s.sep} />
-          <InfoRow
-            icon="map-marker-outline"
-            label={t('pickup.address')}
-            value={pickupAddress}
-          />
-          <View style={s.sep} />
-          <InfoRow
-            icon="clock-outline"
-            label={t('pickup.scheduled')}
-            value={
-              scheduledAt
-                ? new Date(scheduledAt).toLocaleString(i18n.language === 'ar' ? 'ar-AE' : 'en-AE', {
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })
-                : null
-            }
-          />
-          <View style={s.sep} />
-          <InfoRow
-            icon="package-variant"
-            label={t('pickup.packages')}
-            value={`${packageCount} ${t('pickup.items')}`}
-          />
+        {/* ── Progress Tracker ── */}
+        {!isTerminal && status !== 'failed' && (
+          <View style={$.progressCard}>
+            <View style={$.stepsRow}>
+              {STEPS.map((step, i) => {
+                const done = i < currentStep;
+                const active = i === currentStep;
+                const dotColor = done ? '#15C7AE' : active ? statusColor : '#D5DDE5';
+                return (
+                  <View key={step.key} style={$.stepItem}>
+                    <View style={$.stepDotRow}>
+                      {i > 0 && (
+                        <View style={[$.stepLine, done && {backgroundColor: '#15C7AE'}]} />
+                      )}
+                      {active ? (
+                        <Animated.View style={[$.stepDotActive, {backgroundColor: statusColor, transform: [{scale: pulseAnim}]}]}>
+                          <Icon name={step.icon} size={12} color="#FFF" />
+                        </Animated.View>
+                      ) : (
+                        <View style={[$.stepDot, {backgroundColor: dotColor}]}>
+                          {done ? (
+                            <Icon name="check" size={10} color="#FFF" />
+                          ) : (
+                            <View style={$.stepDotInner} />
+                          )}
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[$.stepLabel, (done || active) && {color: colors.textPrimary, fontFamily: fontFamily.semiBold}]}>
+                      {step.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* ── Pickup Info Card ── */}
+        <View style={$.card}>
+          <View style={$.cardHdr}>
+            <View style={[$.cardIcon, {backgroundColor: '#E8F5E9'}]}>
+              <Icon name="store-outline" size={15} color="#2E7D32" />
+            </View>
+            <Text style={$.cardTitle}>{t('pickup.pickupInfo')}</Text>
+          </View>
+          <View style={$.cardBody}>
+            {merchantName ? (
+              <View style={$.infoRow}>
+                <Text style={$.infoLabel}>{t('pickup.merchant')}</Text>
+                <Text style={$.infoValue}>{merchantName}</Text>
+              </View>
+            ) : null}
+            {pickupAddress ? (
+              <>
+                <View style={$.sep} />
+                <View style={$.infoRow}>
+                  <Text style={$.infoLabel}>{t('pickup.address')}</Text>
+                  <Text style={$.infoValue}>{pickupAddress}</Text>
+                </View>
+              </>
+            ) : null}
+            <View style={$.sep} />
+            <View style={$.infoGrid}>
+              <View style={$.infoGridItem}>
+                <View style={[$.infoGridIcon, {backgroundColor: '#E3F2FD'}]}>
+                  <Icon name="clock-outline" size={14} color="#1565C0" />
+                </View>
+                <Text style={$.infoGridLabel}>{t('pickup.scheduled')}</Text>
+                <Text style={$.infoGridValue}>
+                  {scheduledAt
+                    ? new Date(scheduledAt).toLocaleString(i18n.language === 'ar' ? 'ar-AE' : 'en-AE', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                      })
+                    : '—'}
+                </Text>
+              </View>
+              <View style={$.infoGridItem}>
+                <View style={[$.infoGridIcon, {backgroundColor: '#FFF3E0'}]}>
+                  <Icon name="package-variant" size={14} color="#E65100" />
+                </View>
+                <Text style={$.infoGridLabel}>{t('pickup.packages')}</Text>
+                <Text style={$.infoGridValue}>{packageCount} {t('pickup.items')}</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
-        {/* Contact Card */}
+        {/* ── Contact Card ── */}
         {(contactName || contactPhone) ? (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>{t('pickup.contact')}</Text>
-            {contactName && (
-              <InfoRow icon="account-outline" label={t('pickup.name')} value={contactName} />
-            )}
-            {contactPhone && (
-              <>
-                <View style={s.sep} />
-                <TouchableOpacity
-                  style={s.infoRow}
-                  onPress={() => Linking.openURL(`tel:${contactPhone}`)}>
-                  <View style={[s.infoIconWrap, {backgroundColor: colors.info + '15'}]}>
-                    <Icon name="phone-outline" size={16} color={colors.info} />
+          <View style={$.card}>
+            <View style={$.cardHdr}>
+              <View style={[$.cardIcon, {backgroundColor: '#E3F2FD'}]}>
+                <Icon name="account-outline" size={15} color="#1565C0" />
+              </View>
+              <Text style={$.cardTitle}>{t('pickup.contact')}</Text>
+            </View>
+            <View style={$.cardBody}>
+              {contactName ? (
+                <View style={$.contactNameRow}>
+                  <View style={$.contactAvatar}>
+                    <Text style={$.contactAvatarText}>{(contactName || '?')[0].toUpperCase()}</Text>
                   </View>
                   <View style={{flex: 1}}>
-                    <Text style={s.infoLabel}>{t('pickup.phone')}</Text>
-                    <Text style={[s.infoValue, {color: colors.info}]}>{contactPhone}</Text>
+                    <Text style={$.contactName}>{contactName}</Text>
+                    {contactPhone ? <Text style={$.contactPhone}>{contactPhone}</Text> : null}
                   </View>
-                </TouchableOpacity>
-              </>
-            )}
+                </View>
+              ) : null}
+              {contactPhone ? (
+                <View style={$.quickActions}>
+                  <TouchableOpacity style={[$.quickBtn, {backgroundColor: '#E3F2FD'}]} onPress={handleCall} activeOpacity={0.7}>
+                    <Icon name="phone-outline" size={18} color="#1565C0" />
+                    <Text style={[$.quickLabel, {color: '#1565C0'}]}>Call</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[$.quickBtn, {backgroundColor: '#E8F5E9'}]} onPress={handleWhatsApp} activeOpacity={0.7}>
+                    <Icon name="whatsapp" size={18} color="#25D366" />
+                    <Text style={[$.quickLabel, {color: '#25D366'}]}>WhatsApp</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[$.quickBtn, {backgroundColor: '#FFF3E0'}]} onPress={handleNavigate} activeOpacity={0.7}>
+                    <Icon name="navigation-variant-outline" size={18} color="#E65100" />
+                    <Text style={[$.quickLabel, {color: '#E65100'}]}>Navigate</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </View>
           </View>
         ) : null}
 
-        {/* Notes */}
+        {/* ── Notes Card ── */}
         {notes ? (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>{t('pickup.notes')}</Text>
-            <Text style={s.notesTxt}>{notes}</Text>
+          <View style={$.card}>
+            <View style={$.cardHdr}>
+              <View style={[$.cardIcon, {backgroundColor: '#FFF8E1'}]}>
+                <Icon name="note-text-outline" size={15} color="#F9A825" />
+              </View>
+              <Text style={$.cardTitle}>{t('pickup.notes')}</Text>
+            </View>
+            <View style={$.notesBubble}>
+              <Text style={$.notesTxt}>{notes}</Text>
+            </View>
           </View>
         ) : null}
 
-        {/* Fail Reason Input */}
+        {/* ── Fail Reason Input ── */}
         {showFail && (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>{t('pickup.failureReason')}</Text>
+          <View style={$.card}>
+            <View style={$.cardHdr}>
+              <View style={[$.cardIcon, {backgroundColor: colors.dangerBg}]}>
+                <Icon name="alert-circle-outline" size={15} color={colors.danger} />
+              </View>
+              <Text style={$.cardTitle}>{t('pickup.failureReason')}</Text>
+            </View>
             <TextInput
-              style={s.failInput}
+              style={$.failInput}
               placeholder={t('pickup.failReasonPlaceholder')}
               placeholderTextColor={colors.textMuted}
               multiline
@@ -248,170 +397,252 @@ const PickupDetailScreen = ({navigation, route}) => {
             />
             <View style={{flexDirection: 'row', gap: 10, marginTop: 12}}>
               <TouchableOpacity
-                style={[s.actionBtn, {flex: 1, backgroundColor: colors.bgMuted}]}
+                style={[$.failAction, {backgroundColor: '#F0F3F8'}]}
                 onPress={() => setShowFail(false)}>
-                <Text style={[s.actionTxt, {color: colors.textSecondary}]}>{t('common.cancel')}</Text>
+                <Text style={[$.failActionTxt, {color: colors.textSecondary}]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.actionBtn, {flex: 1, backgroundColor: colors.danger}]}
+                style={[$.failAction, {backgroundColor: colors.danger}]}
                 onPress={handleFail}
                 disabled={actionLoading}>
                 {actionLoading ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={s.actionTxt}>{t('pickup.submit')}</Text>
+                  <Text style={$.failActionTxt}>{t('pickup.submit')}</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
         )}
+
+        {/* ── Terminal Status Banner ── */}
+        {isTerminal && (
+          <View style={[$.terminalBanner, {backgroundColor: status === 'failed' || status === 'pickup_failed' ? colors.dangerBg : '#E8F5E9'}]}>
+            <Icon
+              name={status === 'failed' || status === 'pickup_failed' ? 'close-circle-outline' : 'check-circle-outline'}
+              size={28}
+              color={status === 'failed' || status === 'pickup_failed' ? colors.danger : '#2E7D32'}
+            />
+            <Text style={[$.terminalText, {color: status === 'failed' || status === 'pickup_failed' ? colors.danger : '#2E7D32'}]}>
+              {formatLabel(status)}
+            </Text>
+            <Text style={$.terminalSub}>
+              {status === 'failed' || status === 'pickup_failed' ? 'This pickup was reported as failed' : 'All packages collected successfully'}
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
-      {/* Bottom CTAs */}
-      {!isTerminal && (
-        <View style={[s.bottom, {paddingBottom: ins.bottom + 10}]}>
-          {status === 'pending' || status === 'assigned' || status === 'none' || status === 'pending_pickup' || status === 'pickup_scheduled' ? (
-            /* Step 1: Navigate  +  En Route */
-            <View style={{gap: 10}}>
-              <TouchableOpacity style={s.navBtn} onPress={handleNavigate} activeOpacity={0.8}>
-                <Icon name="navigation-outline" size={16} color={colors.primary} />
-                <Text style={s.navTxt}>{t('pickup.navigateToPickup')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.btn}
-                onPress={handleEnRoute}
-                activeOpacity={0.8}
-                disabled={actionLoading}>
-                {actionLoading ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <>
-                    <Icon name="truck-fast-outline" size={16} color="#FFF" />
-                    <Text style={s.btnTxt}>{t('pickup.enRoute')}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          ) : status === 'en_route' ? (
-            /* Step 2: Navigate  +  Mark Arrived */
-            <View style={{gap: 10}}>
-              <TouchableOpacity style={s.navBtn} onPress={handleNavigate} activeOpacity={0.8}>
-                <Icon name="navigation-outline" size={16} color={colors.primary} />
-                <Text style={s.navTxt}>{t('pickup.navigateToPickup')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.btn}
-                onPress={handleArrived}
-                activeOpacity={0.8}
-                disabled={actionLoading}>
-                {actionLoading ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <>
-                    <Icon name="map-marker-check-outline" size={16} color="#FFF" />
-                    <Text style={s.btnTxt}>{t('pickup.arrived')}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          ) : status === 'arrived' ? (
-            /* Step 2: Confirm Pickup  +  Report Problem */
-            <View style={{gap: 10}}>
-              <TouchableOpacity
-                style={s.btn}
-                onPress={handleConfirm}
-                activeOpacity={0.8}
-                disabled={actionLoading}>
-                {actionLoading ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <>
-                    <Icon name="check-circle-outline" size={16} color="#FFF" />
-                    <Text style={s.btnTxt}>{t('pickup.confirmPickup')}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.dangerBtn}
-                onPress={() => setShowFail(true)}
-                activeOpacity={0.8}>
+      {/* ── Bottom CTAs ── */}
+      {cta && !showFail && (
+        <View style={[$.bottom, {paddingBottom: ins.bottom + 10}]}>
+          {/* Primary CTA Card */}
+          <TouchableOpacity
+            style={[$.ctaPrimary, {backgroundColor: cta.color}]}
+            onPress={cta.onPress}
+            activeOpacity={0.85}
+            disabled={actionLoading}>
+            {actionLoading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <View style={$.ctaInner}>
+                <View style={$.ctaIconCircle}>
+                  <Icon name={cta.icon} size={20} color="#FFF" />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={$.ctaPrimaryTxt}>{cta.label}</Text>
+                  <Text style={$.ctaSubTxt}>{cta.sub}</Text>
+                </View>
+                <Icon name="chevron-right" size={22} color="rgba(255,255,255,0.6)" />
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Secondary row */}
+          <View style={$.ctaSecRow}>
+            <TouchableOpacity style={$.ctaSec} onPress={handleNavigate} activeOpacity={0.7}>
+              <Icon name="navigation-variant-outline" size={16} color={colors.primary} />
+              <Text style={$.ctaSecTxt}>{t('pickup.navigateToPickup')}</Text>
+            </TouchableOpacity>
+            {(status === 'arrived' || status === 'at_pickup' || status === 'driver_arrived') && (
+              <TouchableOpacity style={$.ctaDanger} onPress={() => setShowFail(true)} activeOpacity={0.7}>
                 <Icon name="alert-circle-outline" size={16} color={colors.danger} />
-                <Text style={s.dangerTxt}>{t('pickup.reportProblem')}</Text>
+                <Text style={$.ctaDangerTxt}>{t('pickup.reportProblem')}</Text>
               </TouchableOpacity>
-            </View>
-          ) : null}
+            )}
+          </View>
         </View>
       )}
     </View>
   );
 };
 
-const s = StyleSheet.create({
+/* ────────────────────── Styles ────────────────────── */
+const $ = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
+
+  /* Header */
   hdr: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52, gap: 8,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, height: 52,
   },
-  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
-  scroll: {paddingHorizontal: 20, paddingBottom: 160},
+  hdrBack: {
+    width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF',
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.06, shadowRadius: 4,
+    elevation: 2,
+  },
+  hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary},
+  hdrSub: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 1},
 
-  statusRow: {alignItems: 'flex-start', marginBottom: 14, gap: 6},
-  statusBadge: {
+  scroll: {paddingHorizontal: 16, paddingBottom: 180},
+
+  /* Hero Card */
+  heroCard: {
+    backgroundColor: '#FFF', borderRadius: 16, padding: 18, marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.06, shadowRadius: 8,
+    elevation: 3,
+  },
+  heroTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12},
+  heroBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
   },
-  statusText: {fontFamily: fontFamily.semiBold, fontSize: 12},
-  orderNum: {fontFamily: fontFamily.medium, fontSize: 12, color: colors.textMuted},
+  heroBadgeText: {fontFamily: fontFamily.semiBold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4},
+  copyBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: '#F5F7FA',
+  },
+  copyText: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.textMuted},
+  heroMerchant: {fontFamily: fontFamily.bold, fontSize: 18, color: colors.textPrimary, marginBottom: 6},
+  heroAddressRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 6},
+  heroAddress: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textSecondary, lineHeight: 19, flex: 1},
 
+  /* Progress Card */
+  progressCard: {
+    backgroundColor: '#FFF', borderRadius: 16, padding: 18, marginBottom: 12,
+    shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.04, shadowRadius: 6,
+    elevation: 2,
+  },
+  stepsRow: {flexDirection: 'row', justifyContent: 'space-between'},
+  stepItem: {flex: 1, alignItems: 'center'},
+  stepDotRow: {flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'center', marginBottom: 8, height: 28},
+  stepLine: {
+    position: 'absolute', left: 0, right: '50%', top: 13, height: 2.5,
+    backgroundColor: '#D5DDE5', borderRadius: 2,
+  },
+  stepDot: {
+    width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center',
+    zIndex: 1,
+  },
+  stepDotInner: {width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFF'},
+  stepDotActive: {
+    width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center',
+    zIndex: 1,
+    shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.15, shadowRadius: 6,
+    elevation: 4,
+  },
+  stepLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, textAlign: 'center'},
+
+  /* Card base */
   card: {
-    backgroundColor: '#FFF', borderRadius: 14,
-    borderWidth: 1, borderColor: '#EEF1F5', padding: 18, marginBottom: 12,
+    backgroundColor: '#FFF', borderRadius: 16, marginBottom: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.04, shadowRadius: 6,
+    elevation: 2,
   },
-  cardTitle: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginBottom: 16},
-  infoRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 14, paddingVertical: 4},
-  infoIconWrap: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: '#F0F3F8',
-    justifyContent: 'center', alignItems: 'center', marginTop: 2,
+  cardHdr: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12,
   },
+  cardIcon: {width: 30, height: 30, borderRadius: 10, justifyContent: 'center', alignItems: 'center'},
+  cardTitle: {fontFamily: fontFamily.semiBold, fontSize: 13.5, color: colors.textPrimary},
+  cardBody: {paddingHorizontal: 18, paddingBottom: 18},
+  infoRow: {paddingVertical: 2},
   infoLabel: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginBottom: 3},
-  infoValue: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, lineHeight: 18},
-  sep: {height: 1, backgroundColor: '#EEF1F5', marginVertical: 12},
+  infoValue: {fontFamily: fontFamily.medium, fontSize: 13.5, color: colors.textPrimary, lineHeight: 19},
+  sep: {height: 1, backgroundColor: '#F0F3F8', marginVertical: 12},
 
-  notesTxt: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textSecondary, lineHeight: 19},
+  infoGrid: {flexDirection: 'row', gap: 12},
+  infoGridItem: {flex: 1, backgroundColor: '#FAFBFD', borderRadius: 12, padding: 14, alignItems: 'center'},
+  infoGridIcon: {width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8},
+  infoGridLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginBottom: 2},
+  infoGridValue: {fontFamily: fontFamily.semiBold, fontSize: 12.5, color: colors.textPrimary},
 
+  /* Contact */
+  contactNameRow: {flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14},
+  contactAvatar: {
+    width: 42, height: 42, borderRadius: 14, backgroundColor: '#E8EDF4',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  contactAvatarText: {fontFamily: fontFamily.bold, fontSize: 17, color: colors.primary},
+  contactName: {fontFamily: fontFamily.semiBold, fontSize: 14, color: colors.textPrimary},
+  contactPhone: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, marginTop: 2},
+  quickActions: {flexDirection: 'row', gap: 10},
+  quickBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', gap: 4,
+  },
+  quickLabel: {fontFamily: fontFamily.semiBold, fontSize: 11},
+
+  /* Notes */
+  notesBubble: {
+    marginHorizontal: 18, marginBottom: 18, backgroundColor: '#FFFDE7', borderRadius: 12,
+    padding: 14, borderWidth: 1, borderColor: '#FFF9C4',
+  },
+  notesTxt: {fontFamily: fontFamily.regular, fontSize: 13, color: '#827717', lineHeight: 19},
+
+  /* Fail */
   failInput: {
-    backgroundColor: '#F5F7FA', borderRadius: 10, padding: 12,
+    marginHorizontal: 18, backgroundColor: '#F5F7FA', borderRadius: 12, padding: 14,
     fontFamily: fontFamily.regular, fontSize: 13, color: colors.textPrimary,
-    minHeight: 70, textAlignVertical: 'top',
+    minHeight: 80, textAlignVertical: 'top',
   },
-  actionBtn: {
-    height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center',
+  failAction: {flex: 1, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginHorizontal: 18},
+  failActionTxt: {fontFamily: fontFamily.semiBold, fontSize: 13, color: '#FFF'},
+
+  /* Terminal Banner */
+  terminalBanner: {
+    borderRadius: 16, padding: 26, alignItems: 'center', marginBottom: 12,
   },
-  actionTxt: {fontFamily: fontFamily.semiBold, fontSize: 13, color: '#FFF'},
+  terminalText: {fontFamily: fontFamily.bold, fontSize: 18, marginTop: 10},
+  terminalSub: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, marginTop: 4, textAlign: 'center'},
 
   /* Bottom */
   bottom: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: '#FFF', paddingHorizontal: 20, paddingTop: 12,
-    borderTopWidth: 1, borderTopColor: '#EEF1F5',
+    backgroundColor: '#FFF', paddingHorizontal: 16, paddingTop: 14,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    shadowColor: '#000', shadowOffset: {width: 0, height: -4}, shadowOpacity: 0.08, shadowRadius: 12,
+    elevation: 12,
   },
-  btn: {
-    height: 48, backgroundColor: colors.primary, borderRadius: 12,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
+  ctaPrimary: {
+    height: 60, borderRadius: 16,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14,
+    shadowColor: '#000', shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.2, shadowRadius: 12,
+    elevation: 8, marginBottom: 10,
   },
-  btnTxt: {fontFamily: fontFamily.bold, fontSize: 14, color: '#FFF'},
-  navBtn: {
-    height: 44, borderRadius: 12,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
-    backgroundColor: '#FFF', borderWidth: 1, borderColor: colors.primary,
+  ctaInner: {flexDirection: 'row', alignItems: 'center', flex: 1},
+  ctaIconCircle: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center', alignItems: 'center', marginEnd: 12,
   },
-  navTxt: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.primary},
-  dangerBtn: {
-    height: 44, borderRadius: 12,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
-    backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: colors.danger + '30',
+  ctaPrimaryTxt: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF', letterSpacing: 0.2},
+  ctaSubTxt: {fontFamily: fontFamily.regular, fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 1},
+  ctaSecRow: {flexDirection: 'row', gap: 10, marginBottom: 6},
+  ctaSec: {
+    flex: 1, height: 44, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#F5F7FA',
   },
-  dangerTxt: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.danger},
+  ctaSecTxt: {fontFamily: fontFamily.semiBold, fontSize: 12.5, color: colors.primary},
+  ctaDanger: {
+    flex: 1, height: 44, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.dangerBg, borderWidth: 1, borderColor: colors.danger + '20',
+  },
+  ctaDangerTxt: {fontFamily: fontFamily.semiBold, fontSize: 12.5, color: colors.danger},
 });
 
 export default PickupDetailScreen;
