@@ -85,6 +85,19 @@ const fmtTime = (d) => {
   return `${h % 12 || 12}:${m} ${ampm}`;
 };
 
+const fmtDateTime = (d) => {
+  if (!d) return '';
+  const dt = new Date(d.replace(' ', 'T'));
+  if (isNaN(dt)) return d;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const day = dt.getDate();
+  const mon = months[dt.getMonth()];
+  const h = dt.getHours();
+  const m = dt.getMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${mon} ${day}, ${h % 12 || 12}:${m} ${ampm}`;
+};
+
 const cleanPhone = (p) => (p || '').replace(/[\s\-()]/g, '');
 
 /* ── Main Component ───────────────────────────────────────── */
@@ -1092,21 +1105,26 @@ const OrderDetailScreen = ({navigation, route}) => {
             </View>
             <View style={$.secDiv} />
 
-            {logs.map((log, i) => {
-              const isLast = i === logs.length - 1;
+            {[...logs].reverse().map((log, i, arr) => {
+              const isFirst = i === 0;
+              const isLast = i === arr.length - 1;
               const logColor = getStatusColor(log.status);
               return (
                 <View key={log.id} style={$.tlRow}>
                   <View style={$.tlLeft}>
-                    <View style={[$.tlDot, {backgroundColor: isLast ? logColor : colors.textLight}]} />
-                    {!isLast && <View style={$.tlLine} />}
+                    <View style={[
+                      $.tlDot,
+                      {backgroundColor: logColor},
+                      isFirst && $.tlDotActive,
+                    ]} />
+                    {!isLast && <View style={[$.tlLine, {backgroundColor: logColor + '30'}]} />}
                   </View>
-                  <View style={[$.tlContent, !isLast && {paddingBottom: 16}]}>
+                  <View style={[$.tlContent, !isLast && {paddingBottom: 18}]}>
                     <View style={$.tlHdr}>
-                      <Text style={[$.tlStatus, isLast && {color: logColor}]}>
+                      <Text style={[$.tlStatus, {color: logColor}]}>
                         {t('status.' + log.status) || log.status}
                       </Text>
-                      <Text style={$.tlTime}>{fmtTime(log.created_at)}</Text>
+                      <Text style={$.tlTime}>{fmtDateTime(log.created_at)}</Text>
                     </View>
                     {log.note && <Text style={$.tlNote}>{log.note}</Text>}
                     {log.changed_by_name && (
@@ -1556,19 +1574,25 @@ const $ = StyleSheet.create({
 
   /* Timeline */
   tlRow: {flexDirection: 'row'},
-  tlLeft: {width: 24, alignItems: 'center'},
+  tlLeft: {width: 28, alignItems: 'center'},
   tlDot: {
-    width: 10, height: 10, borderRadius: 5, marginTop: 4,
+    width: 12, height: 12, borderRadius: 6, marginTop: 4,
+  },
+  tlDotActive: {
+    width: 14, height: 14, borderRadius: 7, marginTop: 3,
+    borderWidth: 2.5, borderColor: '#FFF',
+    shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.15, shadowRadius: 4,
+    elevation: 3,
   },
   tlLine: {
-    width: 2, flex: 1, backgroundColor: '#E0E0E0', marginTop: 3,
+    width: 2, flex: 1, marginTop: 4,
   },
   tlContent: {flex: 1, marginStart: 10},
   tlHdr: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'},
-  tlStatus: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textPrimary},
+  tlStatus: {fontFamily: fontFamily.semiBold, fontSize: 12.5},
   tlTime: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted},
-  tlNote: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 2},
-  tlBy: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textLight, marginTop: 1},
+  tlNote: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textSecondary, marginTop: 3},
+  tlBy: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textLight, marginTop: 2},
 
   /* Progress bar */
   progressCard: {
