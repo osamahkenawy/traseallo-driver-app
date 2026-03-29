@@ -966,6 +966,7 @@
     "pending": "قيد الانتظار",
     "confirmed": "مؤكد",
     "assigned": "معيّن",
+    "accepted": "مقبول",
     "picked_up": "تم الاستلام",
     "in_transit": "قيد التوصيل",
     "delivered": "تم التسليم",

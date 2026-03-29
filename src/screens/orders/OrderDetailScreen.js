@@ -1164,129 +1164,141 @@ const OrderDetailScreen = ({navigation, route}) => {
           {/* ── STATUS: assigned ── */}
           {status === 'assigned' && (
             <>
-              {/* Accept Order */}
               <TouchableOpacity
-                style={$.cta}
+                style={$.ctaPrimary}
                 onPress={handleAcceptOrder}
                 disabled={isUpdatingStatus}
-                activeOpacity={0.75}>
+                activeOpacity={0.85}>
                 {isUpdatingStatus ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <>
-                    <Icon name="check-decagram" size={18} color="#FFF" />
-                    <Text style={[$.ctaTxt, {marginStart: 8}]}>{t('orderDetail.acceptOrder')}</Text>
-                  </>
+                  <View style={$.ctaInner}>
+                    <View style={$.ctaIconCircle}>
+                      <Icon name="check-decagram" size={20} color="#FFF" />
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={$.ctaPrimaryTxt}>{t('orderDetail.acceptOrder')}</Text>
+                      <Text style={$.ctaSubTxt}>{t('orderDetail.navigateToPickup')}</Text>
+                    </View>
+                    <Icon name="arrow-right" size={22} color="#FFF" />
+                  </View>
                 )}
               </TouchableOpacity>
-              {/* Navigate to Pickup */}
-              <TouchableOpacity
-                style={$.ctaNav}
-                onPress={handleNavigateToSender}
-                activeOpacity={0.7}>
-                <Icon name="navigation-variant" size={17} color={colors.primary} />
-                <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToPickup')}</Text>
-                <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
-              </TouchableOpacity>
-              {/* Report Problem */}
-              <TouchableOpacity
-                style={$.ctaFail}
-                onPress={handleReportFailure}
-                activeOpacity={0.75}>
-                <Icon name="close-circle-outline" size={17} color={colors.danger} />
-                <Text style={$.ctaFailTxt}>{t('orderDetail.reportProblem')}</Text>
-              </TouchableOpacity>
+              <View style={$.ctaSecondaryRow}>
+                <TouchableOpacity style={$.ctaSecondary} onPress={handleNavigateToSender} activeOpacity={0.7}>
+                  <View style={[$.ctaSecIcon, {backgroundColor: colors.primary + '12'}]}>
+                    <Icon name="navigation-variant" size={16} color={colors.primary} />
+                  </View>
+                  <Text style={$.ctaSecTxt}>{t('orderDetail.navigate')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.ctaSecondary} onPress={handleReportFailure} activeOpacity={0.7}>
+                  <View style={[$.ctaSecIcon, {backgroundColor: colors.danger + '12'}]}>
+                    <Icon name="alert-circle-outline" size={16} color={colors.danger} />
+                  </View>
+                  <Text style={[$.ctaSecTxt, {color: colors.danger}]}>{t('orderDetail.reportProblem')}</Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
 
-          {/* ── STATUS: accepted ── */}
+          {/* ── STATUS: accepted / confirmed ── */}
           {(status === 'accepted' || status === 'confirmed') && (
             <>
-              {/* Pickup Workflow */}
               <TouchableOpacity
-                style={[$.cta, {backgroundColor: '#1565C0'}]}
+                style={[$.ctaPrimary, {backgroundColor: '#1565C0'}]}
                 onPress={handlePickupOrder}
-                activeOpacity={0.75}>
-                <Icon name="package-variant" size={18} color="#FFF" />
-                <Text style={[$.ctaTxt, {marginStart: 8}]}>{t('orderDetail.pickUpFromClient')}</Text>
+                activeOpacity={0.85}>
+                <View style={$.ctaInner}>
+                  <View style={[$.ctaIconCircle, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
+                    <Icon name="package-variant" size={20} color="#FFF" />
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={$.ctaPrimaryTxt}>{t('orderDetail.pickUpFromClient')}</Text>
+                    <Text style={$.ctaSubTxt}>{t('orderDetail.navigateToPickup')}</Text>
+                  </View>
+                  <Icon name="arrow-right" size={22} color="#FFF" />
+                </View>
               </TouchableOpacity>
-              {/* Navigate to Pickup */}
-              <TouchableOpacity
-                style={$.ctaNav}
-                onPress={handleNavigateToSender}
-                activeOpacity={0.7}>
-                <Icon name="navigation-variant" size={17} color={colors.primary} />
-                <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToPickup')}</Text>
-                <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
-              </TouchableOpacity>
-              {/* Report Problem */}
-              <TouchableOpacity
-                style={$.ctaFail}
-                onPress={handleReportFailure}
-                activeOpacity={0.75}>
-                <Icon name="close-circle-outline" size={17} color={colors.danger} />
-                <Text style={$.ctaFailTxt}>{t('orderDetail.reportProblem')}</Text>
-              </TouchableOpacity>
+              <View style={$.ctaSecondaryRow}>
+                <TouchableOpacity style={$.ctaSecondary} onPress={handleNavigateToSender} activeOpacity={0.7}>
+                  <View style={[$.ctaSecIcon, {backgroundColor: colors.primary + '12'}]}>
+                    <Icon name="navigation-variant" size={16} color={colors.primary} />
+                  </View>
+                  <Text style={$.ctaSecTxt}>{t('orderDetail.navigate')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.ctaSecondary} onPress={handleReportFailure} activeOpacity={0.7}>
+                  <View style={[$.ctaSecIcon, {backgroundColor: colors.danger + '12'}]}>
+                    <Icon name="alert-circle-outline" size={16} color={colors.danger} />
+                  </View>
+                  <Text style={[$.ctaSecTxt, {color: colors.danger}]}>{t('orderDetail.reportProblem')}</Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
 
           {/* ── STATUS: picked_up ── */}
           {status === 'picked_up' && (
             <>
-              {/* Start Delivery — main CTA */}
               <TouchableOpacity
-                style={$.cta}
+                style={[$.ctaPrimary, {backgroundColor: '#0D7C66'}]}
                 onPress={handleStartDelivery}
                 disabled={isUpdatingStatus}
-                activeOpacity={0.75}>
+                activeOpacity={0.85}>
                 {isUpdatingStatus ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <>
-                    <Icon name="truck-fast-outline" size={18} color="#FFF" />
-                    <Text style={[$.ctaTxt, {marginStart: 8}]}>{t('orderDetail.startDelivery')}</Text>
-                  </>
+                  <View style={$.ctaInner}>
+                    <View style={[$.ctaIconCircle, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
+                      <Icon name="truck-fast-outline" size={20} color="#FFF" />
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={$.ctaPrimaryTxt}>{t('orderDetail.startDelivery')}</Text>
+                      <Text style={$.ctaSubTxt}>{t('orderDetail.navigateToRecipient')}</Text>
+                    </View>
+                    <Icon name="arrow-right" size={22} color="#FFF" />
+                  </View>
                 )}
               </TouchableOpacity>
-              {/* Navigate to Recipient */}
-              <TouchableOpacity
-                style={$.ctaNav}
-                onPress={handleNavigate}
-                activeOpacity={0.7}>
-                <Icon name="navigation-variant" size={17} color={colors.primary} />
-                <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToRecipient')}</Text>
-                <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
-              </TouchableOpacity>
-              {/* Contact Recipient */}
-              <View style={$.ctaContactRow}>
-                <TouchableOpacity style={$.ctaContactBtn} onPress={handleCall} activeOpacity={0.7}>
-                  <Icon name="phone-outline" size={16} color={colors.primary} />
-                  <Text style={$.ctaContactTxt}>{t('orderDetail.call')}</Text>
+              <View style={$.ctaQuickActions}>
+                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleNavigate} activeOpacity={0.7}>
+                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F4FD'}]}>
+                    <Icon name="navigation-variant" size={18} color="#1976D2" />
+                  </View>
+                  <Text style={[$.ctaQuickLabel, {color: '#1976D2'}]}>{t('orderDetail.navigate')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={$.ctaContactBtn} onPress={handleSMS} activeOpacity={0.7}>
-                  <Icon name="message-text-outline" size={16} color={colors.primary} />
-                  <Text style={$.ctaContactTxt}>{t('orderDetail.sms')}</Text>
+                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleCall} activeOpacity={0.7}>
+                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F5E9'}]}>
+                    <Icon name="phone-outline" size={18} color="#2E7D32" />
+                  </View>
+                  <Text style={[$.ctaQuickLabel, {color: '#2E7D32'}]}>{t('orderDetail.call')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={$.ctaContactBtn} onPress={handleWhatsApp} activeOpacity={0.7}>
-                  <Icon name="whatsapp" size={16} color="#25D366" />
-                  <Text style={[$.ctaContactTxt, {color: '#25D366'}]}>{t('orderDetail.whatsapp')}</Text>
+                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleWhatsApp} activeOpacity={0.7}>
+                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F5E9'}]}>
+                    <Icon name="whatsapp" size={18} color="#25D366" />
+                  </View>
+                  <Text style={[$.ctaQuickLabel, {color: '#25D366'}]}>{t('orderDetail.whatsapp')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleSMS} activeOpacity={0.7}>
+                  <View style={[$.ctaQuickIcon, {backgroundColor: '#FFF3E0'}]}>
+                    <Icon name="message-text-outline" size={18} color="#E65100" />
+                  </View>
+                  <Text style={[$.ctaQuickLabel, {color: '#E65100'}]}>{t('orderDetail.sms')}</Text>
                 </TouchableOpacity>
               </View>
-              {/* Return + Report row */}
               <View style={{flexDirection: 'row', gap: 10}}>
                 <TouchableOpacity
-                  style={[$.ctaFail, {flex: 1}]}
+                  style={[$.ctaOutline, {flex: 1, borderColor: colors.danger + '40'}]}
                   onPress={handleReportFailure}
-                  activeOpacity={0.75}>
-                  <Icon name="close-circle-outline" size={17} color={colors.danger} />
-                  <Text style={$.ctaFailTxt}>{t('orderDetail.reportFailure')}</Text>
+                  activeOpacity={0.7}>
+                  <Icon name="close-circle-outline" size={16} color={colors.danger} />
+                  <Text style={[$.ctaOutlineTxt, {color: colors.danger}]}>{t('orderDetail.reportFailure')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[$.ctaReturn, {flex: 1}]}
+                  style={[$.ctaOutline, {flex: 1, borderColor: colors.warning + '40'}]}
                   onPress={handleReturnOrder}
-                  activeOpacity={0.75}>
-                  <Icon name="keyboard-return" size={17} color={colors.warning} />
-                  <Text style={$.ctaReturnTxt}>{t('orderDetail.returnOrder')}</Text>
+                  activeOpacity={0.7}>
+                  <Icon name="keyboard-return" size={16} color={colors.warning} />
+                  <Text style={[$.ctaOutlineTxt, {color: colors.warning}]}>{t('orderDetail.returnOrder')}</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -1295,57 +1307,65 @@ const OrderDetailScreen = ({navigation, route}) => {
           {/* ── STATUS: in_transit ── */}
           {status === 'in_transit' && (
             <>
-              {/* Confirm Delivery — main CTA */}
               <TouchableOpacity
-                style={$.cta}
+                style={[$.ctaPrimary, {backgroundColor: '#15C7AE'}]}
                 onPress={handleConfirmDelivery}
-                activeOpacity={0.75}>
-                <Text style={$.ctaTxt}>
-                  {packages.length > 0
-                    ? t('orderDetail.deliverNextPkg', {count: packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length})
-                    : t('orderDetail.confirmDelivery')}
-                </Text>
-                <Icon name="arrow-right" size={18} color="#FFF" style={{marginStart: 8}} />
+                activeOpacity={0.85}>
+                <View style={$.ctaInner}>
+                  <View style={[$.ctaIconCircle, {backgroundColor: 'rgba(255,255,255,0.25)'}]}>
+                    <Icon name="check-circle-outline" size={20} color="#FFF" />
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={$.ctaPrimaryTxt}>
+                      {packages.length > 0
+                        ? t('orderDetail.deliverNextPkg', {count: packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length})
+                        : t('orderDetail.confirmDelivery')}
+                    </Text>
+                    <Text style={$.ctaSubTxt}>{t('orderDetail.navigateToRecipient')}</Text>
+                  </View>
+                  <Icon name="arrow-right" size={22} color="#FFF" />
+                </View>
               </TouchableOpacity>
-              {/* Navigate to Recipient */}
-              <TouchableOpacity
-                style={$.ctaNav}
-                onPress={handleNavigate}
-                activeOpacity={0.7}>
-                <Icon name="navigation-variant" size={17} color={colors.primary} />
-                <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToRecipient')}</Text>
-                <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
-              </TouchableOpacity>
-              {/* Contact Recipient */}
-              <View style={$.ctaContactRow}>
-                <TouchableOpacity style={$.ctaContactBtn} onPress={handleCall} activeOpacity={0.7}>
-                  <Icon name="phone-outline" size={16} color={colors.primary} />
-                  <Text style={$.ctaContactTxt}>{t('orderDetail.call')}</Text>
+              <View style={$.ctaQuickActions}>
+                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleNavigate} activeOpacity={0.7}>
+                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F4FD'}]}>
+                    <Icon name="navigation-variant" size={18} color="#1976D2" />
+                  </View>
+                  <Text style={[$.ctaQuickLabel, {color: '#1976D2'}]}>{t('orderDetail.navigate')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={$.ctaContactBtn} onPress={handleSMS} activeOpacity={0.7}>
-                  <Icon name="message-text-outline" size={16} color={colors.primary} />
-                  <Text style={$.ctaContactTxt}>{t('orderDetail.sms')}</Text>
+                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleCall} activeOpacity={0.7}>
+                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F5E9'}]}>
+                    <Icon name="phone-outline" size={18} color="#2E7D32" />
+                  </View>
+                  <Text style={[$.ctaQuickLabel, {color: '#2E7D32'}]}>{t('orderDetail.call')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={$.ctaContactBtn} onPress={handleWhatsApp} activeOpacity={0.7}>
-                  <Icon name="whatsapp" size={16} color="#25D366" />
-                  <Text style={[$.ctaContactTxt, {color: '#25D366'}]}>{t('orderDetail.whatsapp')}</Text>
+                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleWhatsApp} activeOpacity={0.7}>
+                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F5E9'}]}>
+                    <Icon name="whatsapp" size={18} color="#25D366" />
+                  </View>
+                  <Text style={[$.ctaQuickLabel, {color: '#25D366'}]}>{t('orderDetail.whatsapp')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleSMS} activeOpacity={0.7}>
+                  <View style={[$.ctaQuickIcon, {backgroundColor: '#FFF3E0'}]}>
+                    <Icon name="message-text-outline" size={18} color="#E65100" />
+                  </View>
+                  <Text style={[$.ctaQuickLabel, {color: '#E65100'}]}>{t('orderDetail.sms')}</Text>
                 </TouchableOpacity>
               </View>
-              {/* Return + Report row */}
               <View style={{flexDirection: 'row', gap: 10}}>
                 <TouchableOpacity
-                  style={[$.ctaFail, {flex: 1}]}
+                  style={[$.ctaOutline, {flex: 1, borderColor: colors.danger + '40'}]}
                   onPress={handleReportFailure}
-                  activeOpacity={0.75}>
-                  <Icon name="close-circle-outline" size={17} color={colors.danger} />
-                  <Text style={$.ctaFailTxt}>{t('orderDetail.reportFailure')}</Text>
+                  activeOpacity={0.7}>
+                  <Icon name="close-circle-outline" size={16} color={colors.danger} />
+                  <Text style={[$.ctaOutlineTxt, {color: colors.danger}]}>{t('orderDetail.reportFailure')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[$.ctaReturn, {flex: 1}]}
+                  style={[$.ctaOutline, {flex: 1, borderColor: colors.warning + '40'}]}
                   onPress={handleReturnOrder}
-                  activeOpacity={0.75}>
-                  <Icon name="keyboard-return" size={17} color={colors.warning} />
-                  <Text style={$.ctaReturnTxt}>{t('orderDetail.returnOrder')}</Text>
+                  activeOpacity={0.7}>
+                  <Icon name="keyboard-return" size={16} color={colors.warning} />
+                  <Text style={[$.ctaOutlineTxt, {color: colors.warning}]}>{t('orderDetail.returnOrder')}</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -1568,47 +1588,57 @@ const $ = StyleSheet.create({
   /* Bottom CTA */
   bottom: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: '#FFF', paddingHorizontal: 16, paddingTop: 12,
-    borderTopWidth: 1, borderTopColor: '#EEF1F5',
-    shadowColor: '#000', shadowOffset: {width: 0, height: -3}, shadowOpacity: 0.05, shadowRadius: 6,
+    backgroundColor: '#FFF', paddingHorizontal: 16, paddingTop: 14,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    shadowColor: '#000', shadowOffset: {width: 0, height: -4}, shadowOpacity: 0.08, shadowRadius: 12,
+    elevation: 12,
   },
-  ctaFail: {
-    height: 44, borderRadius: 12,
+  ctaPrimary: {
+    height: 56, backgroundColor: colors.primary, borderRadius: 16,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14,
+    shadowColor: '#000', shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.2, shadowRadius: 12,
+    elevation: 8, marginBottom: 10,
+  },
+  ctaInner: {
+    flexDirection: 'row', alignItems: 'center', flex: 1,
+  },
+  ctaIconCircle: {
+    width: 36, height: 36, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center', alignItems: 'center', marginEnd: 12,
+  },
+  ctaPrimaryTxt: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF', letterSpacing: 0.2},
+  ctaSubTxt: {fontFamily: fontFamily.regular, fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 1},
+  ctaSecondaryRow: {
+    flexDirection: 'row', gap: 10, marginBottom: 8,
+  },
+  ctaSecondary: {
+    flex: 1, height: 48, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#F5F7FA',
+  },
+  ctaSecIcon: {
+    width: 30, height: 30, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center', marginEnd: 8,
+  },
+  ctaSecTxt: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.primary},
+  ctaQuickActions: {
+    flexDirection: 'row', gap: 8, marginBottom: 10,
+  },
+  ctaQuickBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 8,
+  },
+  ctaQuickIcon: {
+    width: 40, height: 40, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 4,
+  },
+  ctaQuickLabel: {fontFamily: fontFamily.semiBold, fontSize: 10, textAlign: 'center'},
+  ctaOutline: {
+    height: 42, borderRadius: 12,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.danger, marginBottom: 8,
-    backgroundColor: '#FFF',
+    borderWidth: 1.5, marginBottom: 6, backgroundColor: '#FFF', gap: 6,
   },
-  ctaFailTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.danger, marginStart: 6},
-  ctaReturn: {
-    height: 44, borderRadius: 12,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.warning, marginBottom: 8,
-    backgroundColor: '#FFF',
-  },
-  ctaReturnTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.warning, marginStart: 6},
-  ctaContactRow: {
-    flexDirection: 'row', gap: 8, marginBottom: 8,
-  },
-  ctaContactBtn: {
-    flex: 1, height: 40, borderRadius: 10,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#F5F7FA', borderWidth: 1, borderColor: '#EEF1F5',
-  },
-  ctaContactTxt: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.primary, marginStart: 6},
-  ctaNav: {
-    height: 44, borderRadius: 12,
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.primary, marginBottom: 8,
-    backgroundColor: colors.primary + '08',
-    paddingHorizontal: 16,
-  },
-  ctaNavTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.primary, marginStart: 8},
-  cta: {
-    height: 50, backgroundColor: colors.primary, borderRadius: 14,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    shadowColor: colors.primary, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.25, shadowRadius: 8,
-  },
-  ctaTxt: {fontFamily: fontFamily.bold, fontSize: 14, color: '#FFF'},
+  ctaOutlineTxt: {fontFamily: fontFamily.semiBold, fontSize: 12},
 });
 
 export default OrderDetailScreen;

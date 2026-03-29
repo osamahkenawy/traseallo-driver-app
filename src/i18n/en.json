@@ -966,6 +966,7 @@
     "pending": "Pending",
     "confirmed": "Confirmed",
     "assigned": "Assigned",
+    "accepted": "Accepted",
     "picked_up": "Picked Up",
     "in_transit": "In Transit",
     "delivered": "Delivered",
