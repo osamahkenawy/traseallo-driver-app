@@ -23,7 +23,9 @@ import {useTranslation} from 'react-i18next';
 
 const InfoRow = ({icon, label, value}) => (
   <View style={s.infoRow}>
-    <Icon name={icon} size={16} color={colors.textMuted} />
+    <View style={s.infoIconWrap}>
+      <Icon name={icon} size={16} color={colors.textMuted} />
+    </View>
     <View style={{flex: 1}}>
       <Text style={s.infoLabel}>{label}</Text>
       <Text style={s.infoValue}>{value || '—'}</Text>
@@ -210,7 +212,9 @@ const PickupDetailScreen = ({navigation, route}) => {
                 <TouchableOpacity
                   style={s.infoRow}
                   onPress={() => Linking.openURL(`tel:${contactPhone}`)}>
-                  <Icon name="phone-outline" size={16} color={colors.info} />
+                  <View style={[s.infoIconWrap, {backgroundColor: colors.info + '15'}]}>
+                    <Icon name="phone-outline" size={16} color={colors.info} />
+                  </View>
                   <View style={{flex: 1}}>
                     <Text style={s.infoLabel}>{t('pickup.phone')}</Text>
                     <Text style={[s.infoValue, {color: colors.info}]}>{contactPhone}</Text>
@@ -363,11 +367,15 @@ const s = StyleSheet.create({
     backgroundColor: '#FFF', borderRadius: 14,
     borderWidth: 1, borderColor: '#EEF1F5', padding: 18, marginBottom: 12,
   },
-  cardTitle: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginBottom: 14},
-  infoRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 2},
-  infoLabel: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted},
-  infoValue: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, marginTop: 1},
-  sep: {height: 1, backgroundColor: '#EEF1F5', marginVertical: 10},
+  cardTitle: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginBottom: 16},
+  infoRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 14, paddingVertical: 4},
+  infoIconWrap: {
+    width: 32, height: 32, borderRadius: 10, backgroundColor: '#F0F3F8',
+    justifyContent: 'center', alignItems: 'center', marginTop: 2,
+  },
+  infoLabel: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginBottom: 3},
+  infoValue: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.textPrimary, lineHeight: 18},
+  sep: {height: 1, backgroundColor: '#EEF1F5', marginVertical: 12},
 
   notesTxt: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textSecondary, lineHeight: 19},
 
