@@ -62,7 +62,7 @@ const DashboardScreen = ({navigation}) => {
     if (activeFilter === 'All') return all;
     const filterMap = {
       Confirmed: ['confirmed'],
-      Assigned: ['assigned'],
+      Assigned: ['assigned', 'accepted'],
       'On Delivery': ['picked_up', 'in_transit'],
       Delivered: ['delivered'],
     };

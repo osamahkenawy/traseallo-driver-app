@@ -51,7 +51,7 @@ const useDashboard = () => {
   const activeOrders = useMemo(
     () =>
       orders?.filter(o =>
-        ['confirmed', 'assigned', 'picked_up', 'in_transit', 'delivered'].includes(o.status),
+        ['confirmed', 'assigned', 'accepted', 'picked_up', 'in_transit', 'delivered'].includes(o.status),
       ) || [],
     [orders],
   );
