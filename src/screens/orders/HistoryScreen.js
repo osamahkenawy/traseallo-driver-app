@@ -27,6 +27,7 @@ import {fontFamily} from '../../theme/fonts';
 import {useTranslation} from 'react-i18next';
 
 const STATUS_COLORS = {
+  accepted: '#1565C0',
   delivered: colors.success,
   failed: colors.danger,
   returned: colors.orange,
@@ -34,6 +35,7 @@ const STATUS_COLORS = {
 };
 
 const STATUS_ICONS = {
+  accepted: 'check-bold',
   delivered: 'check-circle-outline',
   failed: 'close-circle-outline',
   returned: 'undo-variant',

@@ -21,6 +21,7 @@ import {useTranslation} from 'react-i18next';
 
 const STATUS_COLORS = {
   pending: '#F39C12',
+  accepted: '#1565C0',
   arrived: '#3498DB',
   completed: '#27AE60',
   failed: '#E74C3C',

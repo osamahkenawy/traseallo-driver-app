@@ -8,6 +8,7 @@ export const ORDER_STATUS = {
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
   ASSIGNED: 'assigned',
+  ACCEPTED: 'accepted',
   PICKED_UP: 'picked_up',
   IN_TRANSIT: 'in_transit',
   DELIVERED: 'delivered',
@@ -19,6 +20,7 @@ export const ORDER_STATUS = {
 // Active statuses (orders currently in play)
 export const ACTIVE_STATUSES = [
   ORDER_STATUS.ASSIGNED,
+  ORDER_STATUS.ACCEPTED,
   ORDER_STATUS.PICKED_UP,
   ORDER_STATUS.IN_TRANSIT,
 ];
@@ -129,6 +131,7 @@ export const ORDER_STATUS_LABEL = {
   [ORDER_STATUS.PENDING]: 'Pending',
   [ORDER_STATUS.CONFIRMED]: 'Confirmed',
   [ORDER_STATUS.ASSIGNED]: 'Assigned',
+  [ORDER_STATUS.ACCEPTED]: 'Accepted',
   [ORDER_STATUS.PICKED_UP]: 'Picked Up',
   [ORDER_STATUS.IN_TRANSIT]: 'In Transit',
   [ORDER_STATUS.DELIVERED]: 'Delivered',

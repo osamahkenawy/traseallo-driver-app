@@ -12,6 +12,7 @@ import {fontFamily, fontSize} from '../../../theme/fonts';
 const STOP_COLORS = {
   pending: colors.primary,
   assigned: colors.primary,
+  accepted: '#1565C0',
   picked_up: colors.info,
   in_transit: colors.info,
   en_route: colors.info,

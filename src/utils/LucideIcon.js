@@ -20,6 +20,7 @@ import {
   BadgeCheck,
   CheckCheck,
   Check,
+  ChevronLeft,
   ChevronRight,
   ChevronUp,
   ChevronDown,
@@ -158,6 +159,7 @@ const ICON_MAP = {
   'check': Check,
 
   // Chevrons
+  'chevron-left': ChevronLeft,
   'chevron-right': ChevronRight,
   'chevron-up': ChevronUp,
   'chevron-down': ChevronDown,

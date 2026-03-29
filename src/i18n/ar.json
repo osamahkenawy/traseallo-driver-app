@@ -558,8 +558,16 @@
     "sms": "رسالة",
     "navigate": "توجيه",
     "navigateToRecipient": "التوجه إلى المستلم",
+    "navigateToPickup": "التوجه إلى نقطة الاستلام",
     "copy": "نسخ",
-    "orderNotFound": "الطلب غير موجود"
+    "orderNotFound": "الطلب غير موجود",
+    "acceptOrder": "قبول الطلب",
+    "orderAccepted": "تم قبول الطلب بنجاح",
+    "acceptFailed": "فشل في قبول الطلب",
+    "deliveryStarted": "بدأ التوصيل — في الطريق",
+    "startDeliveryFailed": "فشل في بدء التوصيل",
+    "returnOrder": "إرجاع الطلب",
+    "reportProblem": "الإبلاغ عن مشكلة"
   },
   "photoProof": {
     "title": "صور التسليم",

@@ -25,6 +25,7 @@ const TRIP_URL_FALLBACK = `${OSRM_SELF_HOSTED}/trip/v1/driving`;
  * OSRM returns geometry in this format by default (polyline precision 5).
  */
 function decodePolyline(encoded) {
+  if (typeof encoded !== 'string' || encoded.length === 0) return [];
   const coords = [];
   let index = 0;
   let lat = 0;
@@ -53,6 +54,30 @@ function decodePolyline(encoded) {
     coords.push({latitude: lat / 1e5, longitude: lng / 1e5});
   }
   return coords;
+}
+
+/**
+ * Parse route geometry from OSRM — handles both encoded polyline strings
+ * and GeoJSON geometry objects ({type: "LineString", coordinates: [[lng,lat], ...]}).
+ */
+function parseGeometry(geometry) {
+  if (typeof geometry === 'string') {
+    return decodePolyline(geometry);
+  }
+  // GeoJSON LineString format
+  if (geometry && Array.isArray(geometry.coordinates)) {
+    return geometry.coordinates
+      .map(c => ({latitude: c[1], longitude: c[0]}))
+      .filter(c => Number.isFinite(c.latitude) && Number.isFinite(c.longitude));
+  }
+  // Raw coordinate array [[lng,lat], ...]
+  if (Array.isArray(geometry)) {
+    return geometry
+      .map(c => ({latitude: c[1] ?? c.lat ?? c.latitude, longitude: c[0] ?? c.lng ?? c.longitude}))
+      .filter(c => Number.isFinite(c.latitude) && Number.isFinite(c.longitude));
+  }
+  if (__DEV__) console.warn('[routing] Unknown geometry format:', typeof geometry, geometry);
+  return [];
 }
 
 /**
@@ -98,7 +123,12 @@ export async function fetchRoadRoute(waypoints, options = {}) {
       }
 
       const route = json.routes[0];
-      const coordinates = decodePolyline(route.geometry);
+      const coordinates = parseGeometry(route.geometry);
+
+      if (coordinates.length < 2) {
+        if (__DEV__) console.warn('[routing] fetchRoadRoute: decoded geometry has <2 points, format:', typeof route.geometry);
+        continue;
+      }
 
       return {
         coordinates,
@@ -183,7 +213,12 @@ export async function fetchNavigationRoute(origin, dest, options = {}) {
       if (json.code !== 'Ok' || !json.routes || json.routes.length === 0) continue;
 
       const route = json.routes[0];
-      const coordinates = decodePolyline(route.geometry);
+      const coordinates = parseGeometry(route.geometry);
+
+      if (coordinates.length < 2) {
+        if (__DEV__) console.warn('[routing] fetchNavigationRoute: decoded geometry has <2 points, format:', typeof route.geometry);
+        continue;
+      }
 
       // Extract human-readable steps
       const steps = [];
@@ -252,7 +287,12 @@ export async function fetchOptimizedRoute(waypoints, options = {}) {
       }
 
       const trip = json.trips[0];
-      const coordinates = decodePolyline(trip.geometry);
+      const coordinates = parseGeometry(trip.geometry);
+
+      if (coordinates.length < 2) {
+        if (__DEV__) console.warn('[routing] fetchOptimizedRoute: decoded geometry has <2 points, format:', typeof trip.geometry);
+        continue;
+      }
 
       const optimizedOrder = (json.waypoints || [])
         .sort((a, b) => a.trips_index - b.trips_index || a.waypoint_index - b.waypoint_index)

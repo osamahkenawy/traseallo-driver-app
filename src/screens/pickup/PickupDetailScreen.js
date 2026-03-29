@@ -37,7 +37,10 @@ const PickupDetailScreen = ({navigation, route}) => {
   const pickup = route.params?.pickup || {};
   const {enRoute, markArrived, confirmPickup, failPickup, isActing} = usePickupStore();
 
-  const [status, setStatus] = useState(pickup.status || 'pending');
+  // Normalize status — API uses pickup_status, OrderDetail passes status
+  const [status, setStatus] = useState(
+    pickup.status || pickup.pickup_status || 'pending',
+  );
   const [actionLoading, setActionLoading] = useState(false);
   const [failReason, setFailReason] = useState('');
   const [showFail, setShowFail] = useState(false);
@@ -46,6 +49,17 @@ const PickupDetailScreen = ({navigation, route}) => {
   const statusColor = getStatusColor(status);
   const formatLabel = (st) =>
     t('status.' + (st || 'pending'), (st || 'pending'));
+
+  // Normalize field names — handle both order fields and dedicated pickup fields
+  const merchantName = pickup.merchant_name || pickup.store_name || pickup.sender_name || pickup.client_name;
+  const pickupAddress = pickup.pickup_address || pickup.address || pickup.sender_address;
+  const pickupLat = pickup.latitude || pickup.lat || pickup.sender_lat;
+  const pickupLng = pickup.longitude || pickup.lng || pickup.sender_lng;
+  const scheduledAt = pickup.scheduled_at || pickup.pickup_scheduled_at;
+  const packageCount = pickup.package_count || pickup.order_count || pickup.total_packages || pickup.items?.length || 0;
+  const contactName = pickup.contact_name || pickup.sender_name;
+  const contactPhone = pickup.contact_phone || pickup.sender_phone;
+  const notes = pickup.notes || pickup.pickup_notes || pickup.special_instructions;
 
   const handleEnRoute = async () => {
     setActionLoading(true);
@@ -113,19 +127,16 @@ const PickupDetailScreen = ({navigation, route}) => {
   };
 
   const handleNavigate = () => {
-    const addr = pickup.pickup_address || pickup.address;
-    const lat = pickup.latitude || pickup.lat;
-    const lng = pickup.longitude || pickup.lng;
-    if (lat && lng) {
-      Linking.openURL(`https://maps.apple.com/?daddr=${lat},${lng}`);
-    } else if (addr) {
-      Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(addr)}`);
+    if (pickupLat && pickupLng) {
+      Linking.openURL(`https://maps.apple.com/?daddr=${pickupLat},${pickupLng}`);
+    } else if (pickupAddress) {
+      Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(pickupAddress)}`);
     } else {
       Alert.alert(t('pickup.noAddress'), t('pickup.noLocationAvailable'));
     }
   };
 
-  const isTerminal = status === 'picked_up' || status === 'completed' || status === 'failed';
+  const isTerminal = status === 'picked_up' || status === 'completed' || status === 'failed' || status === 'pickup_failed';
 
   return (
     <View style={[s.root, {paddingTop: ins.top}]}>
@@ -144,6 +155,9 @@ const PickupDetailScreen = ({navigation, route}) => {
             <Icon name="package-variant" size={14} color={statusColor} />
             <Text style={[s.statusText, {color: statusColor}]}>{formatLabel(status)}</Text>
           </View>
+          {pickup.order_number ? (
+            <Text style={s.orderNum}>#{pickup.order_number}</Text>
+          ) : null}
         </View>
 
         {/* Pickup Info Card */}
@@ -152,21 +166,21 @@ const PickupDetailScreen = ({navigation, route}) => {
           <InfoRow
             icon="store-outline"
             label={t('pickup.merchant')}
-            value={pickup.merchant_name || pickup.store_name}
+            value={merchantName}
           />
           <View style={s.sep} />
           <InfoRow
             icon="map-marker-outline"
             label={t('pickup.address')}
-            value={pickup.pickup_address || pickup.address}
+            value={pickupAddress}
           />
           <View style={s.sep} />
           <InfoRow
             icon="clock-outline"
             label={t('pickup.scheduled')}
             value={
-              pickup.scheduled_at
-                ? new Date(pickup.scheduled_at).toLocaleString(i18n.language === 'ar' ? 'ar-AE' : 'en-AE', {
+              scheduledAt
+                ? new Date(scheduledAt).toLocaleString(i18n.language === 'ar' ? 'ar-AE' : 'en-AE', {
                     day: 'numeric',
                     month: 'short',
                     hour: '2-digit',
@@ -179,27 +193,27 @@ const PickupDetailScreen = ({navigation, route}) => {
           <InfoRow
             icon="package-variant"
             label={t('pickup.packages')}
-            value={`${pickup.package_count || pickup.order_count || pickup.items?.length || 0} ${t('pickup.items')}`}
+            value={`${packageCount} ${t('pickup.items')}`}
           />
         </View>
 
         {/* Contact Card */}
-        {(pickup.contact_name || pickup.contact_phone) ? (
+        {(contactName || contactPhone) ? (
           <View style={s.card}>
             <Text style={s.cardTitle}>{t('pickup.contact')}</Text>
-            {pickup.contact_name && (
-              <InfoRow icon="account-outline" label={t('pickup.name')} value={pickup.contact_name} />
+            {contactName && (
+              <InfoRow icon="account-outline" label={t('pickup.name')} value={contactName} />
             )}
-            {pickup.contact_phone && (
+            {contactPhone && (
               <>
                 <View style={s.sep} />
                 <TouchableOpacity
                   style={s.infoRow}
-                  onPress={() => Linking.openURL(`tel:${pickup.contact_phone}`)}>
+                  onPress={() => Linking.openURL(`tel:${contactPhone}`)}>
                   <Icon name="phone-outline" size={16} color={colors.info} />
                   <View style={{flex: 1}}>
                     <Text style={s.infoLabel}>{t('pickup.phone')}</Text>
-                    <Text style={[s.infoValue, {color: colors.info}]}>{pickup.contact_phone}</Text>
+                    <Text style={[s.infoValue, {color: colors.info}]}>{contactPhone}</Text>
                   </View>
                 </TouchableOpacity>
               </>
@@ -208,10 +222,10 @@ const PickupDetailScreen = ({navigation, route}) => {
         ) : null}
 
         {/* Notes */}
-        {pickup.notes ? (
+        {notes ? (
           <View style={s.card}>
             <Text style={s.cardTitle}>{t('pickup.notes')}</Text>
-            <Text style={s.notesTxt}>{pickup.notes}</Text>
+            <Text style={s.notesTxt}>{notes}</Text>
           </View>
         ) : null}
 
@@ -252,7 +266,7 @@ const PickupDetailScreen = ({navigation, route}) => {
       {/* Bottom CTAs */}
       {!isTerminal && (
         <View style={[s.bottom, {paddingBottom: ins.bottom + 10}]}>
-          {status === 'pending' || status === 'assigned' ? (
+          {status === 'pending' || status === 'assigned' || status === 'none' || status === 'pending_pickup' || status === 'pickup_scheduled' ? (
             /* Step 1: Navigate  +  En Route */
             <View style={{gap: 10}}>
               <TouchableOpacity style={s.navBtn} onPress={handleNavigate} activeOpacity={0.8}>
@@ -337,12 +351,13 @@ const s = StyleSheet.create({
   hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 160},
 
-  statusRow: {alignItems: 'flex-start', marginBottom: 14},
+  statusRow: {alignItems: 'flex-start', marginBottom: 14, gap: 6},
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
   },
   statusText: {fontFamily: fontFamily.semiBold, fontSize: 12},
+  orderNum: {fontFamily: fontFamily.medium, fontSize: 12, color: colors.textMuted},
 
   card: {
     backgroundColor: '#FFF', borderRadius: 14,

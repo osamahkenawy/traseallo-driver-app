@@ -266,7 +266,7 @@ const MapScreen = ({navigation}) => {
     } else {
       // Fallback to active orders
       stops = orders
-        .filter((o) => ['assigned', 'picked_up', 'in_transit'].includes(o.status))
+        .filter((o) => ['assigned', 'accepted', 'picked_up', 'in_transit'].includes(o.status))
         .filter((o) => isValidCoord(toNum(o.recipient_lat), toNum(o.recipient_lng)))
         .map((o) => ({
           ...o,
@@ -324,7 +324,7 @@ const MapScreen = ({navigation}) => {
   const storedPolyline = useMemo(() => {
     // Look for route_polyline in any active order
     const activeOrders = orders.filter((o) =>
-      ['assigned', 'picked_up', 'in_transit'].includes(o.status),
+      ['assigned', 'accepted', 'picked_up', 'in_transit'].includes(o.status),
     );
     // For single active order, use its stored polyline directly
     if (activeOrders.length === 1 && activeOrders[0].route_polyline) {
@@ -418,7 +418,7 @@ const MapScreen = ({navigation}) => {
 
   // ── Stats ───────────────────────────────────
   const activeCount = useMemo(
-    () => orders.filter((o) => ['assigned', 'picked_up', 'in_transit'].includes(o.status)).length,
+    () => orders.filter((o) => ['assigned', 'accepted', 'picked_up', 'in_transit'].includes(o.status)).length,
     [orders],
   );
   const assignedCount = useMemo(
@@ -518,6 +518,10 @@ const MapScreen = ({navigation}) => {
   const handleStartOneOrder = useCallback(
     async (order) => {
       if (!currentPosition) return;
+      if (!['picked_up'].includes(order.status)) {
+        Alert.alert(t('common.error'), t('map.pickupRequiredFirst', 'Pickup must be completed before starting delivery.'));
+        return;
+      }
       const result = await startDelivery(order.id, {
         lat: currentPosition.latitude,
         lng: currentPosition.longitude,
@@ -534,8 +538,14 @@ const MapScreen = ({navigation}) => {
   const handleStartAllOrders = useCallback(
     async (orderedList) => {
       if (!currentPosition) return;
+      // Filter to only picked_up orders
+      const eligible = orderedList.filter(o => o.status === 'picked_up');
+      if (eligible.length === 0) {
+        Alert.alert(t('common.error'), t('map.pickupRequiredFirst', 'Pickup must be completed before starting delivery.'));
+        return;
+      }
       const results = await Promise.all(
-        orderedList.map((o) =>
+        eligible.map((o) =>
           startDelivery(o.id, {
             lat: currentPosition.latitude,
             lng: currentPosition.longitude,

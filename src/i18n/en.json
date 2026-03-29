@@ -558,8 +558,16 @@
     "sms": "SMS",
     "navigate": "Navigate",
     "navigateToRecipient": "Navigate to Recipient",
+    "navigateToPickup": "Navigate to Pickup",
     "copy": "Copy",
-    "orderNotFound": "Order not found"
+    "orderNotFound": "Order not found",
+    "acceptOrder": "Accept Order",
+    "orderAccepted": "Order accepted successfully",
+    "acceptFailed": "Failed to accept order",
+    "deliveryStarted": "Delivery started — out for delivery",
+    "startDeliveryFailed": "Failed to start delivery",
+    "returnOrder": "Return Order",
+    "reportProblem": "Report Problem"
   },
   "photoProof": {
     "title": "Delivery Photos",

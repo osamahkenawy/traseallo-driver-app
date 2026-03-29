@@ -23,6 +23,7 @@ import {useTranslation} from 'react-i18next';
 const STATUS_ICONS = {
   pending: 'clock-outline',
   assigned: 'account-arrow-right-outline',
+  accepted: 'check-bold',
   arrived: 'map-marker-check-outline',
   picked_up: 'package-variant-closed-check',
   completed: 'check-circle-outline',

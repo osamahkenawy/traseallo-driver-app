@@ -31,8 +31,20 @@ import PhotoProofGrid from '../../components/PhotoProofGrid';
 const DeliveryConfirmScreen = ({navigation, route}) => {
   const {t} = useTranslation();
   const ins = useSafeAreaInsets();
-  const {token, orderId, codAmount = 0} = route.params || {};
+  const {token, orderId, codAmount = 0, orderStatus} = route.params || {};
   const hasCod = Number(codAmount) > 0;
+
+  // Guard: only allow delivery if order is picked_up or in_transit
+  React.useEffect(() => {
+    if (orderStatus && !['picked_up', 'in_transit'].includes(orderStatus)) {
+      Alert.alert(
+        t('deliveryConfirm.error'),
+        t('deliveryConfirm.pickupRequired', 'Pickup must be completed before confirming delivery.'),
+        [{text: t('common.ok'), onPress: () => navigation.goBack()}],
+      );
+    }
+  }, [orderStatus]);
+
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);

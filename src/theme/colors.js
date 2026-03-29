@@ -85,12 +85,20 @@ export const getStatusColor = (status) => {
     pending: colors.statusPending,
     confirmed: colors.statusConfirmed,
     assigned: colors.statusAssigned,
+    accepted: '#1565C0',
     picked_up: colors.statusPickedUp,
     in_transit: colors.statusInTransit,
     delivered: colors.statusDelivered,
     failed: colors.statusFailed,
     returned: colors.statusReturned,
     cancelled: colors.statusCancelled,
+    // Pickup-specific statuses
+    none: colors.textMuted,
+    pending_pickup: colors.statusPending,
+    pickup_scheduled: '#1565C0',
+    en_route: colors.statusInTransit,
+    at_pickup: '#FB8C00',
+    pickup_failed: colors.statusFailed,
   };
   return map[status] || colors.textMuted;
 };

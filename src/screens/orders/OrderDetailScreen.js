@@ -29,12 +29,13 @@ import {showMessage} from 'react-native-flash-message';
 import {useTranslation} from 'react-i18next';
 
 /* ── Helpers ──────────────────────────────────────────────── */
-const STATUS_FLOW = ['pending', 'confirmed', 'assigned', 'picked_up', 'in_transit', 'delivered'];
+const STATUS_FLOW = ['pending', 'confirmed', 'assigned', 'accepted', 'picked_up', 'in_transit', 'delivered'];
 // STATUS_LABELS now uses t('status.*') inside component
 const STATUS_ICONS = {
   pending: 'clock-outline',
   confirmed: 'check-circle-outline',
   assigned: 'account-check-outline',
+  accepted: 'check-decagram',
   picked_up: 'package-variant',
   in_transit: 'truck-fast-outline',
   delivered: 'check-decagram',
@@ -103,6 +104,8 @@ const OrderDetailScreen = ({navigation, route}) => {
   const fetchPackages = useOrderStore(st => st.fetchPackages);
   const clearPackages = useOrderStore(st => st.clearPackages);
   const startDeliveryAction = useOrderStore(st => st.startDelivery);
+  const acceptOrderAction = useOrderStore(st => st.acceptOrder);
+  const returnOrderAction = useOrderStore(st => st.returnOrder);
   const isUpdatingStatus = useOrderStore(st => st.isUpdatingStatus);
   const storeError = useOrderStore(st => st.error);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,7 +119,7 @@ const OrderDetailScreen = ({navigation, route}) => {
   const status = order?.status || 'assigned';
   const stops = order?.stops || [];
   const isPickedUp = ['picked_up', 'in_transit', 'delivered'].includes(status);
-  const needsPickup = status === 'assigned' || status === 'confirmed';
+  const needsPickup = status === 'assigned' || status === 'confirmed' || status === 'accepted';
 
   // Resolve order ID — prefer param, fallback to loaded order
   const resolvedOrderId = orderIdParam || order?.id;
@@ -261,28 +264,102 @@ const OrderDetailScreen = ({navigation, route}) => {
     Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(sAddr)}`);
   }, [order]);
 
+  const handleAcceptOrder = useCallback(async () => {
+    if (!resolvedOrderId) return;
+    const result = await acceptOrderAction(resolvedOrderId);
+    if (result.success) {
+      showMessage({message: t('orderDetail.orderAccepted'), type: 'success'});
+      fetchOrderDetail(resolvedOrderId);
+    } else {
+      Alert.alert(t('common.error'), result.error || t('orderDetail.acceptFailed'));
+    }
+  }, [resolvedOrderId, acceptOrderAction, fetchOrderDetail]);
+
+  const handleStartDelivery = useCallback(async () => {
+    if (!resolvedOrderId) return;
+    const result = await startDeliveryAction(resolvedOrderId);
+    if (result.success) {
+      showMessage({message: t('orderDetail.deliveryStarted'), type: 'success'});
+      fetchOrderDetail(resolvedOrderId);
+    } else {
+      Alert.alert(t('common.error'), result.error || t('orderDetail.startDeliveryFailed'));
+    }
+  }, [resolvedOrderId, startDeliveryAction, fetchOrderDetail]);
+
+  const handleReturnOrder = useCallback(() => {
+    navigation.navigate(routeNames.ReturnOrder, {token: tkn, orderId: order?.id});
+  }, [navigation, order, tkn]);
+
+  const handleReportFailure = useCallback(() => {
+    if (packages.length > 0 && (status === 'in_transit' || status === 'picked_up')) {
+      const undelivered = packages.find(
+        p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status),
+      );
+      if (undelivered) {
+        navigation.navigate(routeNames.PackageFail, {
+          packageId: undelivered.id,
+          orderId: order?.id,
+          token: tkn,
+          barcode: undelivered.barcode,
+          recipientName: undelivered.recipient_name,
+        });
+        return;
+      }
+    }
+    navigation.navigate(routeNames.FailureReport, {token: tkn, orderId: order?.id});
+  }, [navigation, order, tkn, packages, status]);
+
+  const handleConfirmDelivery = useCallback(() => {
+    if (packages.length > 0) {
+      const undelivered = packages.find(
+        p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status),
+      );
+      if (undelivered) {
+        navigation.navigate(routeNames.PackageDeliver, {
+          packageId: undelivered.id,
+          orderId: order?.id,
+          token: tkn,
+          codAmount: undelivered.cod_amount || 0,
+          recipientName: undelivered.recipient_name,
+          recipientAddress: undelivered.recipient_address,
+          barcode: undelivered.barcode,
+        });
+        return;
+      }
+    }
+    navigation.navigate(routeNames.DeliveryConfirm, {
+      token: tkn,
+      orderId: order?.id,
+      codAmount: order?.cod_amount || 0,
+      orderStatus: status,
+    });
+  }, [navigation, order, tkn, packages, status]);
+
   const handlePickupOrder = useCallback(async () => {
-    Alert.alert(
-      t('orderDetail.confirmPickup'),
-      t('orderDetail.confirmPickupMsg', {sender: order?.sender_name || 'sender'}),
-      [
-        {text: t('common.cancel'), style: 'cancel'},
-        {
-          text: t('orderDetail.confirmPickupBtn'),
-          onPress: async () => {
-            if (!resolvedOrderId) return;
-            const result = await startDeliveryAction(resolvedOrderId, {});
-            if (result.success) {
-              showMessage({message: t('orderDetail.orderPickedUp'), description: t('orderDetail.orderPickedUpDesc'), type: 'success'});
-              fetchOrderDetail(resolvedOrderId);
-            } else {
-              Alert.alert(t('orderDetail.error'), result.error || t('orderDetail.failedToUpdate'));
-            }
-          },
-        },
-      ],
-    );
-  }, [order, resolvedOrderId, startDeliveryAction, fetchOrderDetail]);
+    // Navigate to the proper pickup workflow screen
+    navigation.navigate(routeNames.PickupDetail, {
+      pickup: {
+        id: resolvedOrderId,
+        order_id: resolvedOrderId,
+        order_number: order?.order_number,
+        status: order?.pickup_status || 'pending',
+        sender_name: order?.sender_name,
+        sender_phone: order?.sender_phone,
+        sender_address: order?.sender_address,
+        sender_lat: order?.sender_lat,
+        sender_lng: order?.sender_lng,
+        recipient_name: order?.recipient_name,
+        recipient_address: order?.recipient_address,
+        pickup_notes: order?.pickup_notes,
+        pickup_scheduled_at: order?.pickup_scheduled_at,
+        client_name: order?.client_name,
+        category: order?.category,
+        total_packages: order?.total_packages,
+        weight_kg: order?.weight_kg,
+        description: order?.description,
+      },
+    });
+  }, [order, resolvedOrderId, navigation]);
 
   const handleNavigateToStop = useCallback((stop) => {
     if (stop?.lat && stop?.lng) {
@@ -1081,100 +1158,199 @@ const OrderDetailScreen = ({navigation, route}) => {
       </ScrollView>
 
       {/* ── Bottom CTA ── */}
-      {(status === 'assigned' || status === 'confirmed' || status === 'picked_up' || status === 'in_transit') && (
+      {(status === 'assigned' || status === 'accepted' || status === 'confirmed' || status === 'picked_up' || status === 'in_transit') && (
         <View style={[$.bottom, {paddingBottom: ins.bottom + 10}]}>
-          {/* Navigate to recipient — shown after pickup */}
-          {!needsPickup && (
-            <TouchableOpacity
-              style={$.ctaNav}
-              onPress={handleNavigate}
-              activeOpacity={0.7}>
-              <Icon name="navigation-variant" size={17} color={colors.primary} />
-              <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToRecipient')}</Text>
-              <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
-            </TouchableOpacity>
+
+          {/* ── STATUS: assigned ── */}
+          {status === 'assigned' && (
+            <>
+              {/* Accept Order */}
+              <TouchableOpacity
+                style={$.cta}
+                onPress={handleAcceptOrder}
+                disabled={isUpdatingStatus}
+                activeOpacity={0.75}>
+                {isUpdatingStatus ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <>
+                    <Icon name="check-decagram" size={18} color="#FFF" />
+                    <Text style={[$.ctaTxt, {marginStart: 8}]}>{t('orderDetail.acceptOrder')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              {/* Navigate to Pickup */}
+              <TouchableOpacity
+                style={$.ctaNav}
+                onPress={handleNavigateToSender}
+                activeOpacity={0.7}>
+                <Icon name="navigation-variant" size={17} color={colors.primary} />
+                <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToPickup')}</Text>
+                <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
+              </TouchableOpacity>
+              {/* Report Problem */}
+              <TouchableOpacity
+                style={$.ctaFail}
+                onPress={handleReportFailure}
+                activeOpacity={0.75}>
+                <Icon name="close-circle-outline" size={17} color={colors.danger} />
+                <Text style={$.ctaFailTxt}>{t('orderDetail.reportProblem')}</Text>
+              </TouchableOpacity>
+            </>
           )}
 
-          {/* Report Failure button for in_transit */}
+          {/* ── STATUS: accepted ── */}
+          {(status === 'accepted' || status === 'confirmed') && (
+            <>
+              {/* Pickup Workflow */}
+              <TouchableOpacity
+                style={[$.cta, {backgroundColor: '#1565C0'}]}
+                onPress={handlePickupOrder}
+                activeOpacity={0.75}>
+                <Icon name="package-variant" size={18} color="#FFF" />
+                <Text style={[$.ctaTxt, {marginStart: 8}]}>{t('orderDetail.pickUpFromClient')}</Text>
+              </TouchableOpacity>
+              {/* Navigate to Pickup */}
+              <TouchableOpacity
+                style={$.ctaNav}
+                onPress={handleNavigateToSender}
+                activeOpacity={0.7}>
+                <Icon name="navigation-variant" size={17} color={colors.primary} />
+                <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToPickup')}</Text>
+                <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
+              </TouchableOpacity>
+              {/* Report Problem */}
+              <TouchableOpacity
+                style={$.ctaFail}
+                onPress={handleReportFailure}
+                activeOpacity={0.75}>
+                <Icon name="close-circle-outline" size={17} color={colors.danger} />
+                <Text style={$.ctaFailTxt}>{t('orderDetail.reportProblem')}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* ── STATUS: picked_up ── */}
+          {status === 'picked_up' && (
+            <>
+              {/* Start Delivery — main CTA */}
+              <TouchableOpacity
+                style={$.cta}
+                onPress={handleStartDelivery}
+                disabled={isUpdatingStatus}
+                activeOpacity={0.75}>
+                {isUpdatingStatus ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <>
+                    <Icon name="truck-fast-outline" size={18} color="#FFF" />
+                    <Text style={[$.ctaTxt, {marginStart: 8}]}>{t('orderDetail.startDelivery')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              {/* Navigate to Recipient */}
+              <TouchableOpacity
+                style={$.ctaNav}
+                onPress={handleNavigate}
+                activeOpacity={0.7}>
+                <Icon name="navigation-variant" size={17} color={colors.primary} />
+                <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToRecipient')}</Text>
+                <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
+              </TouchableOpacity>
+              {/* Contact Recipient */}
+              <View style={$.ctaContactRow}>
+                <TouchableOpacity style={$.ctaContactBtn} onPress={handleCall} activeOpacity={0.7}>
+                  <Icon name="phone-outline" size={16} color={colors.primary} />
+                  <Text style={$.ctaContactTxt}>{t('orderDetail.call')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.ctaContactBtn} onPress={handleSMS} activeOpacity={0.7}>
+                  <Icon name="message-text-outline" size={16} color={colors.primary} />
+                  <Text style={$.ctaContactTxt}>{t('orderDetail.sms')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.ctaContactBtn} onPress={handleWhatsApp} activeOpacity={0.7}>
+                  <Icon name="whatsapp" size={16} color="#25D366" />
+                  <Text style={[$.ctaContactTxt, {color: '#25D366'}]}>{t('orderDetail.whatsapp')}</Text>
+                </TouchableOpacity>
+              </View>
+              {/* Return + Report row */}
+              <View style={{flexDirection: 'row', gap: 10}}>
+                <TouchableOpacity
+                  style={[$.ctaFail, {flex: 1}]}
+                  onPress={handleReportFailure}
+                  activeOpacity={0.75}>
+                  <Icon name="close-circle-outline" size={17} color={colors.danger} />
+                  <Text style={$.ctaFailTxt}>{t('orderDetail.reportFailure')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[$.ctaReturn, {flex: 1}]}
+                  onPress={handleReturnOrder}
+                  activeOpacity={0.75}>
+                  <Icon name="keyboard-return" size={17} color={colors.warning} />
+                  <Text style={$.ctaReturnTxt}>{t('orderDetail.returnOrder')}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+
+          {/* ── STATUS: in_transit ── */}
           {status === 'in_transit' && (
-            <TouchableOpacity
-              style={$.ctaFail}
-              onPress={() => {
-                if (packages.length > 0) {
-                  const undelivered = packages.find(
-                    p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status),
-                  );
-                  if (undelivered) {
-                    navigation.navigate(routeNames.PackageFail, {
-                      packageId: undelivered.id,
-                      orderId: order?.id,
-                      token: tkn,
-                      barcode: undelivered.barcode,
-                      recipientName: undelivered.recipient_name,
-                    });
-                    return;
-                  }
-                }
-                navigation.navigate(routeNames.FailureReport, {token: tkn, orderId: order?.id});
-              }}
-              activeOpacity={0.75}>
-              <Icon name="close-circle-outline" size={17} color={colors.danger} />
-              <Text style={$.ctaFailTxt}>{t('orderDetail.reportFailure')}</Text>
-            </TouchableOpacity>
+            <>
+              {/* Confirm Delivery — main CTA */}
+              <TouchableOpacity
+                style={$.cta}
+                onPress={handleConfirmDelivery}
+                activeOpacity={0.75}>
+                <Text style={$.ctaTxt}>
+                  {packages.length > 0
+                    ? t('orderDetail.deliverNextPkg', {count: packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length})
+                    : t('orderDetail.confirmDelivery')}
+                </Text>
+                <Icon name="arrow-right" size={18} color="#FFF" style={{marginStart: 8}} />
+              </TouchableOpacity>
+              {/* Navigate to Recipient */}
+              <TouchableOpacity
+                style={$.ctaNav}
+                onPress={handleNavigate}
+                activeOpacity={0.7}>
+                <Icon name="navigation-variant" size={17} color={colors.primary} />
+                <Text style={$.ctaNavTxt}>{t('orderDetail.navigateToRecipient')}</Text>
+                <Icon name="chevron-right" size={16} color={colors.primary} style={{marginStart: 'auto'}} />
+              </TouchableOpacity>
+              {/* Contact Recipient */}
+              <View style={$.ctaContactRow}>
+                <TouchableOpacity style={$.ctaContactBtn} onPress={handleCall} activeOpacity={0.7}>
+                  <Icon name="phone-outline" size={16} color={colors.primary} />
+                  <Text style={$.ctaContactTxt}>{t('orderDetail.call')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.ctaContactBtn} onPress={handleSMS} activeOpacity={0.7}>
+                  <Icon name="message-text-outline" size={16} color={colors.primary} />
+                  <Text style={$.ctaContactTxt}>{t('orderDetail.sms')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.ctaContactBtn} onPress={handleWhatsApp} activeOpacity={0.7}>
+                  <Icon name="whatsapp" size={16} color="#25D366" />
+                  <Text style={[$.ctaContactTxt, {color: '#25D366'}]}>{t('orderDetail.whatsapp')}</Text>
+                </TouchableOpacity>
+              </View>
+              {/* Return + Report row */}
+              <View style={{flexDirection: 'row', gap: 10}}>
+                <TouchableOpacity
+                  style={[$.ctaFail, {flex: 1}]}
+                  onPress={handleReportFailure}
+                  activeOpacity={0.75}>
+                  <Icon name="close-circle-outline" size={17} color={colors.danger} />
+                  <Text style={$.ctaFailTxt}>{t('orderDetail.reportFailure')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[$.ctaReturn, {flex: 1}]}
+                  onPress={handleReturnOrder}
+                  activeOpacity={0.75}>
+                  <Icon name="keyboard-return" size={17} color={colors.warning} />
+                  <Text style={$.ctaReturnTxt}>{t('orderDetail.returnOrder')}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
 
-          {/* Main CTA — changes based on pickup-first workflow */}
-          {needsPickup ? (
-            /* STEP 1: Pick Up Order from Sender */
-            <TouchableOpacity
-              style={[$.cta, {backgroundColor: '#1565C0'}]}
-              onPress={handlePickupOrder}
-              disabled={isUpdatingStatus}
-              activeOpacity={0.75}>
-              <Icon name="package-variant" size={18} color="#FFF" />
-              <Text style={[$.ctaTxt, {marginStart: 8}]}>
-                {isUpdatingStatus ? t('orderDetail.pickingUp') : t('orderDetail.pickUpFromClient')}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            /* STEP 2: Deliver packages / stops */
-            <TouchableOpacity
-              style={$.cta}
-              onPress={() => {
-                if (packages.length > 0 && (status === 'in_transit' || status === 'picked_up')) {
-                  const undelivered = packages.find(
-                    p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status),
-                  );
-                  if (undelivered) {
-                    navigation.navigate(routeNames.PackageDeliver, {
-                      packageId: undelivered.id,
-                      orderId: order?.id,
-                      token: tkn,
-                      codAmount: undelivered.cod_amount || 0,
-                      recipientName: undelivered.recipient_name,
-                      recipientAddress: undelivered.recipient_address,
-                      barcode: undelivered.barcode,
-                    });
-                    return;
-                  }
-                }
-                navigation.navigate(routeNames.DeliveryConfirm, {
-                  token: tkn,
-                  orderId: order?.id,
-                  codAmount: order?.cod_amount || 0,
-                });
-              }}
-              activeOpacity={0.75}>
-              <Text style={$.ctaTxt}>
-                {packages.length > 0
-                  ? t('orderDetail.deliverNextPkg', {count: packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length})
-                  : status === 'in_transit'
-                    ? t('orderDetail.confirmDelivery')
-                    : t('orderDetail.startDelivery')}
-              </Text>
-              <Icon name="arrow-right" size={18} color="#FFF" style={{marginStart: 8}} />
-            </TouchableOpacity>
-          )}
         </View>
       )}
     </View>
@@ -1403,6 +1579,22 @@ const $ = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   ctaFailTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.danger, marginStart: 6},
+  ctaReturn: {
+    height: 44, borderRadius: 12,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1.5, borderColor: colors.warning, marginBottom: 8,
+    backgroundColor: '#FFF',
+  },
+  ctaReturnTxt: {fontFamily: fontFamily.bold, fontSize: 13, color: colors.warning, marginStart: 6},
+  ctaContactRow: {
+    flexDirection: 'row', gap: 8, marginBottom: 8,
+  },
+  ctaContactBtn: {
+    flex: 1, height: 40, borderRadius: 10,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#F5F7FA', borderWidth: 1, borderColor: '#EEF1F5',
+  },
+  ctaContactTxt: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.primary, marginStart: 6},
   ctaNav: {
     height: 44, borderRadius: 12,
     flexDirection: 'row', alignItems: 'center',

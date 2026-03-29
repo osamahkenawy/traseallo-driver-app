@@ -32,11 +32,14 @@ const StopDetailScreen = () => {
   const {t} = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
-  const {stop, orderId} = route.params || {};
+  const {stop, orderId, orderStatus} = route.params || {};
 
   const {arrivedAtStop, completeStop, failStop, skipStop, isActing} = useStopsStore();
   const {requireSignature, requirePhoto} = useSettingsStore();
   const currency = useSettingsStore(s => s.currency);
+
+  // Guard: stop actions require parent order to be picked_up or in_transit
+  const pickupDone = !orderStatus || ['picked_up', 'in_transit'].includes(orderStatus);
 
   const status = stop?.status || 'pending';
   const statusColor = STATUS_COLORS[status] || '#95A5A6';
@@ -190,7 +193,7 @@ const StopDetailScreen = () => {
       </ScrollView>
 
       {/* Bottom CTAs */}
-      {(status === 'pending' || status === 'arrived') && (
+      {(status === 'pending' || status === 'arrived') && pickupDone && (
         <View style={styles.bottomBar}>
           {isActing ? (
             <ActivityIndicator color="#4A90D9" size="large" />

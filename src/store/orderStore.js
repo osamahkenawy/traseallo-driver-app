@@ -136,7 +136,11 @@ const useOrderStore = create((set, get) => ({
     set({isUpdatingStatus: true});
     try {
       const res = await ordersApi.acceptOrder(orderId);
-      // Update order in list
+      // Update selected order + list
+      const selected = get().selectedOrder;
+      if (selected?.id === orderId || selected?.id === Number(orderId)) {
+        set({selectedOrder: {...selected, status: 'accepted'}});
+      }
       const orders = get().orders.map(o =>
         (o.id === orderId || o.id === Number(orderId)) ? {...o, status: 'accepted'} : o,
       );
