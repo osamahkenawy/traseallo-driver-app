@@ -31,7 +31,7 @@ import PhotoProofGrid from '../../components/PhotoProofGrid';
 const DeliveryConfirmScreen = ({navigation, route}) => {
   const {t} = useTranslation();
   const ins = useSafeAreaInsets();
-  const {token, orderId, codAmount = 0, orderStatus} = route.params || {};
+  const {token, orderId, codAmount = 0, orderStatus, signatureData: sigFromRoute} = route.params || {};
   const hasCod = Number(codAmount) > 0;
 
   // Guard: only allow delivery if order is picked_up or in_transit
@@ -50,6 +50,11 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
   const [loading, setLoading] = useState(false);
   const [codCollected, setCodCollected] = useState(hasCod ? String(codAmount) : '');
   const [signatureUri, setSignatureUri] = useState(null);
+
+  // Pick up signature data returned from SignatureScreen
+  React.useEffect(() => {
+    if (sigFromRoute) setSignatureUri(sigFromRoute);
+  }, [sigFromRoute]);
   const [checkingPackages, setCheckingPackages] = useState(true);
   const currentPosition = useLocationStore(s => s.currentPosition);
   const requireSignature = useSettingsStore(s => s.requireSignature);
@@ -123,6 +128,24 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
         signatureUrl = sigRes.data?.data?.url || sigRes.data?.url || null;
       }
 
+      // Pre-transition any packages that aren't picked_up yet
+      try {
+        const pkgRes = await packagesApi.getOrderPackages(orderId);
+        const pkgData = pkgRes.data?.data || pkgRes.data;
+        const pkgs = pkgData?.packages || pkgData || [];
+        for (const pkg of pkgs) {
+          if (!['picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned', 'cancelled'].includes(pkg.status)) {
+            await packagesApi.updateStatus(pkg.id, {
+              status: 'picked_up',
+              lat: currentPosition?.latitude || undefined,
+              lng: currentPosition?.longitude || undefined,
+            });
+          }
+        }
+      } catch (_ignored) {
+        // Continue — order deliver endpoint will give clear error if needed
+      }
+
       // Deliver order via new API
       const deliverData = {
         note: notes.trim() || undefined,
@@ -192,7 +215,8 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
             <TouchableOpacity
               style={s.photoBox}
               onPress={() => navigation.navigate(routeNames.Signature, {
-                onSave: (uri) => setSignatureUri(uri),
+                returnScreen: routeNames.DeliveryConfirm,
+                returnParams: {token, orderId, codAmount, orderStatus},
               })}
               activeOpacity={0.7}>
               {signatureUri ? (

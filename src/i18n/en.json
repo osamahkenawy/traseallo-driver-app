@@ -287,7 +287,15 @@
     "submit": "Submit",
     "navigateToPickup": "Navigate to Pickup",
     "enRoute": "En Route to Pickup",
-    "reportProblem": "Report Problem"
+    "reportProblem": "Report Problem",
+    "ctaEnRouteSub": "Heading to pickup location",
+    "ctaArrivedSub": "Confirm your arrival",
+    "ctaConfirmSub": "All packages collected",
+    "terminalFailed": "This pickup was reported as failed",
+    "terminalSuccess": "All packages collected successfully",
+    "callBtn": "Call",
+    "whatsappBtn": "WhatsApp",
+    "navigateBtn": "Navigate"
   },
   "scanner": {
     "title": "Scanner",
@@ -532,10 +540,13 @@
     "recipient": "Recipient",
     "packages": "Packages",
     "packageDetails": "Package Details",
+    "packageDetailsPlural": "Package(s) Details",
     "category": "Category",
     "weight": "Weight",
     "dimensions": "Dimensions",
     "trackingTimeline": "Tracking Timeline",
+    "tlEnRoute": "En Route to Pickup",
+    "tlArrived": "Arrived at Pickup",
     "by": "by {{name}}",
     "deliveryProgress": "Delivery Progress",
     "collectCOD": "Collect Cash on Delivery",
@@ -689,6 +700,11 @@
   },
   "signature": {
     "title": "Signature",
+    "customerTitle": "Customer Signature",
+    "askCustomer": "Please ask the customer to sign below",
+    "instructionTitle": "Proof of Delivery",
+    "signatureLabel": "SIGNATURE",
+    "saveSignature": "Save Signature",
     "signBelow": "Sign below",
     "clear": "Clear",
     "done": "Done"

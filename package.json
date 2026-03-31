@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
-    "ios": "react-native run-ios",
+    "ios": "react-native run-ios --simulator=\"iPhone 14\"",
     "start": "react-native start",
     "test": "jest",
     "lint": "eslint ."
@@ -33,6 +33,7 @@
     "react-native-restart": "^0.0.27",
     "react-native-safe-area-context": "^4.4.1",
     "react-native-screens": "^3.18.2",
+    "react-native-signature-canvas": "^5.0.2",
     "react-native-svg": "^13.6.0",
     "react-native-vector-icons": "^10.3.0",
     "react-native-webview": "^13.16.1",

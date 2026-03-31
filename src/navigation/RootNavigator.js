@@ -7,7 +7,6 @@ import React, {useEffect, useState, useRef} from 'react';
 import {StatusBar, View, StyleSheet} from 'react-native';
 import {NavigationContainer, createNavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {routeNames} from '../constants/routeNames';
 import {colors} from '../theme/colors';
@@ -50,9 +49,7 @@ import WebViewScreen from '../screens/settings/WebViewScreen';
 import SupportScreen from '../screens/support/SupportScreen';
 import TicketDetailScreen from '../screens/support/TicketDetailScreen';
 import HelpScreen from '../screens/support/HelpScreen';
-import OnboardingScreen from '../screens/OnboardingScreen';
 
-const ONBOARDING_KEY = '@traseallo_onboarding_seen';
 
 const Stack = createNativeStackNavigator();
 
@@ -81,36 +78,21 @@ const RootNavigator = () => {
   const validateSession = useAuthStore(state => state.validateSession);
 
   const [isReady, setIsReady] = useState(false);
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(true); // default true to avoid flash
 
   useEffect(() => {
     const bootstrap = async () => {
       const splashMin = new Promise(resolve => setTimeout(resolve, 3000));
       try {
-        const [, onboardingSeen] = await Promise.all([
-          validateSession(),
-          AsyncStorage.getItem(ONBOARDING_KEY),
-          splashMin,
-        ]);
-        setHasSeenOnboarding(onboardingSeen === 'true');
+        await Promise.all([validateSession(), splashMin]);
       } catch (e) {
         // Session invalid — user goes to login
-        try {
-          const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
-          setHasSeenOnboarding(seen === 'true');
-        } catch {}
-        await splashMin; // still wait for the 3 s minimum
+        await splashMin;
       } finally {
         setIsReady(true);
       }
     };
     bootstrap();
   }, []);
-
-  const completeOnboarding = async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-    setHasSeenOnboarding(true);
-  };
 
   if (!isReady || isLoading) {
     return <SplashScreen />;
@@ -134,13 +116,7 @@ const RootNavigator = () => {
         }}>
         {!isAuthenticated ? (
           // ─── Auth Flow ──────────────────────────
-          !hasSeenOnboarding ? (
-            <Stack.Screen name={routeNames.Onboarding}>
-              {props => <OnboardingScreen {...props} onComplete={completeOnboarding} />}
-            </Stack.Screen>
-          ) : (
-            <Stack.Screen name={routeNames.AuthStack} component={AuthStack} />
-          )
+          <Stack.Screen name={routeNames.AuthStack} component={AuthStack} />
         ) : (
           // ─── Authenticated Flow ─────────────────
           <>

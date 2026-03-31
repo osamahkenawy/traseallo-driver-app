@@ -1,6 +1,6 @@
 /**
- * SignatureScreen — Full-page driver signature capture
- * Matches the clean design: title → name → large canvas → clear → Back / Confirm
+ * SignatureScreen — Premium customer signature capture
+ * Compact branded card with signature pad, preview, and action buttons
  */
 
 import React, {useRef, useState, useCallback} from 'react';
@@ -9,108 +9,144 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  ScrollView,
   Platform,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
-import useAuthStore from '../../store/authStore';
 import SignaturePad from '../../components/SignaturePad';
 import {useTranslation} from 'react-i18next';
 
 const SignatureScreen = ({navigation, route}) => {
   const {t} = useTranslation();
   const ins = useSafeAreaInsets();
-  const {returnScreen, returnParams = {}} = route.params || {};
+  const {returnScreen, returnParams = {}, signerLabel} = route.params || {};
   const sigRef = useRef(null);
   const [hasStrokes, setHasStrokes] = useState(false);
-  const sigExportResolve = useRef(null);
-
-  // Get the driver's name from the auth store
-  const user = useAuthStore(s => s.user);
-  const driverName = user?.full_name || user?.name || 'Driver';
+  const [savedData, setSavedData] = useState(null);
 
   const handleExport = useCallback((dataUrl) => {
-    if (sigExportResolve.current) {
-      sigExportResolve.current(dataUrl);
-      sigExportResolve.current = null;
-    }
+    if (dataUrl) setSavedData(dataUrl);
   }, []);
 
-  const exportSignatureAsync = useCallback(() => {
-    return new Promise((resolve) => {
-      if (!hasStrokes) {
-        resolve(null);
-        return;
-      }
-      sigExportResolve.current = resolve;
-      sigRef.current?.exportSignature();
-      setTimeout(() => {
-        if (sigExportResolve.current) {
-          sigExportResolve.current(null);
-          sigExportResolve.current = null;
-        }
-      }, 3000);
-    });
-  }, [hasStrokes]);
-
-  const handleConfirm = async () => {
-    if (!hasStrokes) return;
-    const dataUrl = await exportSignatureAsync();
-    if (dataUrl && returnScreen) {
+  const handleConfirm = () => {
+    if (savedData && returnScreen) {
       navigation.navigate({
         name: returnScreen,
-        params: {...returnParams, signatureData: dataUrl},
+        params: {...returnParams, signatureData: savedData},
         merge: true,
       });
-    } else {
-      navigation.goBack();
+    } else if (!savedData && hasStrokes) {
+      // Auto-export then navigate
+      sigRef.current?.exportSignature();
+      // Use a small delay for the export callback
+      setTimeout(() => {
+        const data = savedData;
+        if (returnScreen) {
+          navigation.navigate({
+            name: returnScreen,
+            params: {...returnParams, signatureData: data},
+            merge: true,
+          });
+        }
+      }, 500);
+    }
+  };
+
+  const handleSave = () => {
+    if (hasStrokes) {
+      sigRef.current?.exportSignature();
     }
   };
 
   const handleClear = () => {
     sigRef.current?.clear();
     setHasStrokes(false);
+    setSavedData(null);
   };
 
   return (
     <View style={[s.root, {paddingTop: ins.top}]}>
-      {/* Header area */}
-      <View style={s.header}>
-        <Text style={s.title}>{t('signature.title')}</Text>
-        <Text style={s.driverName}>{driverName}</Text>
+      {/* Top bar with back */}
+      <View style={s.topBar}>
+        <TouchableOpacity
+          style={s.topBackBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}>
+          <Text style={s.topBackIcon}>‹</Text>
+        </TouchableOpacity>
+        <Text style={s.topBarTitle}>{t('signature.customerTitle', 'Customer Signature')}</Text>
+        <View style={s.topBackBtn} />
       </View>
 
-      {/* Signature canvas — fills available space */}
-      <View style={s.canvasContainer}>
-        <SignaturePad
-          ref={sigRef}
-          style={s.canvas}
-          onStrokeEnd={(has) => setHasStrokes(has)}
-          onExport={handleExport}
-        />
-        {/* Signature baseline */}
-        <View style={s.baseline} />
-      </View>
+      <ScrollView
+        style={s.scrollView}
+        contentContainerStyle={s.scrollContent}
+        bounces={false}
+        showsVerticalScrollIndicator={false}>
+        {/* Instruction card */}
+        <View style={s.instructionCard}>
+          <View style={s.instructionIcon}>
+            <Text style={s.instructionEmoji}>✍️</Text>
+          </View>
+          <View style={s.instructionTextWrap}>
+            <Text style={s.instructionTitle}>
+              {t('signature.instructionTitle', 'Proof of Delivery')}
+            </Text>
+            <Text style={s.instructionSub}>
+              {signerLabel ||
+                t(
+                  'signature.askCustomer',
+                  'Please ask the customer to sign below',
+                )}
+            </Text>
+          </View>
+        </View>
 
-      {/* Clear signature */}
-      <TouchableOpacity style={s.clearBtn} onPress={handleClear} activeOpacity={0.6}>
-        <Text style={s.clearTxt}>{t('signature.clear')}</Text>
-      </TouchableOpacity>
+        {/* Signature pad area */}
+        <View style={s.padSection}>
+          <Text style={s.padLabel}>
+            {t('signature.signatureLabel', 'SIGNATURE')}
+          </Text>
+          <SignaturePad
+            ref={sigRef}
+            height={220}
+            onStrokeEnd={(has) => setHasStrokes(has)}
+            onExport={handleExport}
+            onClear={() => {
+              setHasStrokes(false);
+              setSavedData(null);
+            }}
+          />
+        </View>
+
+        {/* Save button — visible when strokes exist but not yet saved */}
+        {hasStrokes && !savedData && (
+          <TouchableOpacity
+            style={s.saveBtn}
+            onPress={handleSave}
+            activeOpacity={0.7}>
+            <Text style={s.saveBtnTxt}>
+              {t('signature.saveSignature', 'Save Signature')}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
 
       {/* Bottom buttons */}
       <View style={[s.bottom, {paddingBottom: ins.bottom + 12}]}>
         <TouchableOpacity
-          style={s.backBtn}
+          style={s.cancelBtn}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}>
-          <Text style={s.backTxt}>{t('common.cancel')}</Text>
+          <Text style={s.cancelTxt}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.confirmBtn, !hasStrokes && s.confirmDisabled]}
+          style={[s.confirmBtn, !savedData && s.confirmDisabled]}
           onPress={handleConfirm}
           activeOpacity={0.7}
-          disabled={!hasStrokes}>
+          disabled={!savedData}>
           <Text style={s.confirmTxt}>{t('common.confirm')}</Text>
         </TouchableOpacity>
       </View>
@@ -121,71 +157,145 @@ const SignatureScreen = ({navigation, route}) => {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.bgScreen,
   },
 
-  /* Header */
-  header: {
+  /* Top bar */
+  topBar: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 8,
-  },
-  title: {
-    fontFamily: fontFamily.bold,
-    fontSize: 22,
-    color: colors.textPrimary,
-    textAlign: 'auto',
-    letterSpacing: -0.3,
-  },
-  driverName: {
-    fontFamily: fontFamily.medium,
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginTop: 6,
-  },
-
-  /* Canvas */
-  canvasContainer: {
-    flex: 1,
-    marginHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 4,
-    position: 'relative',
-  },
-  canvas: {
-    flex: 1,
-    borderRadius: 0,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  baseline: {
-    position: 'absolute',
-    bottom: 40,
-    left: 20,
-    right: 20,
-    height: 1,
-    backgroundColor: '#D0D5DD',
+  topBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topBackIcon: {
+    fontSize: 28,
+    color: colors.textPrimary,
+    lineHeight: 32,
+    fontFamily: fontFamily.medium,
+  },
+  topBarTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 17,
+    color: colors.textPrimary,
+    letterSpacing: -0.2,
   },
 
-  /* Clear */
-  clearBtn: {
-    alignSelf: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+  /* Scroll */
+  scrollView: {
+    flex: 1,
   },
-  clearTxt: {
-    fontFamily: fontFamily.medium,
-    fontSize: 14,
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 30,
+  },
+
+  /* Instruction card */
+  instructionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {elevation: 2},
+    }),
+  },
+  instructionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.bgSoftBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  instructionEmoji: {
+    fontSize: 22,
+  },
+  instructionTextWrap: {
+    flex: 1,
+  },
+  instructionTitle: {
+    fontFamily: fontFamily.bold,
+    fontSize: 15,
+    color: colors.textPrimary,
+    marginBottom: 2,
+  },
+  instructionSub: {
+    fontFamily: fontFamily.regular,
+    fontSize: 13,
     color: colors.textMuted,
+    lineHeight: 18,
+  },
+
+  /* Pad section */
+  padSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    paddingTop: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+      },
+      android: {elevation: 2},
+    }),
+  },
+  padLabel: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+
+  /* Save button */
+  saveBtn: {
+    alignSelf: 'center',
+    marginTop: 16,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+  },
+  saveBtnTxt: {
+    fontFamily: fontFamily.bold,
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 
   /* Bottom buttons */
   bottom: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 12,
     gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  backBtn: {
+  cancelBtn: {
     flex: 1,
     height: 52,
     borderRadius: 14,
@@ -193,7 +303,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backTxt: {
+  cancelTxt: {
     fontFamily: fontFamily.bold,
     fontSize: 15,
     color: colors.textPrimary,

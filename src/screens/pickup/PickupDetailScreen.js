@@ -185,9 +185,9 @@ const PickupDetailScreen = ({navigation, route}) => {
   const getCTA = () => {
     if (isTerminal) return null;
     const s0 = ['pending', 'assigned', 'none', 'pending_pickup', 'pickup_scheduled', 'accepted'];
-    if (s0.includes(status)) return {icon: 'truck-fast-outline', label: t('pickup.enRoute'), sub: 'Heading to pickup location', color: '#1565C0', onPress: handleEnRoute};
-    if (status === 'en_route' || status === 'en_route_to_pickup') return {icon: 'map-marker-check-outline', label: t('pickup.arrived'), sub: 'Confirm your arrival', color: '#00796B', onPress: handleArrived};
-    if (status === 'arrived' || status === 'at_pickup' || status === 'driver_arrived') return {icon: 'check-circle-outline', label: t('pickup.confirmPickup'), sub: 'All packages collected', color: '#2E7D32', onPress: handleConfirm};
+    if (s0.includes(status)) return {icon: 'truck-fast-outline', label: t('pickup.enRoute'), sub: t('pickup.ctaEnRouteSub', 'Heading to pickup location'), color: '#1565C0', onPress: handleEnRoute};
+    if (status === 'en_route' || status === 'en_route_to_pickup') return {icon: 'map-marker-check-outline', label: t('pickup.arrived'), sub: t('pickup.ctaArrivedSub', 'Confirm your arrival'), color: '#00796B', onPress: handleArrived};
+    if (status === 'arrived' || status === 'at_pickup' || status === 'driver_arrived') return {icon: 'check-circle-outline', label: t('pickup.confirmPickup'), sub: t('pickup.ctaConfirmSub', 'All packages collected'), color: '#2E7D32', onPress: handleConfirm};
     return null;
   };
   const cta = getCTA();
@@ -323,42 +323,49 @@ const PickupDetailScreen = ({navigation, route}) => {
 
         {/* ── Contact Card ── */}
         {(contactName || contactPhone) ? (
-          <View style={$.card}>
-            <View style={$.cardHdr}>
-              <View style={[$.cardIcon, {backgroundColor: '#E3F2FD'}]}>
-                <Icon name="account-outline" size={15} color="#1565C0" />
+          <View style={$.contactCard}>
+            {/* Contact header band */}
+            <View style={$.contactBand}>
+              <View style={$.contactAvatarLg}>
+                <Text style={$.contactAvatarLgTxt}>{(contactName || '?')[0].toUpperCase()}</Text>
               </View>
-              <Text style={$.cardTitle}>{t('pickup.contact')}</Text>
+              <View style={{flex: 1, marginLeft: 14}}>
+                {contactName ? <Text style={$.contactNameLg}>{contactName}</Text> : null}
+                {contactPhone ? (
+                  <View style={$.contactPhoneRow}>
+                    <Icon name="phone-outline" size={12} color="rgba(255,255,255,0.7)" />
+                    <Text style={$.contactPhoneLg}>{contactPhone}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={$.contactMerchantTag}>
+                <Icon name="store-outline" size={11} color="#FFF" />
+                <Text style={$.contactMerchantTagTxt}>{t('pickup.merchant')}</Text>
+              </View>
             </View>
-            <View style={$.cardBody}>
-              {contactName ? (
-                <View style={$.contactNameRow}>
-                  <View style={$.contactAvatar}>
-                    <Text style={$.contactAvatarText}>{(contactName || '?')[0].toUpperCase()}</Text>
-                  </View>
-                  <View style={{flex: 1}}>
-                    <Text style={$.contactName}>{contactName}</Text>
-                    {contactPhone ? <Text style={$.contactPhone}>{contactPhone}</Text> : null}
-                  </View>
-                </View>
-              ) : null}
-              {contactPhone ? (
-                <View style={$.quickActions}>
-                  <TouchableOpacity style={[$.quickBtn, {backgroundColor: '#E3F2FD'}]} onPress={handleCall} activeOpacity={0.7}>
+            {/* Action buttons */}
+            {contactPhone ? (
+              <View style={$.contactActions}>
+                <TouchableOpacity style={$.contactActionBtn} onPress={handleCall} activeOpacity={0.7}>
+                  <View style={[$.contactActionIcon, {backgroundColor: '#E3F2FD'}]}>
                     <Icon name="phone-outline" size={18} color="#1565C0" />
-                    <Text style={[$.quickLabel, {color: '#1565C0'}]}>Call</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[$.quickBtn, {backgroundColor: '#E8F5E9'}]} onPress={handleWhatsApp} activeOpacity={0.7}>
+                  </View>
+                  <Text style={[$.contactActionLabel, {color: '#1565C0'}]}>{t('pickup.callBtn', 'Call')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.contactActionBtn} onPress={handleWhatsApp} activeOpacity={0.7}>
+                  <View style={[$.contactActionIcon, {backgroundColor: '#E8F5E9'}]}>
                     <Icon name="whatsapp" size={18} color="#25D366" />
-                    <Text style={[$.quickLabel, {color: '#25D366'}]}>WhatsApp</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[$.quickBtn, {backgroundColor: '#FFF3E0'}]} onPress={handleNavigate} activeOpacity={0.7}>
+                  </View>
+                  <Text style={[$.contactActionLabel, {color: '#25D366'}]}>{t('pickup.whatsappBtn', 'WhatsApp')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={$.contactActionBtn} onPress={handleNavigate} activeOpacity={0.7}>
+                  <View style={[$.contactActionIcon, {backgroundColor: '#FFF3E0'}]}>
                     <Icon name="navigation-variant-outline" size={18} color="#E65100" />
-                    <Text style={[$.quickLabel, {color: '#E65100'}]}>Navigate</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-            </View>
+                  </View>
+                  <Text style={[$.contactActionLabel, {color: '#E65100'}]}>{t('pickup.navigateBtn', 'Navigate')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -427,7 +434,7 @@ const PickupDetailScreen = ({navigation, route}) => {
               {formatLabel(status)}
             </Text>
             <Text style={$.terminalSub}>
-              {status === 'failed' || status === 'pickup_failed' ? 'This pickup was reported as failed' : 'All packages collected successfully'}
+              {status === 'failed' || status === 'pickup_failed' ? t('pickup.terminalFailed', 'This pickup was reported as failed') : t('pickup.terminalSuccess', 'All packages collected successfully')}
             </Text>
           </View>
         )}
@@ -506,7 +513,7 @@ const $ = StyleSheet.create({
   },
   heroTop: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12},
   heroBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
   },
   heroBadgeText: {fontFamily: fontFamily.semiBold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4},
@@ -516,7 +523,7 @@ const $ = StyleSheet.create({
   },
   copyText: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.textMuted},
   heroMerchant: {fontFamily: fontFamily.bold, fontSize: 18, color: colors.textPrimary, marginBottom: 6},
-  heroAddressRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 6},
+  heroAddressRow: {flexDirection: 'row', alignItems: 'flex-start', gap: 8},
   heroAddress: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textSecondary, lineHeight: 19, flex: 1},
 
   /* Progress Card */
@@ -552,7 +559,7 @@ const $ = StyleSheet.create({
     elevation: 2,
   },
   cardHdr: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12,
   },
   cardIcon: {width: 30, height: 30, borderRadius: 10, justifyContent: 'center', alignItems: 'center'},
@@ -569,21 +576,43 @@ const $ = StyleSheet.create({
   infoGridLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginBottom: 2},
   infoGridValue: {fontFamily: fontFamily.semiBold, fontSize: 12.5, color: colors.textPrimary},
 
-  /* Contact */
-  contactNameRow: {flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14},
-  contactAvatar: {
-    width: 42, height: 42, borderRadius: 14, backgroundColor: '#E8EDF4',
+  /* Contact — premium card */
+  contactCard: {
+    backgroundColor: '#FFF', borderRadius: 16, marginBottom: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.06, shadowRadius: 8,
+    elevation: 3,
+  },
+  contactBand: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 16,
+  },
+  contactAvatarLg: {
+    width: 48, height: 48, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
+  },
+  contactAvatarLgTxt: {fontFamily: fontFamily.bold, fontSize: 20, color: '#FFF'},
+  contactNameLg: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF'},
+  contactPhoneRow: {flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3},
+  contactPhoneLg: {fontFamily: fontFamily.regular, fontSize: 12, color: 'rgba(255,255,255,0.8)'},
+  contactMerchantTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+  },
+  contactMerchantTagTxt: {fontFamily: fontFamily.medium, fontSize: 9, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: 0.4},
+  contactActions: {
+    flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 16, gap: 10,
+  },
+  contactActionBtn: {
+    flex: 1, alignItems: 'center', gap: 8,
+  },
+  contactActionIcon: {
+    width: 48, height: 48, borderRadius: 16,
     justifyContent: 'center', alignItems: 'center',
   },
-  contactAvatarText: {fontFamily: fontFamily.bold, fontSize: 17, color: colors.primary},
-  contactName: {fontFamily: fontFamily.semiBold, fontSize: 14, color: colors.textPrimary},
-  contactPhone: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, marginTop: 2},
-  quickActions: {flexDirection: 'row', gap: 10},
-  quickBtn: {
-    flex: 1, paddingVertical: 12, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', gap: 4,
-  },
-  quickLabel: {fontFamily: fontFamily.semiBold, fontSize: 11},
+  contactActionLabel: {fontFamily: fontFamily.semiBold, fontSize: 11},
 
   /* Notes */
   notesBubble: {

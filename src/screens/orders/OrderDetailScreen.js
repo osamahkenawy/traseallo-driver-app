@@ -129,7 +129,7 @@ const OrderDetailScreen = ({navigation, route}) => {
   const setSelectedOrder = useOrderStore(st => st.setSelectedOrder);
 
   const order = selectedOrder;
-  const status = order?.status || 'assigned';
+  const status = order?.status || 'pending';
   const stops = order?.stops || [];
   const isPickedUp = ['picked_up', 'in_transit', 'delivered'].includes(status);
   const needsPickup = status === 'assigned' || status === 'confirmed' || status === 'accepted';
@@ -1053,35 +1053,102 @@ const OrderDetailScreen = ({navigation, route}) => {
         )}
 
         {/* ── Package Details ── */}
-        {(order?.category || order?.weight_kg || order?.special_instructions || order?.description) && (
+        {(order?.category || order?.weight_kg || order?.special_instructions || order?.description || packages.length > 0) && (
           <View style={$.sectionCard}>
             <View style={$.secHdrRow}>
               <View style={[$.secIc, {backgroundColor: '#FFF3E0'}]}>
                 <Icon name="package-variant-closed" size={16} color="#E65100" />
               </View>
-              <Text style={$.secH}>{t('orderDetail.packageDetails')}</Text>
+              <Text style={$.secH}>
+                {packages.length > 1
+                  ? t('orderDetail.packageDetailsPlural', 'Package(s) Details')
+                  : t('orderDetail.packageDetails')}
+              </Text>
+              {packages.length > 1 && (
+                <View style={$.pkgCountBadge}>
+                  <Text style={$.pkgCountTxt}>{packages.length}</Text>
+                </View>
+              )}
             </View>
             <View style={$.secDiv} />
-            {order?.category && (
-              <InfoRow icon="shape-outline" label={t('orderDetail.category')} value={order.category} />
+
+            {packages.length > 1 ? (
+              /* ── Multi-package: show each package's details ── */
+              packages.map((pkg, idx) => {
+                const pkgStatusColor = getStatusColor(pkg.status);
+                const pkgStatusBg = getStatusBgColor(pkg.status);
+                return (
+                  <View key={pkg.id || idx} style={$.pkgDetailCard}>
+                    <View style={$.pkgDetailHeader}>
+                      <View style={$.pkgDetailHeaderLeft}>
+                        <Icon name="package-variant" size={14} color={colors.primary} />
+                        <Text style={$.pkgDetailTitle}>
+                          {pkg.barcode || t('orderDetail.pkgFallback', {idx: idx + 1})}
+                        </Text>
+                      </View>
+                      <View style={[$.pkgStatusChip, {backgroundColor: pkgStatusBg}]}>
+                        <Text style={[$.pkgStatusTxt, {color: pkgStatusColor}]}>
+                          {t('status.' + (pkg.status || 'pending'), (pkg.status || ''))}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {(pkg.category || order?.category) && (
+                      <InfoRow icon="shape-outline" label={t('orderDetail.category')} value={pkg.category || order.category} />
+                    )}
+                    {(pkg.weight_kg || order?.weight_kg) && (
+                      <InfoRow icon="weight-kilogram" label={t('orderDetail.weight')} value={`${pkg.weight_kg || order.weight_kg} kg`} />
+                    )}
+                    {(pkg.dimensions || order?.dimensions) && (
+                      <InfoRow icon="ruler-square" label={t('orderDetail.dimensions')} value={pkg.dimensions || order.dimensions} />
+                    )}
+                    {pkg.recipient_name && (
+                      <InfoRow icon="account-outline" label={t('orderDetail.recipient')} value={pkg.recipient_name} />
+                    )}
+                    {parseFloat(pkg.cod_amount) > 0 && (
+                      <InfoRow icon="cash" label={t('orderDetail.codAmount')} value={`${currency} ${parseFloat(pkg.cod_amount).toFixed(2)}`} />
+                    )}
+                    {pkg.description && (
+                      <View style={$.instrBox}>
+                        <Icon name="text-box-outline" size={14} color={colors.textMuted} style={{marginTop: 2}} />
+                        <Text style={[$.instrTxt, {color: colors.textSecondary}]}>{pkg.description}</Text>
+                      </View>
+                    )}
+                    {idx < packages.length - 1 && <View style={$.pkgDivider} />}
+                  </View>
+                );
+              })
+            ) : (
+              /* ── Single package / order-level details ── */
+              <>
+                {order?.category && (
+                  <InfoRow icon="shape-outline" label={t('orderDetail.category')} value={order.category} />
+                )}
+                {order?.weight_kg && (
+                  <InfoRow icon="weight-kilogram" label={t('orderDetail.weight')} value={`${order.weight_kg} kg`} />
+                )}
+                {order?.dimensions && (
+                  <InfoRow icon="ruler-square" label={t('orderDetail.dimensions')} value={order.dimensions} />
+                )}
+              </>
             )}
-            {order?.weight_kg && (
-              <InfoRow icon="weight-kilogram" label={t('orderDetail.weight')} value={`${order.weight_kg} kg`} />
-            )}
-            {order?.dimensions && (
-              <InfoRow icon="ruler-square" label={t('orderDetail.dimensions')} value={order.dimensions} />
-            )}
-            {order?.special_instructions && (
-              <View style={$.instrBox}>
-                <Icon name="information-outline" size={14} color={colors.warning} style={{marginTop: 2}} />
-                <Text style={$.instrTxt}>{order.special_instructions}</Text>
-              </View>
-            )}
-            {order?.description && (
-              <View style={$.instrBox}>
-                <Icon name="text-box-outline" size={14} color={colors.textMuted} style={{marginTop: 2}} />
-                <Text style={[$.instrTxt, {color: colors.textSecondary}]}>{order.description}</Text>
-              </View>
+
+            {/* Order-level instructions & description — only for single-package view */}
+            {packages.length <= 1 && (
+              <>
+                {order?.special_instructions && (
+                  <View style={$.instrBox}>
+                    <Icon name="information-outline" size={14} color={colors.warning} style={{marginTop: 2}} />
+                    <Text style={$.instrTxt}>{order.special_instructions}</Text>
+                  </View>
+                )}
+                {order?.description && (
+                  <View style={$.instrBox}>
+                    <Icon name="text-box-outline" size={14} color={colors.textMuted} style={{marginTop: 2}} />
+                    <Text style={[$.instrTxt, {color: colors.textSecondary}]}>{order.description}</Text>
+                  </View>
+                )}
+              </>
             )}
           </View>
         )}
@@ -1108,7 +1175,18 @@ const OrderDetailScreen = ({navigation, route}) => {
             {[...logs].reverse().map((log, i, arr) => {
               const isFirst = i === 0;
               const isLast = i === arr.length - 1;
-              const logColor = getStatusColor(log.status);
+
+              // Derive a display label — pickup actions log the order status but the
+              // note describes what actually happened, so use the note as label instead
+              const pickupNoteMap = {
+                'Driver en route to pickup': {label: t('orderDetail.tlEnRoute', 'En Route to Pickup'), icon: 'truck-fast-outline', color: '#1565C0'},
+                'Driver arrived at pickup location': {label: t('orderDetail.tlArrived', 'Arrived at Pickup'), icon: 'map-marker-check-outline', color: '#00796B'},
+                'Pickup confirmed by driver.': {label: t('status.picked_up'), icon: 'package-variant-closed', color: getStatusColor('picked_up')},
+              };
+              const override = pickupNoteMap[log.note];
+              const displayLabel = override?.label || (t('status.' + log.status) || log.status);
+              const logColor = override?.color || getStatusColor(log.status);
+
               return (
                 <View key={log.id} style={$.tlRow}>
                   <View style={$.tlLeft}>
@@ -1122,11 +1200,11 @@ const OrderDetailScreen = ({navigation, route}) => {
                   <View style={[$.tlContent, !isLast && {paddingBottom: 18}]}>
                     <View style={$.tlHdr}>
                       <Text style={[$.tlStatus, {color: logColor}]}>
-                        {t('status.' + log.status) || log.status}
+                        {displayLabel}
                       </Text>
                       <Text style={$.tlTime}>{fmtDateTime(log.created_at)}</Text>
                     </View>
-                    {log.note && <Text style={$.tlNote}>{log.note}</Text>}
+                    {log.note && !override && <Text style={$.tlNote}>{log.note}</Text>}
                     {log.changed_by_name && (
                       <Text style={$.tlBy}>{t('orderDetail.by', {name: log.changed_by_name})}</Text>
                     )}
@@ -1563,6 +1641,41 @@ const $ = StyleSheet.create({
     backgroundColor: '#FFF7E6', borderRadius: 8, padding: 10, marginTop: 6,
   },
   instrTxt: {flex: 1, fontFamily: fontFamily.regular, fontSize: 11, color: '#E65100', lineHeight: 16, marginStart: 8},
+
+  /* Package count badge */
+  pkgCountBadge: {
+    backgroundColor: '#E65100',
+    minWidth: 22, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+    marginStart: 8, paddingHorizontal: 6,
+  },
+  pkgCountTxt: {
+    fontFamily: fontFamily.bold, fontSize: 11, color: '#FFFFFF',
+  },
+
+  /* Multi-package detail cards */
+  pkgDetailCard: {
+    marginBottom: 4,
+  },
+  pkgDetailHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 6, marginTop: 4,
+  },
+  pkgDetailHeaderLeft: {
+    flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8,
+  },
+  pkgDetailTitle: {
+    fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary,
+  },
+  pkgStatusChip: {
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10,
+  },
+  pkgStatusTxt: {
+    fontFamily: fontFamily.bold, fontSize: 9, textTransform: 'uppercase',
+  },
+  pkgDivider: {
+    height: 1, backgroundColor: '#EEF1F5', marginVertical: 10,
+  },
 
   /* Notes card */
   noteCard: {

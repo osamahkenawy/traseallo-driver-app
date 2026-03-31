@@ -287,7 +287,15 @@
     "submit": "إرسال",
     "navigateToPickup": "التنقل إلى الاستلام",
     "enRoute": "في الطريق للاستلام",
-    "reportProblem": "الإبلاغ عن مشكلة"
+    "reportProblem": "الإبلاغ عن مشكلة",
+    "ctaEnRouteSub": "متوجه إلى موقع الاستلام",
+    "ctaArrivedSub": "أكد وصولك",
+    "ctaConfirmSub": "تم جمع جميع الطرود",
+    "terminalFailed": "تم الإبلاغ عن فشل هذا الاستلام",
+    "terminalSuccess": "تم جمع جميع الطرود بنجاح",
+    "callBtn": "اتصال",
+    "whatsappBtn": "واتساب",
+    "navigateBtn": "تنقل"
   },
   "scanner": {
     "title": "الماسح",
@@ -532,10 +540,13 @@
     "recipient": "المستلم",
     "packages": "الطرود",
     "packageDetails": "تفاصيل الطرد",
+    "packageDetailsPlural": "تفاصيل الطرود",
     "category": "الفئة",
     "weight": "الوزن",
     "dimensions": "الأبعاد",
     "trackingTimeline": "الجدول الزمني للتتبع",
+    "tlEnRoute": "في الطريق للاستلام",
+    "tlArrived": "وصل لموقع الاستلام",
     "by": "بواسطة {{name}}",
     "deliveryProgress": "تقدم التوصيل",
     "collectCOD": "تحصيل الدفع عند الاستلام",
@@ -689,6 +700,11 @@
   },
   "signature": {
     "title": "التوقيع",
+    "customerTitle": "توقيع العميل",
+    "askCustomer": "يرجى مطالبة العميل بالتوقيع أدناه",
+    "instructionTitle": "إثبات التسليم",
+    "signatureLabel": "التوقيع",
+    "saveSignature": "حفظ التوقيع",
     "signBelow": "وقّع أدناه",
     "clear": "مسح",
     "done": "تم"

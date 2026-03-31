@@ -418,7 +418,7 @@ const s = StyleSheet.create({
     flex: 1, height: '100%',
     fontFamily: fontFamily.medium, fontSize: 15,
     color: colors.textPrimary,
-    paddingStart: 10, paddingEnd: 14,
+    paddingStart: 10, paddingEnd: 4,
   },
   fieldClear: {paddingHorizontal: 14, height: '100%', justifyContent: 'center'},
   eyeBtn: {paddingHorizontal: 16, height: '100%', justifyContent: 'center'},

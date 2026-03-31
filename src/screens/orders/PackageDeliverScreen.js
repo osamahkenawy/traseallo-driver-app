@@ -102,7 +102,23 @@ const PackageDeliverScreen = ({navigation, route}) => {
         signatureUrl = sigRes.data?.data?.url || sigRes.data?.url || null;
       }
 
-      // 3. PATCH package status to delivered
+      // 3. Auto-transition package to picked_up if not already in a deliverable state
+      try {
+        const pkgRes = await packagesApi.getPackage(packageId);
+        const pkgData = pkgRes.data?.data || pkgRes.data;
+        const pkgStatus = pkgData?.status;
+        if (pkgStatus && !['picked_up', 'in_transit', 'out_for_delivery'].includes(pkgStatus)) {
+          await packagesApi.updateStatus(packageId, {
+            status: 'picked_up',
+            lat: currentPosition?.latitude || undefined,
+            lng: currentPosition?.longitude || undefined,
+          });
+        }
+      } catch (_ignored) {
+        // Continue — the delivery PATCH will give a clear error if transition fails
+      }
+
+      // 4. PATCH package status to delivered
       const body = {
         status: 'delivered',
         notes: notes.trim() || undefined,

@@ -1,208 +1,278 @@
 /**
- * SignaturePad — Canvas-based signature capture using WebView
- * Uses already-installed react-native-webview with HTML5 Canvas
+ * SignaturePad — Premium signature capture using react-native-signature-canvas
+ * Compact, branded, smooth canvas with clear/save and base64 export.
  */
 
-import React, {useRef, useImperativeHandle, forwardRef} from 'react';
-import {View, StyleSheet} from 'react-native';
-import {WebView} from 'react-native-webview';
+import React, {useRef, useImperativeHandle, forwardRef, useState} from 'react';
+import {View, Text, TouchableOpacity, Image, StyleSheet, Platform} from 'react-native';
+import SignatureCanvas from 'react-native-signature-canvas';
+import {colors} from '../theme/colors';
+import {fontFamily} from '../theme/fonts';
 
-const SIGNATURE_HTML = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #FFF; overflow: hidden; touch-action: none; }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      cursor: crosshair;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="sig"></canvas>
-  <script>
-    const canvas = document.getElementById('sig');
-    const ctx = canvas.getContext('2d');
-    let drawing = false;
-    let hasStrokes = false;
-    let paths = [];
-    let currentPath = [];
-
-    function resize() {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = canvas.clientWidth * dpr;
-      canvas.height = canvas.clientHeight * dpr;
-      ctx.scale(dpr, dpr);
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = '#1A1A2E';
-      redraw();
-    }
-
-    function redraw() {
-      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-      for (const path of paths) {
-        if (path.length < 2) continue;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) {
-          ctx.lineTo(path[i].x, path[i].y);
-        }
-        ctx.stroke();
-      }
-      if (currentPath.length >= 2) {
-        ctx.beginPath();
-        ctx.moveTo(currentPath[0].x, currentPath[0].y);
-        for (let i = 1; i < currentPath.length; i++) {
-          ctx.lineTo(currentPath[i].x, currentPath[i].y);
-        }
-        ctx.stroke();
-      }
-    }
-
-    function getPos(e) {
-      const rect = canvas.getBoundingClientRect();
-      const touch = e.touches ? e.touches[0] : e;
-      return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-    }
-
-    canvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      drawing = true;
-      currentPath = [getPos(e)];
-    }, { passive: false });
-
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (!drawing) return;
-      currentPath.push(getPos(e));
-      redraw();
-    }, { passive: false });
-
-    canvas.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      if (currentPath.length > 0) {
-        paths.push([...currentPath]);
-        hasStrokes = true;
-      }
-      currentPath = [];
-      drawing = false;
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'strokeEnd', hasStrokes }));
-    }, { passive: false });
-
-    // Mouse support for simulator
-    canvas.addEventListener('mousedown', (e) => {
-      drawing = true;
-      currentPath = [getPos(e)];
-    });
-    canvas.addEventListener('mousemove', (e) => {
-      if (!drawing) return;
-      currentPath.push(getPos(e));
-      redraw();
-    });
-    canvas.addEventListener('mouseup', () => {
-      if (currentPath.length > 0) {
-        paths.push([...currentPath]);
-        hasStrokes = true;
-      }
-      currentPath = [];
-      drawing = false;
-      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'strokeEnd', hasStrokes }));
-    });
-
-    window.addEventListener('resize', resize);
-    resize();
-
-    // Commands from RN
-    window.addEventListener('message', (e) => {
-      const msg = JSON.parse(e.data);
-      if (msg.action === 'clear') {
-        paths = [];
-        currentPath = [];
-        hasStrokes = false;
-        redraw();
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'cleared' }));
-      }
-      if (msg.action === 'export') {
-        const dpr = window.devicePixelRatio || 1;
-        // Create trimmed export canvas
-        const exportCanvas = document.createElement('canvas');
-        exportCanvas.width = canvas.width;
-        exportCanvas.height = canvas.height;
-        const ectx = exportCanvas.getContext('2d');
-        ectx.fillStyle = '#FFFFFF';
-        ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-        ectx.drawImage(canvas, 0, 0);
-        const dataUrl = exportCanvas.toDataURL('image/png');
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'export', dataUrl }));
-      }
-    });
-  </script>
-</body>
-</html>
+const WEB_STYLE = `
+  .m-signature-pad { box-shadow: none; border: none; margin: 0; }
+  .m-signature-pad--body { border: none; }
+  .m-signature-pad--body canvas {
+    border-radius: 12px;
+    background-color: #FAFBFC;
+  }
+  .m-signature-pad--footer { display: none; }
+  body, html { background: transparent; margin: 0; padding: 0; }
 `;
 
-const SignaturePad = forwardRef(({style, onStrokeEnd, onExport, onClear}, ref) => {
-  const webViewRef = useRef(null);
+const SignaturePad = forwardRef(
+  ({style, onStrokeEnd, onExport, onClear, height = 220}, ref) => {
+    const sigRef = useRef(null);
+    const [hasStrokes, setHasStrokes] = useState(false);
+    const [preview, setPreview] = useState(null);
 
-  useImperativeHandle(ref, () => ({
-    clear: () => {
-      webViewRef.current?.postMessage(JSON.stringify({action: 'clear'}));
-    },
-    exportSignature: () => {
-      webViewRef.current?.postMessage(JSON.stringify({action: 'export'}));
-    },
-  }));
-
-  const handleMessage = (event) => {
-    try {
-      const msg = JSON.parse(event.nativeEvent.data);
-      if (msg.type === 'strokeEnd') {
-        onStrokeEnd?.(msg.hasStrokes);
-      }
-      if (msg.type === 'export') {
-        onExport?.(msg.dataUrl);
-      }
-      if (msg.type === 'cleared') {
+    useImperativeHandle(ref, () => ({
+      clear: () => {
+        sigRef.current?.clearSignature();
+        setHasStrokes(false);
+        setPreview(null);
         onClear?.();
-      }
-    } catch {}
-  };
+      },
+      exportSignature: () => {
+        if (!hasStrokes) {
+          onExport?.(null);
+          return;
+        }
+        sigRef.current?.readSignature();
+      },
+      resetPreview: () => setPreview(null),
+      getHasStrokes: () => hasStrokes,
+    }));
 
-  return (
-    <View style={[styles.container, style]}>
-      <WebView
-        ref={webViewRef}
-        source={{html: SIGNATURE_HTML}}
-        style={styles.webview}
-        scrollEnabled={false}
-        bounces={false}
-        overScrollMode="never"
-        onMessage={handleMessage}
-        javaScriptEnabled
-        originWhitelist={['*']}
-      />
-    </View>
-  );
-});
+    const handleEnd = () => {
+      setHasStrokes(true);
+      onStrokeEnd?.(true);
+    };
+
+    const handleOK = (dataUrl) => {
+      setPreview(dataUrl);
+      onExport?.(dataUrl);
+    };
+
+    const handleEmpty = () => {
+      onExport?.(null);
+    };
+
+    const handleClear = () => {
+      sigRef.current?.clearSignature();
+      setHasStrokes(false);
+      setPreview(null);
+      onClear?.();
+    };
+
+    if (preview) {
+      return (
+        <View style={[styles.container, style]}>
+          <View style={[styles.previewCard, {height}]}>
+            <Image
+              source={{uri: preview}}
+              style={styles.previewImage}
+              resizeMode="contain"
+            />
+            <View style={styles.previewBadge}>
+              <Text style={styles.previewBadgeText}>Captured</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.retakeBtn}
+            onPress={handleClear}
+            activeOpacity={0.7}>
+            <Text style={styles.retakeTxt}>Retake Signature</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.container, style]}>
+        <View style={[styles.canvasCard, {height}]}>
+          {/* Signature line */}
+          <View style={styles.signatureLine} />
+          <Text style={styles.signHereLabel}>Sign here</Text>
+
+          <SignatureCanvas
+            ref={sigRef}
+            onEnd={handleEnd}
+            onOK={handleOK}
+            onEmpty={handleEmpty}
+            webStyle={WEB_STYLE}
+            backgroundColor="rgba(250,251,252,0)"
+            penColor={colors.primary}
+            minWidth={1.5}
+            maxWidth={3}
+            dotSize={2}
+            trimWhitespace={false}
+            style={styles.canvas}
+          />
+        </View>
+
+        {/* Inline actions row */}
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.clearChip, !hasStrokes && styles.clearChipDisabled]}
+            onPress={handleClear}
+            disabled={!hasStrokes}
+            activeOpacity={0.7}>
+            <Text style={styles.clearChipIcon}>✕</Text>
+            <Text
+              style={[
+                styles.clearChipTxt,
+                !hasStrokes && styles.clearChipTxtDisabled,
+              ]}>
+              Clear
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.statusDot}>
+            <View
+              style={[
+                styles.dot,
+                {backgroundColor: hasStrokes ? colors.success : '#D0D5DD'},
+              ]}
+            />
+            <Text style={styles.statusTxt}>
+              {hasStrokes ? 'Signature captured' : 'Awaiting signature'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  },
+);
 
 SignaturePad.displayName = 'SignaturePad';
 
 const styles = StyleSheet.create({
-  container: {
+  container: {},
+
+  /* Canvas card */
+  canvasCard: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E4E8EE',
+    borderStyle: 'dashed',
+    backgroundColor: '#FAFBFC',
     overflow: 'hidden',
-    borderRadius: 14,
-    backgroundColor: '#FFF',
+    position: 'relative',
   },
-  webview: {
+  canvas: {
     flex: 1,
-    backgroundColor: 'transparent',
+  },
+  signatureLine: {
+    position: 'absolute',
+    bottom: 44,
+    left: 24,
+    right: 24,
+    height: 1,
+    backgroundColor: '#D0D5DD',
+    zIndex: 10,
+  },
+  signHereLabel: {
+    position: 'absolute',
+    bottom: 24,
+    left: 28,
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: '#B0B7C3',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    zIndex: 10,
+  },
+
+  /* Actions row */
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingHorizontal: 4,
+  },
+  clearChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#FEF3F2',
+  },
+  clearChipDisabled: {
+    backgroundColor: '#F2F4F7',
+  },
+  clearChipIcon: {
+    fontSize: 12,
+    color: '#EB466D',
+    marginRight: 5,
+    fontFamily: fontFamily.bold,
+  },
+  clearChipTxt: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: '#EB466D',
+  },
+  clearChipTxtDisabled: {
+    color: '#ADB5BD',
+  },
+
+  /* Status indicator */
+  statusDot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusTxt: {
+    fontFamily: fontFamily.medium,
+    fontSize: 12,
+    color: '#787A7D',
+  },
+
+  /* Preview */
+  previewCard: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.success,
+    backgroundColor: '#F0FDF9',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  previewImage: {
+    flex: 1,
+    margin: 12,
+  },
+  previewBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: colors.success,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  previewBadgeText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 11,
+    color: '#FFFFFF',
+  },
+  retakeBtn: {
+    alignSelf: 'center',
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+  },
+  retakeTxt: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: colors.primary,
+    textDecorationLine: 'underline',
   },
 });
 

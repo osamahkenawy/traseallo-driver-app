@@ -32,11 +32,20 @@ const StopDetailScreen = () => {
   const {t} = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
-  const {stop, orderId, orderStatus} = route.params || {};
+  const {stop, orderId, orderStatus, signatureData: sigFromRoute} = route.params || {};
 
   const {arrivedAtStop, completeStop, failStop, skipStop, isActing} = useStopsStore();
   const {requireSignature, requirePhoto} = useSettingsStore();
   const currency = useSettingsStore(s => s.currency);
+
+  // Handle signature returned from SignatureScreen
+  React.useEffect(() => {
+    if (sigFromRoute && stop?.id) {
+      completeStop(stop.id, {signature: sigFromRoute})
+        .then(() => Alert.alert(t('stopDetail.success'), t('stopDetail.completedSuccessfully')))
+        .catch(err => Alert.alert(t('orderDetail.error'), err?.response?.data?.message || t('orderDetail.failedToUpdate')));
+    }
+  }, [sigFromRoute]);
 
   // Guard: stop actions require parent order to be picked_up or in_transit
   const pickupDone = !orderStatus || ['picked_up', 'in_transit'].includes(orderStatus);
@@ -73,11 +82,8 @@ const StopDetailScreen = () => {
     // Check if signature/photo is required
     if (requireSignature) {
       navigation.navigate(routeNames.Signature, {
-        stopId: stop.id,
-        orderId,
-        onComplete: async signatureData => {
-          await completeStop(stop.id, {signature: signatureData});
-        },
+        returnScreen: routeNames.StopDetail,
+        returnParams: {stop, orderId, orderStatus},
       });
       return;
     }
