@@ -41,7 +41,8 @@ const useOrders = (params = {}, autoFetch = true) => {
     if (autoFetch) {
       fetchOrders(params);
     }
-  }, [params.status, autoFetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.status, params.page, params.limit, autoFetch]);
 
   // Pull-to-refresh handler
   const onRefresh = useCallback(() => {

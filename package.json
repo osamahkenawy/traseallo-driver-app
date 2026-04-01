@@ -5,8 +5,9 @@
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios --simulator=\"iPhone 14\"",
+    "rebuild": "cd ios && pod install && cd .. && react-native run-ios --simulator=\"iPhone 14\"",
     "start": "react-native start",
-    "test": "jest",
+    "test": "jest --forceExit",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -52,6 +53,12 @@
     "react-test-renderer": "18.1.0"
   },
   "jest": {
-    "preset": "react-native"
+    "preset": "react-native",
+    "transformIgnorePatterns": [
+      "node_modules/(?!(react-native|@react-native|@react-navigation|react-native-.*|axios|lucide-react-native|socket\\.io-client|socket\\.io-parser|engine\\.io-client|i18next|react-i18next|zustand)/)"
+    ],
+    "setupFiles": [
+      "./jest.setup.js"
+    ]
   }
 }

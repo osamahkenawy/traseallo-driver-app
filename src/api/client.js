@@ -5,10 +5,9 @@
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {API_BASE_URL} from '../config';
 
-// ─── Configuration ──────────────────────────────────
-const API_BASE_URL = 'https://dispatch.traseallo.com/api';
-
+// ─── Configuration ──────────────────────────────
 const TIMEOUT = 30000; // 30 seconds
 
 // ─── Token Storage Keys ─────────────────────────────

@@ -25,9 +25,13 @@ const SignatureScreen = ({navigation, route}) => {
   const sigRef = useRef(null);
   const [hasStrokes, setHasStrokes] = useState(false);
   const [savedData, setSavedData] = useState(null);
+  const savedDataRef = useRef(null);
 
   const handleExport = useCallback((dataUrl) => {
-    if (dataUrl) setSavedData(dataUrl);
+    if (dataUrl) {
+      setSavedData(dataUrl);
+      savedDataRef.current = dataUrl;
+    }
   }, []);
 
   const handleConfirm = () => {
@@ -40,10 +44,10 @@ const SignatureScreen = ({navigation, route}) => {
     } else if (!savedData && hasStrokes) {
       // Auto-export then navigate
       sigRef.current?.exportSignature();
-      // Use a small delay for the export callback
+      // Use a small delay for the export callback, read from ref to avoid stale closure
       setTimeout(() => {
-        const data = savedData;
-        if (returnScreen) {
+        const data = savedDataRef.current;
+        if (data && returnScreen) {
           navigation.navigate({
             name: returnScreen,
             params: {...returnParams, signatureData: data},

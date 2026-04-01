@@ -19,7 +19,7 @@ const OnboardingScreen = ({navigation, onComplete}) => {
   const {t} = useTranslation();
 
   const handleGetStarted = () => {
-    if (onComplete) {
+    if (typeof onComplete === 'function') {
       onComplete();
     } else {
       navigation.replace(routeNames.Login);

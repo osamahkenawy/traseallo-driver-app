@@ -7,7 +7,7 @@ import {locationApi} from '../api';
 
 const useLocationStore = create((set, get) => ({
   // ─── State ──────────────────────────────────────
-  currentPosition: {latitude: 24.4539, longitude: 54.3773, accuracy: 100, speed: 0, heading: 0}, // Default: Abu Dhabi
+  currentPosition: null, // Set by GPS watch — null until first real fix
   isTracking: false,
   driverStatus: 'offline', // 'available' | 'busy' | 'offline' | 'on_break'
   sessionStartTime: null, // ISO string — when the driver went online
@@ -86,7 +86,7 @@ const useLocationStore = create((set, get) => ({
    */
   sendPing: async () => {
     const position = get().currentPosition;
-    if (!position) return;
+    if (!position || !Number.isFinite(position.latitude)) return;
 
     const payload = {
       lat: position.latitude,

@@ -35,7 +35,7 @@ const useAuthStore = create((set, get) => ({
    * Tenant slug 'trasealla' is hardcoded for the driver app.
    */
   login: async (username, password) => {
-    const DEFAULT_TENANT_SLUG = 'swiftdrop';
+    const DEFAULT_TENANT_SLUG = 'trasealla';
     set({isLoading: true, loginError: null});
     try {
       // Pre-set tenant slug so the request interceptor sends x-tenant-slug header

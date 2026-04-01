@@ -58,7 +58,7 @@ const useCodStore = create((set, get) => ({
       // Remove from pending list
       set(state => ({
         pendingOrders: state.pendingOrders.filter(o => o.id !== orderId && o.order_id !== orderId),
-        totalPending: Math.max(0, state.totalPending - (data.amount_collected || 0)),
+        totalPending: Math.max(0, state.totalPending - 1),
         isCollecting: false,
       }));
 
@@ -88,5 +88,4 @@ const useCodStore = create((set, get) => ({
   clearError: () => set({error: null}),
 }));
 
-export default useCodStore;
-
+export default useCodStore; 

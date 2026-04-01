@@ -47,9 +47,13 @@ const useNotificationStore = create((set, get) => ({
             const seen = new Set();
             return merged.filter(n => {
               const key = n.id ?? n._id;
-              if (key == null) return true;
-              if (seen.has(key)) return false;
-              seen.add(key);
+              if (key == null) {
+                // No stable ID — always keep but deduplicate won't work
+                return true;
+              }
+              const strKey = String(key);
+              if (seen.has(strKey)) return false;
+              seen.add(strKey);
               return true;
             });
           })();

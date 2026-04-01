@@ -13,6 +13,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Platform,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import useStopsStore from '../../store/stopsStore';
@@ -99,8 +100,8 @@ const StopDetailScreen = () => {
   };
 
   const handleFail = () => {
-    Alert.prompt
-      ? Alert.prompt(t('stopDetail.reportFailure'), t('stopDetail.enterFailureReason'), [
+    if (Platform.OS === 'ios' && Alert.prompt) {
+      Alert.prompt(t('stopDetail.reportFailure'), t('stopDetail.enterFailureReason'), [
           {text: t('common.cancel'), style: 'cancel'},
           {
             text: t('common.confirm'),
@@ -116,8 +117,9 @@ const StopDetailScreen = () => {
               }
             },
           },
-        ])
-      : Alert.alert(t('stopDetail.reportFailure'), t('stopDetail.failConfirm'), [
+        ]);
+    } else {
+      Alert.alert(t('stopDetail.reportFailure'), t('stopDetail.failConfirm'), [
           {text: t('common.cancel'), style: 'cancel'},
           {
             text: t('orderDetail.fail'),
@@ -130,6 +132,7 @@ const StopDetailScreen = () => {
             },
           },
         ]);
+    }
   };
 
   const handleSkip = () => {

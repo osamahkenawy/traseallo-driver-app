@@ -43,9 +43,9 @@ const useOrderStore = create((set, get) => ({
       if (status === 'all') {
         // Backend does not support status=all — fetch multiple statuses in parallel
         const [activeRes, deliveredRes, failedRes] = await Promise.all([
-          ordersApi.getOrders({status: 'active', page: 1, limit: 100}),
-          ordersApi.getOrders({status: 'delivered', page: 1, limit: 100}),
-          ordersApi.getOrders({status: 'failed', page: 1, limit: 100}),
+          ordersApi.getOrders({status: 'active', page: 1, limit: 30}),
+          ordersApi.getOrders({status: 'delivered', page: 1, limit: 30}),
+          ordersApi.getOrders({status: 'failed', page: 1, limit: 30}),
         ]);
         const extract = (res) => {
           const d = res.data?.data || res.data;

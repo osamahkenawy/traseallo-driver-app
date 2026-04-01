@@ -260,7 +260,7 @@ const OrderDetailScreen = ({navigation, route}) => {
   const handleCallSender = useCallback(() => {
     const sp = order?.sender_phone;
     if (!sp) return Alert.alert(t('orderDetail.noPhone'), t('orderDetail.noSenderPhone'));
-    Linking.openURL(`tel:${cleanPhone(sp)}`);
+    Linking.openURL(`tel:${cleanPhone(sp)}`).catch(() => {});
   }, [order]);
 
   const handleNavigateToSender = useCallback(() => {
@@ -269,12 +269,12 @@ const OrderDetailScreen = ({navigation, route}) => {
         ios: `maps:0,0?daddr=${order.sender_lat},${order.sender_lng}`,
         android: `google.navigation:q=${order.sender_lat},${order.sender_lng}`,
       });
-      Linking.openURL(url);
+      Linking.openURL(url).catch(() => {});
       return;
     }
     const sAddr = order?.sender_address;
     if (!sAddr) return Alert.alert(t('orderDetail.noAddress'), t('orderDetail.noPickupAddress'));
-    Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(sAddr)}`);
+    Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(sAddr)}`).catch(() => {});
   }, [order]);
 
   const handleAcceptOrder = useCallback(async () => {
@@ -380,11 +380,11 @@ const OrderDetailScreen = ({navigation, route}) => {
         ios: `maps:0,0?daddr=${stop.lat},${stop.lng}`,
         android: `google.navigation:q=${stop.lat},${stop.lng}`,
       });
-      Linking.openURL(url);
+      Linking.openURL(url).catch(() => {});
       return;
     }
     if (stop?.address) {
-      Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(stop.address)}`);
+      Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(stop.address)}`).catch(() => {});
     }
   }, []);
 

@@ -27,7 +27,7 @@ const useAuth = () => {
   // Init auth expired handler on mount
   useEffect(() => {
     initAuthExpiredHandler();
-  }, []);
+  }, [initAuthExpiredHandler]);
 
   /**
    * Get greeting based on time of day

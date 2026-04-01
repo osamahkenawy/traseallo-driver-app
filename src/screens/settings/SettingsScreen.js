@@ -65,9 +65,9 @@ const SettingsScreen = ({navigation}) => {
         [
           {text: t('settings.openSettings'), onPress: () => {
             if (Platform.OS === 'ios') {
-              Linking.openURL('app-settings:');
+              Linking.openURL('app-settings:').catch(() => {});
             } else {
-              Linking.openSettings();
+              Linking.openSettings().catch(() => {});
             }
           }},
           {text: t('common.cancel'), style: 'cancel', onPress: () => setNotificationsEnabled(true)},

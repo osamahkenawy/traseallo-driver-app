@@ -247,7 +247,12 @@ export const processOfflineQueue = async () => {
 
   for (const action of queue) {
     if (action.retryCount >= MAX_RETRIES) {
-      // Too many retries — remove stale action
+      // Too many retries — alert user and remove
+      if (__DEV__) console.warn('Offline action discarded after max retries:', action.type, action.id);
+      Alert.alert(
+        'Sync Failed',
+        `A queued ${action.type?.replace(/_/g, ' ') || 'action'} could not be submitted after multiple attempts. Please retry manually or contact support.`,
+      );
       await removeFromQueue(action.id);
       failed++;
       continue;
@@ -295,9 +300,10 @@ export const clearOfflineQueue = async () => {
 let _listenerActive = false;
 export const initOfflineQueueListener = () => {
   if (_listenerActive) return;
+  if (typeof AppState?.addEventListener !== 'function') return;
   _listenerActive = true;
 
-  let lastState = AppState.currentState;
+  let lastState = AppState.currentState || 'active';
 
   AppState.addEventListener('change', async (nextState) => {
     try {

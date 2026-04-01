@@ -56,6 +56,20 @@ const PickupDetailScreen = ({navigation, route}) => {
   const [showFail, setShowFail] = useState(false);
 
   const orderId = pickup.id || pickup.order_id;
+
+  if (!orderId) {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgScreen}}>
+        <Text style={{fontFamily: fontFamily.medium, fontSize: 15, color: colors.textMuted}}>
+          {t('pickup.noPickupData', 'No pickup data available')}
+        </Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{marginTop: 16, padding: 12}}>
+          <Text style={{fontFamily: fontFamily.semiBold, fontSize: 14, color: colors.primary}}>{t('common.goBack', 'Go Back')}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const statusColor = getStatusColor(status);
   const currentStep = stepIndex(status);
   const formatLabel = (st) => t('status.' + (st || 'pending'), (st || 'pending'));
@@ -152,23 +166,34 @@ const PickupDetailScreen = ({navigation, route}) => {
   };
 
   const handleNavigate = () => {
-    if (pickupLat && pickupLng) {
-      Linking.openURL(`https://maps.apple.com/?daddr=${pickupLat},${pickupLng}`);
-    } else if (pickupAddress) {
-      Linking.openURL(`https://maps.apple.com/?daddr=${encodeURIComponent(pickupAddress)}`);
+    const url = pickupLat && pickupLng
+      ? `https://maps.apple.com/?daddr=${pickupLat},${pickupLng}`
+      : pickupAddress
+        ? `https://maps.apple.com/?daddr=${encodeURIComponent(pickupAddress)}`
+        : null;
+    if (url) {
+      Linking.openURL(url).catch(() =>
+        Alert.alert(t('common.error'), t('pickup.cannotOpenMaps', 'Could not open maps')),
+      );
     } else {
       Alert.alert(t('pickup.noAddress'), t('pickup.noLocationAvailable'));
     }
   };
 
   const handleCall = () => {
-    if (contactPhone) Linking.openURL(`tel:${contactPhone}`);
+    if (contactPhone) {
+      Linking.openURL(`tel:${contactPhone}`).catch(() =>
+        Alert.alert(t('common.error'), t('pickup.cannotCall', 'Could not open dialer')),
+      );
+    }
   };
 
   const handleWhatsApp = () => {
     if (contactPhone) {
       const phone = contactPhone.replace(/[\s\-()]/g, '');
-      Linking.openURL(`https://wa.me/${phone}`);
+      Linking.openURL(`https://wa.me/${phone}`).catch(() =>
+        Alert.alert(t('common.error'), t('pickup.cannotOpenWhatsApp', 'Could not open WhatsApp')),
+      );
     }
   };
 

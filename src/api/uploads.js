@@ -83,11 +83,9 @@ const uploadsApi = {
    */
   uploadOrderSignature: (orderId, base64DataUrl, onProgress) => {
     const formData = new FormData();
-    formData.append('file', {
-      uri: base64DataUrl,
-      name: `signature_${orderId}_${Date.now()}.png`,
-      type: 'image/png',
-    });
+    // base64DataUrl is "data:image/png;base64,..." — send as JSON field, not file URI
+    formData.append('signature', base64DataUrl);
+    formData.append('filename', `signature_${orderId}_${Date.now()}.png`);
     return apiClient.post(`/driver-app/orders/${orderId}/signature`, formData, {
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
@@ -132,11 +130,9 @@ const uploadsApi = {
    */
   uploadStopSignature: (stopId, base64DataUrl, onProgress) => {
     const formData = new FormData();
-    formData.append('file', {
-      uri: base64DataUrl,
-      name: `signature_stop_${stopId}_${Date.now()}.png`,
-      type: 'image/png',
-    });
+    // base64DataUrl is "data:image/png;base64,..." — send as JSON field, not file URI
+    formData.append('signature', base64DataUrl);
+    formData.append('filename', `signature_stop_${stopId}_${Date.now()}.png`);
     return apiClient.post(`/driver-app/stops/${stopId}/signature`, formData, {
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))

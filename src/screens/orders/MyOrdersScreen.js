@@ -325,7 +325,7 @@ const OrderCard = ({order, onPress, t, currency}) => {
               </Text>
             </View>
           )}
-          {order?.packages?.length > 0 && (
+          {Array.isArray(order?.packages) && order.packages.length > 0 && (
             <View style={$.infoChip}>
               <Icon name="package-variant" size={12} color={colors.textMuted} />
               <Text style={$.infoChipTxt}>
@@ -333,7 +333,7 @@ const OrderCard = ({order, onPress, t, currency}) => {
               </Text>
             </View>
           )}
-          {order?.stops?.length > 0 && (
+          {Array.isArray(order?.stops) && order.stops.length > 0 && (
             <View style={$.infoChip}>
               <Icon name="map-marker-path" size={12} color={colors.textMuted} />
               <Text style={$.infoChipTxt}>

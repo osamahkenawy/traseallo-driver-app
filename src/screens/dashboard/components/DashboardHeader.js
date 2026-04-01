@@ -59,7 +59,7 @@ const DashboardHeader = ({
   }, [loginTime]);
 
   // Tick every second so the elapsed clock updates
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(v => v + 1), 1000);
     return () => clearInterval(id);
@@ -69,12 +69,12 @@ const DashboardHeader = ({
     if (!loginTime) return '00:00:00';
     const start = new Date(loginTime);
     if (isNaN(start.getTime())) return '00:00:00';
-    const diff = Math.max(0, Math.floor((now - start) / 1000));
+    const diff = Math.max(0, Math.floor((Date.now() - start.getTime()) / 1000));
     const h = Math.floor(diff / 3600);
     const m = Math.floor((diff % 3600) / 60);
     const sec = diff % 60;
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  }, [loginTime, now]);
+  }, [loginTime, tick]);
 
   return (
     <View>

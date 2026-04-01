@@ -43,7 +43,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
         [{text: t('common.ok'), onPress: () => navigation.goBack()}],
       );
     }
-  }, [orderStatus]);
+  }, [orderStatus, t, navigation]);
 
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState([]);

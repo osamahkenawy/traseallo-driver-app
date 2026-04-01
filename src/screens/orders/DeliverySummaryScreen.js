@@ -57,7 +57,7 @@ const DeliverySummaryScreen = ({navigation, route}) => {
     return () => { cancelled = true; };
   }, [orderId]);
 
-  const delivered = summary?.delivered || packages.filter(p => p.status === 'delivered').length;
+  const delivered = summary?.delivered ?? packages.filter(p => p.status === 'delivered').length;
   const failed = summary?.failed || packages.filter(p => p.status === 'failed').length;
   const returned = packages.filter(p => p.status === 'returned').length;
   const total = summary?.total || packages.length;

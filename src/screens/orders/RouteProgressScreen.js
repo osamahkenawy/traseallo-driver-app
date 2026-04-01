@@ -38,12 +38,12 @@ const RouteProgressScreen = () => {
   useEffect(() => {
     fetchRoute();
     fetchProgress();
-  }, []);
+  }, [fetchRoute, fetchProgress]);
 
   const onRefresh = useCallback(() => {
     fetchRoute(true);
     fetchProgress();
-  }, []);
+  }, [fetchRoute, fetchProgress]);
 
   const stops = route?.stops || [];
   const completedCount = progress?.completed || stops.filter(s => s.status === 'completed').length;
