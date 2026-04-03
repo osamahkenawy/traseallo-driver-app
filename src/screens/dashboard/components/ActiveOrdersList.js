@@ -41,7 +41,7 @@ const ActiveOrdersList = ({orders = [], onOrderPress, onViewAll}) => {
         <View style={$.list}>
           {orders.slice(0, 3).map((order, idx) => (
             <OrderCard
-              key={order?.id || order?.tracking_token || idx}
+              key={`order-${order?.id || order?.tracking_token || ''}-${idx}`}
               order={order}
               onPress={() => onOrderPress?.(order)}
               t={t}

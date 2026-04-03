@@ -51,7 +51,7 @@ const NotificationsPreview = ({
           const iconCfg = getNotifIcon(notif.type);
           return (
             <TouchableOpacity
-              key={notif.id || idx}
+              key={`notif-${notif.id || idx}-${idx}`}
               style={[$.notifItem, idx < notifications.length - 1 && idx < 2 && $.notifBorder]}
               onPress={() => onPress?.(notif)}
               activeOpacity={0.6}>

@@ -134,7 +134,7 @@ const DashboardScreen = ({navigation}) => {
         ) : (
           filteredOrders.map((order, idx) => (
             <TaskCard
-              key={order?.id || order?.tracking_token || idx}
+              key={`task-${order?.id || order?.tracking_token || ''}-${idx}`}
               order={order}
               onPress={() => handleOpenOrder(order)}
             />

@@ -1188,7 +1188,7 @@ const OrderDetailScreen = ({navigation, route}) => {
               const logColor = override?.color || getStatusColor(log.status);
 
               return (
-                <View key={log.id} style={$.tlRow}>
+                <View key={`log-${log.id}-${i}`} style={$.tlRow}>
                   <View style={$.tlLeft}>
                     <View style={[
                       $.tlDot,

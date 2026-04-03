@@ -22,7 +22,7 @@ import {showMessage} from 'react-native-flash-message';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {packagesApi, uploadsApi} from '../../api';
-import {launchCamera} from 'react-native-image-picker';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import useLocationStore from '../../store/locationStore';
 import useOrderStore from '../../store/orderStore';
 import {useTranslation} from 'react-i18next';
@@ -57,12 +57,20 @@ const PackageFailScreen = ({navigation, route}) => {
   const [loading, setLoading] = useState(false);
 
   const handleTakePhoto = () => {
+    const pickerOptions = {mediaType: 'photo', quality: 0.7, maxWidth: 1200, maxHeight: 1200};
+    const handleResponse = (response) => {
+      if (response.didCancel || response.errorCode) return;
+      const uri = response.assets?.[0]?.uri;
+      if (uri) setPhotoUri(uri);
+    };
     launchCamera(
-      {mediaType: 'photo', cameraType: 'back', quality: 0.7, maxWidth: 1200, maxHeight: 1200},
-      (response) => {
-        if (response.didCancel || response.errorCode) return;
-        const uri = response.assets?.[0]?.uri;
-        if (uri) setPhotoUri(uri);
+      {...pickerOptions, cameraType: 'back'},
+      (res) => {
+        if (res.errorCode === 'camera_unavailable') {
+          launchImageLibrary(pickerOptions, handleResponse);
+        } else {
+          handleResponse(res);
+        }
       },
     );
   };

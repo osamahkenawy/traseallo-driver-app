@@ -22,7 +22,7 @@ import {showMessage} from 'react-native-flash-message';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {packagesApi, uploadsApi} from '../../api';
-import {launchCamera} from 'react-native-image-picker';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import useLocationStore from '../../store/locationStore';
 import useOrderStore from '../../store/orderStore';
 import useSettingsStore from '../../store/settingsStore';
@@ -63,12 +63,20 @@ const PackageDeliverScreen = ({navigation, route}) => {
   }, [sigFromRoute]);
 
   const handleTakePhoto = () => {
+    const pickerOptions = {mediaType: 'photo', quality: 0.7, maxWidth: 1200, maxHeight: 1200};
+    const handleResponse = (response) => {
+      if (response.didCancel || response.errorCode) return;
+      const uri = response.assets?.[0]?.uri;
+      if (uri) setPhotoUri(uri);
+    };
     launchCamera(
-      {mediaType: 'photo', cameraType: 'back', quality: 0.7, maxWidth: 1200, maxHeight: 1200},
-      (response) => {
-        if (response.didCancel || response.errorCode) return;
-        const uri = response.assets?.[0]?.uri;
-        if (uri) setPhotoUri(uri);
+      {...pickerOptions, cameraType: 'back'},
+      (res) => {
+        if (res.errorCode === 'camera_unavailable') {
+          launchImageLibrary(pickerOptions, handleResponse);
+        } else {
+          handleResponse(res);
+        }
       },
     );
   };
@@ -344,7 +352,7 @@ const s = StyleSheet.create({
   infoAddr: {fontFamily: fontFamily.regular, fontSize: 11, color: colors.textMuted, marginTop: 2},
 
   /* Sections */
-  secTitle: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginBottom: 8, marginTop: 16},
+  secTitle: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginBottom: 10, marginTop: 20},
 
   /* Photo */
   photoBox: {
@@ -356,7 +364,7 @@ const s = StyleSheet.create({
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: '#F0F2F5', justifyContent: 'center', alignItems: 'center',
   },
-  photoLabel: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textMuted},
+  photoLabel: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textMuted, marginTop: 4},
   photoImg: {width: '100%', height: '100%', borderRadius: 14},
   retakeBtn: {
     flexDirection: 'row', alignItems: 'center', alignSelf: 'center',
@@ -378,7 +386,7 @@ const s = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: '#F0F2F5', justifyContent: 'center', alignItems: 'center',
   },
-  sigTapLabel: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textMuted},
+  sigTapLabel: {fontFamily: fontFamily.regular, fontSize: 13, color: colors.textMuted, marginTop: 4},
   sigDoneContent: {
     flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%',
   },

@@ -213,13 +213,13 @@ const PhotoProofGrid = ({
 
       {/* Grid */}
       <View style={s.grid}>
-        {photos.map((photo) => {
+        {photos.map((photo, idx) => {
           const uri = photo.photo_url?.startsWith('/')
             ? uploadsApi.getFileUrl(photo.photo_url)
             : photo.photo_url;
           const isDeleting = deleting === photo.id;
           return (
-            <View key={photo.id} style={s.thumbWrap}>
+            <View key={`photo-${photo.id}-${idx}`} style={s.thumbWrap}>
               <Image source={{uri}} style={s.thumb} resizeMode="cover" />
               {photo.photo_type && photo.photo_type !== 'proof_of_delivery' && (
                 <View style={s.typeBadge}>

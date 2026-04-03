@@ -133,6 +133,10 @@ import {
   MapPinCheck,
   LogOut,
   Text,
+  PlusCircle,
+  List,
+  Send,
+  Inbox,
 } from 'lucide-react-native';
 
 const ICON_MAP = {
@@ -469,6 +473,13 @@ const ICON_MAP = {
 
   // Logout
   'logout': LogOut,
+
+  // Support screen
+  'plus-circle': PlusCircle,
+  'list': List,
+  'send': Send,
+  'inbox': Inbox,
+  'help-circle': HelpCircle,
 };
 
 /** Icons that should swap to their mirror counterpart in RTL mode */
