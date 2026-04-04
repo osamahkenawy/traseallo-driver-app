@@ -137,6 +137,10 @@ import {
   List,
   Send,
   Inbox,
+  Satellite,
+  Layers,
+  Map,
+  TrafficCone,
 } from 'lucide-react-native';
 
 const ICON_MAP = {
@@ -451,6 +455,12 @@ const ICON_MAP = {
   'truck-check-outline': Truck,
   'car-outline': Car,
   'car-info': Car,
+  'car-multiple': TrafficCone,
+
+  // Map types
+  'satellite-variant': Satellite,
+  'layers': Layers,
+  'map-outline': Map,
 
   // ID card
   'card-text-outline': IdCard,

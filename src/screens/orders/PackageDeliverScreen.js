@@ -99,31 +99,58 @@ const PackageDeliverScreen = ({navigation, route}) => {
       // 1. Upload proof photo
       let proofUrl = null;
       if (photoUri && orderId) {
-        const uploadRes = await uploadsApi.uploadOrderProofPhoto(orderId, photoUri);
-        proofUrl = uploadRes.data?.data?.url || uploadRes.data?.url || null;
+        try {
+          const uploadRes = await uploadsApi.uploadOrderProofPhoto(orderId, photoUri);
+          proofUrl = uploadRes.data?.data?.url || uploadRes.data?.url || null;
+        } catch (photoErr) {
+          if (__DEV__) console.warn('[PackageDeliver] Photo upload failed:', photoErr?.message);
+          // Continue with delivery — photo is not blocking
+          showMessage({
+            message: t('packageDeliver.photoUploadFailed', 'Photo upload failed, continuing delivery'),
+            type: 'warning',
+            icon: 'auto',
+            duration: 2000,
+          });
+        }
       }
 
       // 2. Upload signature (already captured from SignatureScreen)
       let signatureUrl = null;
       if (signatureData && orderId) {
-        const sigRes = await uploadsApi.uploadOrderSignature(orderId, signatureData);
-        signatureUrl = sigRes.data?.data?.url || sigRes.data?.url || null;
+        try {
+          const sigRes = await uploadsApi.uploadOrderSignature(orderId, signatureData);
+          signatureUrl = sigRes.data?.data?.url || sigRes.data?.url || null;
+        } catch (sigErr) {
+          if (__DEV__) console.warn('[PackageDeliver] Signature upload failed:', sigErr?.message);
+        }
       }
 
-      // 3. Auto-transition package to picked_up if not already in a deliverable state
+      // 3. Auto-transition package through required states before delivery
+      // Backend state machine: picked_up → in_transit → delivered
       try {
         const pkgRes = await packagesApi.getPackage(packageId);
         const pkgData = pkgRes.data?.data || pkgRes.data;
         const pkgStatus = pkgData?.status;
-        if (pkgStatus && !['picked_up', 'in_transit', 'out_for_delivery'].includes(pkgStatus)) {
+
+        if (pkgStatus && !['in_transit', 'out_for_delivery'].includes(pkgStatus)) {
+          // If not yet picked_up, transition to picked_up first
+          if (!['picked_up'].includes(pkgStatus)) {
+            await packagesApi.updateStatus(packageId, {
+              status: 'picked_up',
+              lat: currentPosition?.latitude || undefined,
+              lng: currentPosition?.longitude || undefined,
+            });
+          }
+          // Then transition to in_transit (required before delivered)
           await packagesApi.updateStatus(packageId, {
-            status: 'picked_up',
+            status: 'in_transit',
             lat: currentPosition?.latitude || undefined,
             lng: currentPosition?.longitude || undefined,
           });
         }
-      } catch (_ignored) {
+      } catch (preTransErr) {
         // Continue — the delivery PATCH will give a clear error if transition fails
+        if (__DEV__) console.warn('[PackageDeliver] Pre-transition failed:', preTransErr?.message);
       }
 
       // 4. PATCH package status to delivered
@@ -132,6 +159,8 @@ const PackageDeliverScreen = ({navigation, route}) => {
         notes: notes.trim() || undefined,
         proof_photo_url: proofUrl || undefined,
         signature_url: signatureUrl || undefined,
+        // Include raw signature data if upload didn't produce a URL
+        signature: !signatureUrl && signatureData ? signatureData : undefined,
         lat: currentPosition?.latitude || undefined,
         lng: currentPosition?.longitude || undefined,
       };

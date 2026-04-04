@@ -285,7 +285,7 @@ const EditProfileScreen = ({navigation}) => {
     } finally {
       setStatusLoading(false);
     }
-  }, [driverStatus, goOnline, goOffline, onBreak]);
+  }, [driverStatus, goOnline, goOffline, onBreak, t]);
 
   const handleSave = async () => {
     if (!name.trim()) {

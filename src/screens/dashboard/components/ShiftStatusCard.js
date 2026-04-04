@@ -9,6 +9,7 @@ import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
 import {useTranslation} from 'react-i18next';
+import {showMessage} from 'react-native-flash-message';
 
 const STATUS_CONFIG = {
   offline: {
@@ -92,10 +93,15 @@ const ShiftStatusCard = ({
     try {
       if (status === 'offline') await onGoOnline?.();
       else if (status === 'available') await onBreak?.();
-      else if (status === 'busy') onContinueRoute?.();
+      else if (status === 'busy') await onContinueRoute?.();
       else if (status === 'on_break') await onGoOnline?.();
     } catch (e) {
       if (__DEV__) console.warn('Shift action error:', e.message);
+      showMessage({
+        message: e?.response?.data?.message || e?.message || t('common.error'),
+        type: 'danger',
+        icon: 'auto',
+      });
     } finally {
       setIsActing(false);
     }

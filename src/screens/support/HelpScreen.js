@@ -41,9 +41,9 @@ const HelpScreen = () => {
 
   useEffect(() => {
     fetchHelp();
-  }, []);
+  }, [fetchHelp]);
 
-  const onRefresh = useCallback(() => fetchHelp(), []);
+  const onRefresh = useCallback(() => fetchHelp(), [fetchHelp]);
 
   const faqs = help?.faqs || help?.items || [];
   const contactInfo = help?.contact || null;

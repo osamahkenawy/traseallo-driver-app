@@ -151,6 +151,10 @@ const MapScreen = ({navigation}) => {
   const [zones, setZones] = useState([]);
   const [showZones, setShowZones] = useState(false);
 
+  // ── Map display options ─────────────────────
+  const [mapType, setMapType] = useState('standard'); // 'standard' | 'satellite' | 'hybrid'
+  const [showTraffic, setShowTraffic] = useState(false);
+
   // ── Bottom sheet animation ──────────────────
   const sheetY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
 
@@ -214,11 +218,14 @@ const MapScreen = ({navigation}) => {
 
   // Fetch zones once
   useEffect(() => {
+    let cancelled = false;
     settingsApi.getZones().then((res) => {
+      if (cancelled) return;
       const data = res.data?.data || res.data;
       const items = data?.zones || data || [];
       setZones(Array.isArray(items) ? items : []);
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   // ── Build an order lookup for enriching route stops ──
@@ -481,6 +488,49 @@ const MapScreen = ({navigation}) => {
     });
   }, [mapStops, currentPosition]);
 
+  // ── Zoom controls ──────────────────────────
+  const zoomIn = useCallback(() => {
+    mapRef.current?.getCamera?.().then((cam) => {
+      if (!cam) return;
+      if (Platform.OS === 'ios') {
+        mapRef.current.animateCamera(
+          {...cam, altitude: (cam.altitude || 10000) / 2},
+          {duration: 200},
+        );
+      } else {
+        mapRef.current.animateCamera(
+          {...cam, zoom: (cam.zoom || 15) + 1},
+          {duration: 200},
+        );
+      }
+    }).catch(() => {});
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    mapRef.current?.getCamera?.().then((cam) => {
+      if (!cam) return;
+      if (Platform.OS === 'ios') {
+        mapRef.current.animateCamera(
+          {...cam, altitude: Math.min((cam.altitude || 10000) * 2, 500000)},
+          {duration: 200},
+        );
+      } else {
+        mapRef.current.animateCamera(
+          {...cam, zoom: Math.max((cam.zoom || 15) - 1, 3)},
+          {duration: 200},
+        );
+      }
+    }).catch(() => {});
+  }, []);
+
+  const toggleMapType = useCallback(() => {
+    setMapType((prev) => {
+      if (prev === 'standard') return 'satellite';
+      if (prev === 'satellite') return 'hybrid';
+      return 'standard';
+    });
+  }, []);
+
   // ── Status toggle (fixed B-1, B-7) ─────────
   const cycleStatus = useCallback(() => {
     // For 'busy' (auto-set by backend), next step is on_break
@@ -497,12 +547,16 @@ const MapScreen = ({navigation}) => {
         {
           text: t('common.confirm'),
           onPress: async () => {
-            let result;
-            if (next === 'available') result = await goOnline();
-            else if (next === 'offline') result = await goOffline();
-            else result = await onBreak();
-            if (result && !result.success) {
-              Alert.alert(t('common.error'), result.error || t('common.failed'));
+            try {
+              let result;
+              if (next === 'available') result = await goOnline();
+              else if (next === 'offline') result = await goOffline();
+              else result = await onBreak();
+              if (result && !result.success) {
+                Alert.alert(t('common.error'), result.error || t('common.failed'));
+              }
+            } catch (e) {
+              Alert.alert(t('common.error'), e?.message || t('common.failed'));
             }
           },
         },
@@ -711,6 +765,8 @@ const MapScreen = ({navigation}) => {
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
         initialRegion={initialRegion}
+        mapType={mapType}
+        showsTraffic={showTraffic}
         showsUserLocation={false}
         showsMyLocationButton={false}
         showsCompass={false}
@@ -808,7 +864,7 @@ const MapScreen = ({navigation}) => {
           )}
 
           {/* FABs column */}
-          <View style={[$.fabCol, {top: ins.top + 56}]}>
+          <View style={[$.fabCol, {top: ins.top + (navMode ? 120 : 80)}]}>
             <TouchableOpacity style={$.fab} onPress={recenter} activeOpacity={0.8}>
               <Icon name="crosshairs-gps" size={18} color={colors.primary} />
             </TouchableOpacity>
@@ -835,51 +891,35 @@ const MapScreen = ({navigation}) => {
               </TouchableOpacity>
             )}
 
-        {/* Zoom controls */}
-        <View style={$.zoomDivider} />
-        <TouchableOpacity
-          style={$.fab}
-          onPress={() => {
-            mapRef.current?.getCamera?.().then((cam) => {
-              if (!cam) return;
-              if (Platform.OS === 'ios') {
-                mapRef.current.animateCamera(
-                  {...cam, altitude: (cam.altitude || 10000) / 2},
-                  {duration: 200},
-                );
-              } else {
-                mapRef.current.animateCamera(
-                  {...cam, zoom: (cam.zoom || 15) + 1},
-                  {duration: 200},
-                );
-              }
-            }).catch(() => {});
-          }}
-          activeOpacity={0.8}>
-          <Icon name="plus" size={20} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={$.fab}
-          onPress={() => {
-            mapRef.current?.getCamera?.().then((cam) => {
-              if (!cam) return;
-              if (Platform.OS === 'ios') {
-                mapRef.current.animateCamera(
-                  {...cam, altitude: Math.min((cam.altitude || 10000) * 2, 500000)},
-                  {duration: 200},
-                );
-              } else {
-                mapRef.current.animateCamera(
-                  {...cam, zoom: Math.max((cam.zoom || 15) - 1, 3)},
-                  {duration: 200},
-                );
-              }
-            }).catch(() => {});
-          }}
-          activeOpacity={0.8}>
-          <Icon name="minus" size={20} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+            {/* Map type toggle */}
+            <TouchableOpacity
+              style={[$.fab, mapType !== 'standard' && {backgroundColor: colors.primary}]}
+              onPress={toggleMapType}
+              activeOpacity={0.8}>
+              <Icon
+                name={mapType === 'satellite' ? 'satellite-variant' : mapType === 'hybrid' ? 'layers' : 'map-outline'}
+                size={18}
+                color={mapType !== 'standard' ? colors.white : colors.primary}
+              />
+            </TouchableOpacity>
+
+            {/* Traffic toggle */}
+            <TouchableOpacity
+              style={[$.fab, showTraffic && {backgroundColor: colors.warning}]}
+              onPress={() => setShowTraffic(prev => !prev)}
+              activeOpacity={0.8}>
+              <Icon name="car-multiple" size={18} color={showTraffic ? colors.white : colors.primary} />
+            </TouchableOpacity>
+
+            {/* Zoom controls */}
+            <View style={$.zoomDivider} />
+            <TouchableOpacity style={$.fab} onPress={zoomIn} activeOpacity={0.8}>
+              <Icon name="plus" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={$.fab} onPress={zoomOut} activeOpacity={0.8}>
+              <Icon name="minus" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
 
       {/* Start Trip FAB */}
       {assignedCount > 0 && !selectedStop && (
@@ -945,19 +985,35 @@ const MapScreen = ({navigation}) => {
 
       {/* ── Navigation mode overlay ── */}
       {navMode && (
-        <NavigationOverlay
-          stop={navStop}
-          steps={navSteps}
-          distance={navDistance}
-          duration={navDuration}
-          onEndNav={handleEndNav}
-          onOpenExternal={() => navStop && handleExternalNav(navStop)}
-          onViewDetail={(stop) => {
-            handleEndNav();
-            handleViewDetail(stop);
-          }}
-          t={t}
-        />
+        <>
+          {/* Zoom controls during nav */}
+          <View style={[$.fabCol, {top: ins.top + 56}]}>
+            <TouchableOpacity style={$.fab} onPress={recenter} activeOpacity={0.8}>
+              <Icon name="crosshairs-gps" size={18} color={colors.primary} />
+            </TouchableOpacity>
+            <View style={$.zoomDivider} />
+            <TouchableOpacity style={$.fab} onPress={zoomIn} activeOpacity={0.8}>
+              <Icon name="plus" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={$.fab} onPress={zoomOut} activeOpacity={0.8}>
+              <Icon name="minus" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          <NavigationOverlay
+            stop={navStop}
+            steps={navSteps}
+            distance={navDistance}
+            duration={navDuration}
+            onEndNav={handleEndNav}
+            onOpenExternal={() => navStop && handleExternalNav(navStop)}
+            onViewDetail={(stop) => {
+              handleEndNav();
+              handleViewDetail(stop);
+            }}
+            t={t}
+          />
+        </>
       )}
 
       {/* Trip Preview Modal */}

@@ -34,9 +34,12 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
   const {token, orderId, codAmount = 0, orderStatus, signatureData: sigFromRoute} = route.params || {};
   const hasCod = Number(codAmount) > 0;
 
+  const [invalidStatus, setInvalidStatus] = useState(false);
+
   // Guard: only allow delivery if order is picked_up or in_transit
   React.useEffect(() => {
     if (orderStatus && !['picked_up', 'in_transit'].includes(orderStatus)) {
+      setInvalidStatus(true);
       Alert.alert(
         t('deliveryConfirm.error'),
         t('deliveryConfirm.pickupRequired', 'Pickup must be completed before confirming delivery.'),
@@ -124,26 +127,42 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
       // Upload signature if captured
       let signatureUrl = null;
       if (signatureUri && orderId) {
-        const sigRes = await uploadsApi.uploadOrderSignature(orderId, signatureUri);
-        signatureUrl = sigRes.data?.data?.url || sigRes.data?.url || null;
+        try {
+          const sigRes = await uploadsApi.uploadOrderSignature(orderId, signatureUri);
+          signatureUrl = sigRes.data?.data?.url || sigRes.data?.url || null;
+        } catch (sigErr) {
+          if (__DEV__) console.warn('[DeliveryConfirm] Signature upload failed:', sigErr?.message);
+        }
       }
 
-      // Pre-transition any packages that aren't picked_up yet
+      // Pre-transition packages through required states before delivery
+      // Backend state machine: ... → picked_up → in_transit → delivered
       try {
         const pkgRes = await packagesApi.getOrderPackages(orderId);
         const pkgData = pkgRes.data?.data || pkgRes.data;
         const pkgs = pkgData?.packages || pkgData || [];
+        const terminalStatuses = ['delivered', 'failed', 'returned', 'cancelled'];
         for (const pkg of pkgs) {
-          if (!['picked_up', 'in_transit', 'out_for_delivery', 'delivered', 'failed', 'returned', 'cancelled'].includes(pkg.status)) {
+          if (terminalStatuses.includes(pkg.status)) continue;
+          // Step to picked_up if needed
+          if (!['picked_up', 'in_transit', 'out_for_delivery'].includes(pkg.status)) {
             await packagesApi.updateStatus(pkg.id, {
               status: 'picked_up',
               lat: currentPosition?.latitude || undefined,
               lng: currentPosition?.longitude || undefined,
             });
           }
+          // Step to in_transit if not already
+          if (!['in_transit', 'out_for_delivery'].includes(pkg.status)) {
+            await packagesApi.updateStatus(pkg.id, {
+              status: 'in_transit',
+              lat: currentPosition?.latitude || undefined,
+              lng: currentPosition?.longitude || undefined,
+            });
+          }
         }
-      } catch (_ignored) {
-        // Continue — order deliver endpoint will give clear error if needed
+      } catch (preTransErr) {
+        if (__DEV__) console.warn('[DeliveryConfirm] Pre-transition failed:', preTransErr?.message);
       }
 
       // Deliver order via new API
@@ -151,6 +170,8 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
         note: notes.trim() || undefined,
         proof_photo: proofUrl || undefined,
         signature_url: signatureUrl || undefined,
+        // Include raw signature data if upload didn't produce a URL
+        signature: !signatureUrl && signatureUri ? signatureUri : undefined,
         lat: currentPosition?.latitude || undefined,
         lng: currentPosition?.longitude || undefined,
       };
@@ -181,6 +202,10 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
       setLoading(false);
     }
   };
+
+  if (invalidStatus) {
+    return <View style={[s.root, {paddingTop: ins.top}]} />;
+  }
 
   return (
     <View style={[s.root, {paddingTop: ins.top}]}>

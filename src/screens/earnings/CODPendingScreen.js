@@ -73,7 +73,7 @@ const CODPendingScreen = () => {
         ],
       );
     },
-    [collectCod],
+    [collectCod, t],
   );
 
   const totalPending = orders.reduce(

@@ -140,9 +140,11 @@ apiClient.interceptors.request.use(
 // ─── Response Interceptor ───────────────────────────
 // onAuthExpired will be set by the auth store to redirect to login
 let onAuthExpired = null;
+let authExpiredFired = false;
 
 export const setOnAuthExpired = (callback) => {
   onAuthExpired = callback;
+  authExpiredFired = false;
 };
 
 apiClient.interceptors.response.use(
@@ -179,7 +181,8 @@ apiClient.interceptors.response.use(
     // 401 Unauthorized → token expired → redirect to login
     // Skip for login/auth endpoints — those handle their own errors
     const isAuthEndpoint = requestUrl.includes('/login') || requestUrl.includes('/forgot-password') || requestUrl.includes('/reset-password');
-    if (status === 401 && !isAuthEndpoint) {
+    if (status === 401 && !isAuthEndpoint && !authExpiredFired) {
+      authExpiredFired = true;
       await clearToken();
       if (onAuthExpired) {
         onAuthExpired();

@@ -1,8 +1,8 @@
 /**
  * Trasealla Driver App — Proof of Delivery / Uploads API
- * Endpoints: /driver-app/orders/:id/proof-photo, /driver-app/orders/:id/signature,
- *            /driver-app/stops/:id/proof-photo, /driver-app/stops/:id/signature,
- *            /driver-app/profile/avatar
+ * Endpoints: POST /driver-app/orders/:id/proof-photo (file upload)
+ *            POST /driver-app/orders/:id/signature (base64 or file)
+ *            POST /uploads/drivers/:id/photo (avatar)
  */
 
 import apiClient from './client';
@@ -73,7 +73,7 @@ const uploadsApi = {
    * @param {number|string} photoId
    */
   deletePhoto: (photoId) =>
-    apiClient.delete(`/driver-app/photos/${photoId}`),
+    apiClient.delete(`/uploads/photos/${photoId}`),
 
   /**
    * Upload recipient signature for an order
@@ -81,15 +81,12 @@ const uploadsApi = {
    * @param {string} base64DataUrl - data:image/png;base64,... string
    * @param {function} [onProgress]
    */
-  uploadOrderSignature: (orderId, base64DataUrl, onProgress) => {
-    const formData = new FormData();
-    // base64DataUrl is "data:image/png;base64,..." — send as JSON field, not file URI
-    formData.append('signature', base64DataUrl);
-    formData.append('filename', `signature_${orderId}_${Date.now()}.png`);
-    return apiClient.post(`/driver-app/orders/${orderId}/signature`, formData, {
-      onUploadProgress: onProgress
-        ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
-        : undefined,
+  uploadOrderSignature: async (orderId, base64DataUrl) => {
+    // Send signature as base64 JSON to the driver-app signature endpoint
+    return apiClient.post(`/driver-app/orders/${orderId}/signature`, {
+      signature: base64DataUrl,
+      photo_type: 'signature',
+      filename: `signature_${orderId}_${Date.now()}.png`,
     });
   },
 
@@ -128,15 +125,11 @@ const uploadsApi = {
    * @param {string} base64DataUrl
    * @param {function} [onProgress]
    */
-  uploadStopSignature: (stopId, base64DataUrl, onProgress) => {
-    const formData = new FormData();
-    // base64DataUrl is "data:image/png;base64,..." — send as JSON field, not file URI
-    formData.append('signature', base64DataUrl);
-    formData.append('filename', `signature_stop_${stopId}_${Date.now()}.png`);
-    return apiClient.post(`/driver-app/stops/${stopId}/signature`, formData, {
-      onUploadProgress: onProgress
-        ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
-        : undefined,
+  uploadStopSignature: async (stopId, base64DataUrl) => {
+    return apiClient.post(`/driver-app/stops/${stopId}/signature`, {
+      signature: base64DataUrl,
+      photo_type: 'signature',
+      filename: `signature_stop_${stopId}_${Date.now()}.png`,
     });
   },
 
@@ -149,7 +142,7 @@ const uploadsApi = {
    */
   uploadAvatar: (uri, onProgress) => {
     const formData = createFormData(uri);
-    return apiClient.post('/driver-app/profile/avatar', formData, {
+    return apiClient.post('/uploads/drivers/avatar', formData, {
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,

@@ -80,11 +80,15 @@ const RootNavigator = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
+    let splashTimer = null;
     const bootstrap = async () => {
-      const splashMin = new Promise(resolve => setTimeout(resolve, 3000));
+      const splashMin = new Promise(resolve => {
+        splashTimer = setTimeout(resolve, 3000);
+      });
       try {
         await Promise.all([validateSession(), splashMin]);
       } catch (e) {
+        if (__DEV__) console.warn('Bootstrap error:', e?.message);
         // Session invalid — user goes to login
         await splashMin;
       } finally {
@@ -92,7 +96,10 @@ const RootNavigator = () => {
       }
     };
     bootstrap();
-  }, []);
+    return () => {
+      if (splashTimer) clearTimeout(splashTimer);
+    };
+  }, [validateSession]);
 
   if (!isReady || isLoading) {
     return <SplashScreen />;

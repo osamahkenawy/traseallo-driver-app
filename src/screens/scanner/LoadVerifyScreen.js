@@ -317,7 +317,7 @@ const LoadVerifyScreen = ({navigation}) => {
       {/* Package List */}
       <FlatList
         data={filteredList}
-        keyExtractor={(item, idx) => `pkg-${item.id || item.tracking_number || idx}`}
+        keyExtractor={(item) => `pkg-${item.id || item.tracking_number || item.barcode}`}
         contentContainerStyle={s.list}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

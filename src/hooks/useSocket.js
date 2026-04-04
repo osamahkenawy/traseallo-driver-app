@@ -17,6 +17,7 @@ const SOCKET_URL = 'https://dispatch.traseallo.com';
 
 const useSocket = () => {
   const socketRef = useRef(null);
+  const connectingRef = useRef(false);
   const pollRef = useRef(null);
   const refreshTimerRef = useRef(null);
   const token = useAuthStore((s) => s.token);
@@ -47,7 +48,9 @@ const useSocket = () => {
    */
   const connect = useCallback(() => {
     if (socketRef.current?.connected) return;
+    if (connectingRef.current) return;
     if (!token || !isAuthenticated) return;
+    connectingRef.current = true;
 
     const socket = io(SOCKET_URL, {
       auth: {token: `Bearer ${token}`},
@@ -152,6 +155,7 @@ const useSocket = () => {
     });
 
     socketRef.current = socket;
+    connectingRef.current = false;
   }, [token, tenantId, user, isAuthenticated, scheduleRefresh, addNotification, insertNewStops, fetchRoute]);
 
   /**

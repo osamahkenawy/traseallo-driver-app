@@ -2,7 +2,7 @@
  * My Pickups Screen — Pickup list from API with pull-to-refresh
  */
 
-import React, {useEffect} from 'react';
+import React, {useEffect, useCallback} from 'react';
 import {
   View,
   StyleSheet,
@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useFocusEffect} from '@react-navigation/native';
 import Icon from '../../utils/LucideIcon';
 import {colors, getStatusColor, getStatusBgColor} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
@@ -24,6 +25,7 @@ const STATUS_ICONS = {
   pending: 'clock-outline',
   assigned: 'account-arrow-right-outline',
   accepted: 'check-bold',
+  en_route: 'truck-fast-outline',
   arrived: 'map-marker-check-outline',
   picked_up: 'package-variant-closed-check',
   completed: 'check-circle-outline',
@@ -39,6 +41,13 @@ const MyPickupsScreen = ({navigation}) => {
   useEffect(() => {
     fetchPickups();
   }, [fetchPickups]);
+
+  // Re-fetch when screen comes back into focus (e.g. after pickup confirmation)
+  useFocusEffect(
+    useCallback(() => {
+      fetchPickups(true);
+    }, [fetchPickups]),
+  );
 
   const onRefresh = () => {
     fetchPickups(true);

@@ -107,8 +107,13 @@ const FailureReportScreen = ({navigation, route}) => {
       // Upload photo if taken
       let proofUrl = null;
       if (photoUri && orderId) {
-        const uploadRes = await uploadsApi.uploadOrderProofPhoto(orderId, photoUri);
-        proofUrl = uploadRes.data?.data?.url || uploadRes.data?.url || null;
+        try {
+          const uploadRes = await uploadsApi.uploadOrderProofPhoto(orderId, photoUri);
+          proofUrl = uploadRes.data?.data?.url || uploadRes.data?.url || null;
+        } catch (uploadErr) {
+          if (__DEV__) console.warn('Photo upload failed:', uploadErr?.message);
+          // Continue with failure report even if photo upload fails
+        }
       }
 
       await ordersApi.failOrder(orderId, {

@@ -41,6 +41,10 @@ const ReturnOrderScreen = () => {
       Alert.alert(t('returnOrder.error'), t('returnOrder.selectReason'));
       return;
     }
+    if (!orderId) {
+      Alert.alert(t('returnOrder.error'), t('returnOrder.noOrderId', 'Order ID is missing'));
+      return;
+    }
 
     Alert.alert(
       t('returnOrder.confirmReturn'),

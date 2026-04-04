@@ -54,7 +54,7 @@ const SettingsScreen = ({navigation}) => {
         ? t('settings.restartRTL')
         : t('settings.languageUpdated'),
     );
-  }, [i18n.language]);
+  }, [i18n.language, t]);
 
   const handleNotificationsToggle = useCallback((val) => {
     setNotificationsEnabled(val);

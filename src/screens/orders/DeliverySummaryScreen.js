@@ -58,9 +58,9 @@ const DeliverySummaryScreen = ({navigation, route}) => {
   }, [orderId]);
 
   const delivered = summary?.delivered ?? packages.filter(p => p.status === 'delivered').length;
-  const failed = summary?.failed || packages.filter(p => p.status === 'failed').length;
+  const failed = summary?.failed ?? packages.filter(p => p.status === 'failed').length;
   const returned = packages.filter(p => p.status === 'returned').length;
-  const total = summary?.total || packages.length;
+  const total = summary?.total ?? packages.length;
 
   const allDelivered = delivered === total;
   const heroColor = allDelivered ? colors.success : colors.warning;

@@ -54,7 +54,7 @@ const usePickupStore = create((set, get) => ({
       set(state => ({
         pickups: state.pickups.map(p =>
           p.id === orderId || p.order_id === orderId
-            ? {...p, pickup_status: 'en_route'}
+            ? {...p, status: 'en_route', pickup_status: 'en_route'}
             : p,
         ),
         isActing: false,
@@ -76,7 +76,7 @@ const usePickupStore = create((set, get) => ({
       set(state => ({
         pickups: state.pickups.map(p =>
           p.id === orderId || p.order_id === orderId
-            ? {...p, pickup_status: 'at_pickup'}
+            ? {...p, status: 'arrived', pickup_status: 'arrived'}
             : p,
         ),
         isActing: false,
@@ -96,7 +96,11 @@ const usePickupStore = create((set, get) => ({
     try {
       const res = await pickupApi.confirmPickup(orderId, data);
       set(state => ({
-        pickups: state.pickups.filter(p => p.id !== orderId && p.order_id !== orderId),
+        pickups: state.pickups.map(p =>
+          p.id === orderId || p.order_id === orderId
+            ? {...p, status: 'picked_up', pickup_status: 'picked_up'}
+            : p,
+        ),
         isActing: false,
       }));
       return res.data;
@@ -116,7 +120,7 @@ const usePickupStore = create((set, get) => ({
       set(state => ({
         pickups: state.pickups.map(p =>
           p.id === orderId || p.order_id === orderId
-            ? {...p, pickup_status: 'pickup_failed'}
+            ? {...p, status: 'failed', pickup_status: 'pickup_failed'}
             : p,
         ),
         isActing: false,

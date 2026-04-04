@@ -153,12 +153,13 @@ const OrderDetailScreen = ({navigation, route}) => {
       fetchOrderDetail(tkn);
     }
     return () => clearPackages();
-  }, [orderIdParam, tkn]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderIdParam, tkn, fetchOrderDetail, clearPackages]);
 
   // Fetch packages when order is loaded
   useEffect(() => {
     if (order?.id) fetchPackages(order.id);
-  }, [order?.id]);
+  }, [order?.id, fetchPackages]);
 
   // Re-fetch packages when screen regains focus (after deliver/fail)
   useFocusEffect(
@@ -166,7 +167,7 @@ const OrderDetailScreen = ({navigation, route}) => {
       // Only re-fetch if we already have an order (not the initial load)
       if (!order?.id) return;
       fetchPackages(order.id);
-    }, [order?.id]),
+    }, [order?.id, fetchPackages]),
   );
 
   const phone = order?.recipient_phone;

@@ -64,7 +64,7 @@ const SupportScreen = ({navigation}) => {
     if (tab === 'history') {
       fetchTickets({page: 1});
     }
-  }, [tab]);
+  }, [tab, fetchTickets]);
 
   const handleSubmit = async () => {
     if (!subject.trim()) {

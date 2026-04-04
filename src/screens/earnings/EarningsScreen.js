@@ -111,12 +111,16 @@ const EarningsScreen = ({navigation}) => {
   const refreshing = isRefreshing;
 
   const fetchData = useCallback(async (isRefresh = false) => {
-    await Promise.allSettled([
-      fetchSummary(),
-      fetchEarnings({}, isRefresh),
-      fetchDailyBreakdown(30),
-      fetchPending(isRefresh),
-    ]);
+    try {
+      await Promise.allSettled([
+        fetchSummary?.(),
+        fetchEarnings?.({}, isRefresh),
+        fetchDailyBreakdown?.(30),
+        fetchPending?.(isRefresh),
+      ]);
+    } catch (e) {
+      if (__DEV__) console.warn('[EarningsScreen] fetchData error:', e?.message);
+    }
   }, [fetchSummary, fetchEarnings, fetchDailyBreakdown, fetchPending]);
 
   useEffect(() => {
@@ -330,9 +334,9 @@ const cs = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#EEF1F5',
   },
-  chartTotalItem: {flexDirection: 'row', alignItems: 'center'},
-  chartTotalVal: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textPrimary, marginStart: 4},
-  chartTotalLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginStart: 4},
+  chartTotalItem: {flexDirection: 'row', alignItems: 'center', gap: 4},
+  chartTotalVal: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textPrimary},
+  chartTotalLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginStart: 2},
 });
 
 // ─── Main Styles ─────────────────────────────────────

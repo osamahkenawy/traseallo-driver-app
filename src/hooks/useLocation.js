@@ -162,7 +162,7 @@ const useLocation = (enabled = true) => {
       stopTracking();
       stopWatching();
     };
-  }, [enabled, driverStatus]);
+  }, [enabled, driverStatus, requestPermission, startWatching, startTracking, stopTracking, stopWatching]);
 
   // Handle app state changes (foreground/background)
   useEffect(() => {

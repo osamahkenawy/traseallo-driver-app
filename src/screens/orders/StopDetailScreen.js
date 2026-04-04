@@ -46,7 +46,7 @@ const StopDetailScreen = () => {
         .then(() => Alert.alert(t('stopDetail.success'), t('stopDetail.completedSuccessfully')))
         .catch(err => Alert.alert(t('orderDetail.error'), err?.response?.data?.message || t('orderDetail.failedToUpdate')));
     }
-  }, [sigFromRoute]);
+  }, [sigFromRoute, stop?.id, completeStop, t]);
 
   // Guard: stop actions require parent order to be picked_up or in_transit
   const pickupDone = !orderStatus || ['picked_up', 'in_transit'].includes(orderStatus);

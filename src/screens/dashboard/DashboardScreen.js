@@ -80,7 +80,6 @@ const DashboardScreen = ({navigation}) => {
         rating={driverInfo?.rating}
         unreadCount={unreadCount}
         driverStatus={driverStatus}
-        loginTime={driverInfo?.sessionStartTime}
         onNotificationPress={() => nav('Notifications')}
         onProfilePress={() => nav('Profile')}
       />

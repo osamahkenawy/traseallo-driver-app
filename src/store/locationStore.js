@@ -59,8 +59,8 @@ const useLocationStore = create((set, get) => ({
   goOffline: async () => {
     try {
       await locationApi.goOffline();
-      set({driverStatus: 'offline', sessionStartTime: null});
       get().stopTracking();
+      set({driverStatus: 'offline', sessionStartTime: null});
       return {success: true};
     } catch (error) {
       return {success: false, error: error.response?.data?.message || 'Failed to go offline'};

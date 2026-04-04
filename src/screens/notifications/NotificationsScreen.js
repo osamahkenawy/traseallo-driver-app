@@ -101,7 +101,7 @@ const NotificationsScreen = () => {
   useEffect(() => {
     fetchNotifications();
     fetchUnreadCount();
-  }, []);
+  }, [fetchNotifications, fetchUnreadCount]);
 
   /* ── Merge server notifs with order-derived notifs ── */
   const allNotifications = useMemo(() => {

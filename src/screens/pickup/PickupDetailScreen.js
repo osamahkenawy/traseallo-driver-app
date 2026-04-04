@@ -21,6 +21,7 @@ import Icon from '../../utils/LucideIcon';
 import {colors, getStatusColor, getStatusBgColor} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import usePickupStore from '../../store/pickupStore';
+import {routeNames} from '../../constants/routeNames';
 import {useTranslation} from 'react-i18next';
 import {showMessage} from 'react-native-flash-message';
 
@@ -46,16 +47,23 @@ const PickupDetailScreen = ({navigation, route}) => {
   const ins = useSafeAreaInsets();
   const {t, i18n} = useTranslation();
   const pickup = route.params?.pickup || {};
-  const {enRoute, markArrived, confirmPickup, failPickup} = usePickupStore();
+  const {enRoute, markArrived, confirmPickup, failPickup, pickups} = usePickupStore();
 
-  const [status, setStatus] = useState(
-    pickup.status || pickup.pickup_status || 'pending',
-  );
+  const orderId = pickup.id || pickup.order_id;
+
+  // Sync status from store so going back and re-entering reflects the latest state
+  const storePickup = pickups.find(p => p.id === orderId || p.order_id === orderId);
+  const latestStatus = storePickup?.status || storePickup?.pickup_status || pickup.status || pickup.pickup_status || 'pending';
+
+  const [status, setStatus] = useState(latestStatus);
   const [actionLoading, setActionLoading] = useState(false);
   const [failReason, setFailReason] = useState('');
   const [showFail, setShowFail] = useState(false);
 
-  const orderId = pickup.id || pickup.order_id;
+  // Keep local status in sync with store changes
+  useEffect(() => {
+    setStatus(latestStatus);
+  }, [latestStatus]);
 
   if (!orderId) {
     return (
@@ -137,6 +145,10 @@ const PickupDetailScreen = ({navigation, route}) => {
             await confirmPickup(orderId);
             setStatus('picked_up');
             showMessage({message: t('pickup.pickupConfirmed'), type: 'success'});
+            // Navigate to orders/dashboard after successful pickup
+            setTimeout(() => {
+              navigation.navigate(routeNames.MainTabs, {screen: routeNames.MyOrders});
+            }, 600);
           } catch (err) {
             Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedConfirm'));
           } finally {

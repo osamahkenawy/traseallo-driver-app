@@ -201,7 +201,7 @@ const useAuthStore = create((set, get) => ({
    */
   initAuthExpiredHandler: () => {
     setOnAuthExpired(() => {
-      get().logout();
+      get().logout().catch(() => {});
     });
   },
 

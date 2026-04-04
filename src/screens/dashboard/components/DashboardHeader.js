@@ -2,10 +2,10 @@
  * DashboardHeader — Teal hero with day/date, driver info card overlay
  */
 
-import React, {useMemo, useState, useEffect} from 'react';
+import React, {useMemo, useState} from 'react';
 import {View, StyleSheet, Text, TouchableOpacity, Image} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Bell, User, Clock} from 'lucide-react-native';
+import {Bell, User} from 'lucide-react-native';
 import {colors} from '../../../theme/colors';
 import {fontFamily} from '../../../theme/fonts';
 import {useTranslation} from 'react-i18next';
@@ -16,10 +16,11 @@ const HEADER_BG = '#244066';
 const DashboardHeader = ({
   greeting, driverName, vehicleType, photo, rating,
   unreadCount = 0, onNotificationPress, onProfilePress,
-  driverStatus = 'offline', loginTime,
+  driverStatus = 'offline',
 }) => {
   const ins = useSafeAreaInsets();
   const {t, i18n} = useTranslation();
+  const [imgError, setImgError] = useState(false);
 
   const now = new Date();
   const hour = now.getHours();
@@ -42,39 +43,6 @@ const DashboardHeader = ({
   const vehicleCode = vehicleType
     ? vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1)
     : null;
-
-  const loginTimeFmt = useMemo(() => {
-    if (!loginTime) {
-      const h = now.getHours();
-      const m = now.getMinutes();
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
-    }
-    const d = new Date(loginTime);
-    if (isNaN(d.getTime())) return '';
-    const h = d.getHours();
-    const m = d.getMinutes();
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
-  }, [loginTime]);
-
-  // Tick every second so the elapsed clock updates
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick(v => v + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const elapsed = useMemo(() => {
-    if (!loginTime) return '00:00:00';
-    const start = new Date(loginTime);
-    if (isNaN(start.getTime())) return '00:00:00';
-    const diff = Math.max(0, Math.floor((Date.now() - start.getTime()) / 1000));
-    const h = Math.floor(diff / 3600);
-    const m = Math.floor((diff % 3600) / 60);
-    const sec = diff % 60;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  }, [loginTime, tick]);
 
   return (
     <View>
@@ -101,8 +69,8 @@ const DashboardHeader = ({
         <View style={$.driverCard}>
           <View style={$.driverRow}>
             <TouchableOpacity onPress={onProfilePress} activeOpacity={0.8}>
-              {photo ? (
-                <Image source={{uri: photo.startsWith('http') || photo.startsWith('file') ? photo : uploadsApi.getFileUrl(photo)}} style={$.avatar} />
+              {photo && !imgError ? (
+                <Image source={{uri: photo.startsWith('http') || photo.startsWith('file') ? photo : uploadsApi.getFileUrl(photo)}} style={$.avatar} onError={() => setImgError(true)} />
               ) : (
                 <View style={[$.avatar, $.avatarPlaceholder]}>
                   <User size={26} color={colors.primary} strokeWidth={2} />
@@ -119,14 +87,7 @@ const DashboardHeader = ({
             </View>
           </View>
 
-          {/* Login time bar */}
-          <View style={$.timeBar}>
-            <View style={$.timeLeft}>
-              <Clock size={12} color={colors.textMuted} strokeWidth={2} />
-              <Text style={$.timeLabel}>{t('dashboard.loggedFrom', {time: loginTimeFmt})}</Text>
-            </View>
-            <Text style={$.elapsed}>{elapsed}</Text>
-          </View>
+
         </View>
       </View>
     </View>
@@ -233,28 +194,6 @@ const $ = StyleSheet.create({
   },
   statusDot: {width: 7, height: 7, borderRadius: 3.5, marginEnd: 6},
   statusTxt: {fontFamily: fontFamily.bold, fontSize: 10, letterSpacing: 0.5},
-
-  // Time bar
-  timeBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.primary + '08',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  timeLeft: {flexDirection: 'row', alignItems: 'center'},
-  timeLabel: {
-    fontFamily: fontFamily.regular,
-    fontSize: 11,
-    color: colors.textMuted,
-    marginStart: 8,
-  },
-  elapsed: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 14,
-    color: colors.secondary,
-  },
 });
 
 export default React.memo(DashboardHeader);
