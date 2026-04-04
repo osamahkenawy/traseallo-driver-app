@@ -155,7 +155,15 @@ const uploadsApi = {
    * @returns {string}
    */
   getFileUrl: (path) => {
+    // S3 URLs are already absolute — return as-is
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
     const baseURL = apiClient.defaults.baseURL.replace(/\/api$/, '');
+    // S3 proxy paths: /api/s3-file/... — serve via backend
+    if (path.startsWith('/api/')) {
+      return `${baseURL}${path}`;
+    }
     // path from backend is like "/uploads/drivers/xxx.jpg" — serve directly
     if (path.startsWith('/uploads/')) {
       return `${baseURL}${path}`;
