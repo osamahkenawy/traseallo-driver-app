@@ -107,7 +107,6 @@ const $ = StyleSheet.create({
   pctWrap: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 5,
   },
   pctVal: {
     fontFamily: fontFamily.bold,
@@ -117,6 +116,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: 12,
     color: colors.textMuted,
+    marginLeft: 5,
   },
   remainWrap: {
     alignItems: 'flex-end',
@@ -153,17 +153,18 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
   },
   statVal: {
     fontFamily: fontFamily.bold,
     fontSize: 15,
     color: colors.textPrimary,
+    marginLeft: 5,
   },
   statLbl: {
     fontFamily: fontFamily.medium,
     fontSize: 11,
     color: colors.textMuted,
+    marginLeft: 5,
   },
   statDivider: {
     width: 1,
@@ -176,7 +177,6 @@ const $ = StyleSheet.create({
     borderRadius: 22,
     padding: 28,
     alignItems: 'center',
-    gap: 10,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.05,
@@ -189,6 +189,7 @@ const $ = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 18,
+    marginTop: 10,
   },
 });
 

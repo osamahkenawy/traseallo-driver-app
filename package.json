@@ -31,7 +31,7 @@
     "react-native-flash-message": "^0.3.1",
     "react-native-geolocation-service": "^5.3.1",
     "react-native-gesture-handler": "^2.14.1",
-    "react-native-image-picker": "^8.2.1",
+    "react-native-image-picker": "^5.7.0",
     "react-native-maps": "^1.7.1",
     "react-native-reanimated": "~2.14.0",
     "react-native-restart": "^0.0.27",
@@ -40,7 +40,7 @@
     "react-native-signature-canvas": "^5.0.2",
     "react-native-svg": "^13.6.0",
     "react-native-vector-icons": "^10.3.0",
-    "react-native-webview": "^13.16.1",
+    "react-native-webview": "^11.26.1",
     "socket.io-client": "^4.7.2",
     "tailwindcss": "^3.3.2",
     "zustand": "^4.4.7"

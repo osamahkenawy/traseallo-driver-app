@@ -142,11 +142,11 @@ const s = StyleSheet.create({
 
   /* Success */
   successBox: {
-    alignItems: 'center', gap: 10,
+    alignItems: 'center',
     backgroundColor: colors.successBg, borderRadius: 12,
     padding: 16, borderWidth: 1, borderColor: colors.success + '30',
   },
-  successText: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.success, textAlign: 'center', lineHeight: 18},
+  successText: {fontFamily: fontFamily.medium, fontSize: 13, color: colors.success, textAlign: 'center', lineHeight: 18, marginTop: 10},
 
   /* Card */
   card: {
@@ -154,11 +154,11 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: '#EEF1F5', padding: 20,
   },
   errorBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.dangerBg, borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
   },
-  errorText: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.danger, flex: 1},
+  errorText: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.danger, flex: 1, marginLeft: 8},
 
   label: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textSecondary, marginBottom: 6},
   inputRow: {
@@ -178,10 +178,10 @@ const s = StyleSheet.create({
   btnText: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF'},
 
   backLink: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', marginTop: 24,
   },
-  backLinkText: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.primary},
+  backLinkText: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.primary, marginLeft: 6},
 });
 
 export default ForgotPasswordScreen;

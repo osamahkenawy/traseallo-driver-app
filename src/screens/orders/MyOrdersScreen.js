@@ -3,7 +3,7 @@
  * Premium card-based order list with 7 tabs, search, sort, quick filters & rich cards
  */
 
-import React, {useState, useCallback, useMemo, useRef} from 'react';
+import React, {useState, useCallback, useMemo, useRef, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import Animated, {FadeInDown, FadeIn} from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useFocusEffect} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
 import Icon from '../../utils/LucideIcon';
 import {colors, getStatusColor, getStatusBgColor} from '../../theme/colors';
@@ -104,7 +105,20 @@ const MyOrdersScreen = ({navigation}) => {
   const [sortBy, setSortBy] = useState('newest');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [activeFilters, setActiveFilters] = useState([]);
-  const {orders, isLoading, isRefreshing, onRefresh, acceptOrder, rejectOrder, startDelivery, isUpdatingStatus} = useOrders();
+  const {orders, isLoading, isRefreshing, onRefresh, fetchOrders, acceptOrder, rejectOrder, startDelivery, isUpdatingStatus} = useOrders();
+
+  // Re-fetch orders whenever screen gains focus (e.g. coming back from OrderDetail)
+  // Use fetchOrders directly (stable Zustand ref) — NOT onRefresh (unstable due to params={})
+  const isFirstMount = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstMount.current) {
+        isFirstMount.current = false;
+        return;
+      }
+      fetchOrders('all', true);
+    }, [fetchOrders]),
+  );
 
   const toggleFilter = useCallback((key) => {
     setActiveFilters(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);

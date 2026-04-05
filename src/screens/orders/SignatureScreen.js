@@ -147,7 +147,7 @@ const SignatureScreen = ({navigation, route}) => {
           <Text style={s.cancelTxt}>{t('common.cancel')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.confirmBtn, !savedData && s.confirmDisabled]}
+          style={[s.confirmBtn, !savedData && s.confirmDisabled, {marginLeft: 12}]}
           onPress={handleConfirm}
           activeOpacity={0.7}
           disabled={!savedData}>
@@ -294,7 +294,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingTop: 12,
-    gap: 12,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: colors.border,

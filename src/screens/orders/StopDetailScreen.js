@@ -194,7 +194,7 @@ const StopDetailScreen = () => {
             <Text style={styles.actionBtnText}>{t('stopDetail.navigate')}</Text>
           </TouchableOpacity>
           {stop.phone && (
-            <TouchableOpacity style={styles.actionBtn} onPress={handleCall}>
+            <TouchableOpacity style={[styles.actionBtn, {marginLeft: 12}]} onPress={handleCall}>
               <Text style={styles.actionBtnText}>{t('stopDetail.call')}</Text>
             </TouchableOpacity>
           )}
@@ -213,7 +213,7 @@ const StopDetailScreen = () => {
                 onPress={handleArrived}>
                 <Text style={styles.ctaBtnText}>{t('pickup.arrived')}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+              <TouchableOpacity style={[styles.skipBtn, {marginLeft: 8}]} onPress={handleSkip}>
                 <Text style={styles.skipBtnText}>{t('stopDetail.skip')}</Text>
               </TouchableOpacity>
             </>
@@ -225,7 +225,7 @@ const StopDetailScreen = () => {
                 <Text style={styles.ctaBtnText}>{t('stopDetail.complete')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.ctaBtn, {backgroundColor: '#E74C3C', flex: 1, marginStart: 8}]}
+                style={[styles.ctaBtn, {backgroundColor: '#E74C3C', flex: 1, marginLeft: 8}]}
                 onPress={handleFail}>
                 <Text style={styles.ctaBtnText}>{t('stopDetail.fail')}</Text>
               </TouchableOpacity>
@@ -280,7 +280,6 @@ const styles = StyleSheet.create({
   infoValue: {fontSize: 13, color: '#333', flex: 2, textAlign: 'right'},
   actionsRow: {
     flexDirection: 'row',
-    gap: 12,
     marginBottom: 16,
   },
   actionBtn: {
@@ -302,7 +301,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 34,
     flexDirection: 'row',
-    gap: 8,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: -2},
     shadowOpacity: 0.08,

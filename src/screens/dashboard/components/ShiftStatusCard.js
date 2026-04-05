@@ -231,9 +231,8 @@ const $ = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 20,
-    gap: 6,
   },
-  pillDot: {width: 7, height: 7, borderRadius: 3.5},
+  pillDot: {width: 7, height: 7, borderRadius: 3.5, marginRight: 6},
   pillTxt: {
     fontFamily: fontFamily.bold,
     fontSize: 10,
@@ -283,14 +282,12 @@ const $ = StyleSheet.create({
   btnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
   },
   btn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
     paddingVertical: 16,
     borderRadius: 16,
     shadowColor: '#000',
@@ -302,8 +299,10 @@ const $ = StyleSheet.create({
   btnTxt: {
     fontFamily: fontFamily.bold,
     fontSize: 15,
+    marginLeft: 10,
   },
   btnSecondary: {
+    marginLeft: 16,
     width: 52,
     height: 52,
     borderRadius: 16,

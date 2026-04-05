@@ -55,7 +55,7 @@ const WebViewScreen = ({navigation, route}) => {
       {loading && (
         <View style={s.loadingBar}>
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={s.loadingText}>{t('common.loading')}</Text>
+          <Text style={[s.loadingText, {marginLeft: 8}]}>{t('common.loading')}</Text>
         </View>
       )}
 
@@ -98,7 +98,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     paddingVertical: 8,
     backgroundColor: '#FFF',
     borderBottomWidth: 1,

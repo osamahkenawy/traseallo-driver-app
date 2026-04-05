@@ -137,7 +137,6 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
     paddingVertical: 8,
     marginTop: 6,
     borderTopWidth: 1,
@@ -147,6 +146,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.medium,
     fontSize: 12,
     color: colors.textMuted,
+    marginLeft: 5,
   },
 });
 

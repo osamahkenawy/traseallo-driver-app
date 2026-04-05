@@ -179,7 +179,6 @@ const EditProfileScreen = ({navigation}) => {
   const [driverStatus, setDriverStatus] = useState(locationStoreStatus || user?.status || 'offline');
   const [loading, setLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
-  const [fetchingProfile, setFetchingProfile] = useState(false);
 
   // Animation for status pill
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -200,11 +199,14 @@ const EditProfileScreen = ({navigation}) => {
   }, []);
 
   // Fetch full driver profile on mount
+  // Fetch latest profile data silently (non-blocking — user can interact immediately)
   useEffect(() => {
+    let cancelled = false;
     const fetchProfile = async () => {
-      setFetchingProfile(true);
       try {
-        const res = await authApi.getProfile();
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000));
+        const res = await Promise.race([authApi.getProfile(), timeout]);
+        if (cancelled) return;
         const d = res.data?.data || res.data;
         if (d) {
           if (d.full_name) setName(d.full_name);
@@ -222,12 +224,11 @@ const EditProfileScreen = ({navigation}) => {
             setAvatarUri(d.photo_url || d.avatar_url || d.avatar || d.photo);
         }
       } catch {
-        // Fallback — use existing user data
-      } finally {
-        setFetchingProfile(false);
+        // Silently fallback to auth store data
       }
     };
     fetchProfile();
+    return () => { cancelled = true; };
   }, []);
 
   // ─── Handlers ──────────────────────────────────────
@@ -252,19 +253,22 @@ const EditProfileScreen = ({navigation}) => {
   };
 
   const handleStatusChange = useCallback(async (newStatus) => {
-    if (newStatus === driverStatus) return;
+    if (newStatus === driverStatus || statusLoading) return;
     const prev = driverStatus;
     setDriverStatus(newStatus);
     setStatusLoading(true);
     try {
-      // Call the appropriate location store action
+      // Call the appropriate location store action with timeout
+      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('Status change timed out')), 12000));
+      let action;
       if (newStatus === 'available') {
-        await goOnline();
+        action = goOnline();
       } else if (newStatus === 'offline') {
-        await goOffline();
+        action = goOffline();
       } else if (newStatus === 'on_break') {
-        await onBreak();
+        action = onBreak();
       }
+      if (action) await Promise.race([action, timeout]);
       // Also update authStore user object
       useAuthStore.setState({user: {...useAuthStore.getState().user, status: newStatus}});
       const opt = STATUS_OPTIONS.find(o => o.key === newStatus);
@@ -470,12 +474,7 @@ const EditProfileScreen = ({navigation}) => {
         </TouchableOpacity>
       </View>
 
-      {/* Loading overlay while fetching profile */}
-      {fetchingProfile && (
-        <View style={s.fetchOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      )}
+
     </View>
   );
 };
@@ -704,13 +703,7 @@ const s = StyleSheet.create({
   saveBtnInner: {flexDirection: 'row', alignItems: 'center'},
   saveTxt: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF', textAlign: 'auto'},
 
-  // ─── Fetch Overlay ─────────────────────────────────
-  fetchOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(245,247,250,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
 });
 
 export default EditProfileScreen;

@@ -113,15 +113,19 @@ const PickupDetailScreen = ({navigation, route}) => {
   const notes = pickup.notes || pickup.pickup_notes || pickup.special_instructions;
   const orderNumber = pickup.order_number || '';
 
+  // Safety timeout wrapper — auto-clears loading if API hangs
+  const withTimeout = (promise, ms = 15000) =>
+    Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('Request timed out')), ms))]);
+
   /* ── Handlers ── */
   const handleEnRoute = async () => {
     setActionLoading(true);
     try {
-      await enRoute(orderId);
+      await withTimeout(enRoute(orderId));
       setStatus('en_route');
       showMessage({message: t('pickup.enRouteMsg'), type: 'success'});
     } catch (err) {
-      Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedUpdate'));
+      Alert.alert(t('common.error'), err.response?.data?.message || err.message || t('pickup.failedUpdate'));
     } finally {
       setActionLoading(false);
     }
@@ -130,11 +134,11 @@ const PickupDetailScreen = ({navigation, route}) => {
   const handleArrived = async () => {
     setActionLoading(true);
     try {
-      await markArrived(orderId);
+      await withTimeout(markArrived(orderId));
       setStatus('arrived');
       showMessage({message: t('pickup.arrivalConfirmed'), type: 'success'});
     } catch (err) {
-      Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedArrival'));
+      Alert.alert(t('common.error'), err.response?.data?.message || err.message || t('pickup.failedArrival'));
     } finally {
       setActionLoading(false);
     }
@@ -148,7 +152,7 @@ const PickupDetailScreen = ({navigation, route}) => {
         onPress: async () => {
           setActionLoading(true);
           try {
-            await confirmPickup(orderId);
+            await withTimeout(confirmPickup(orderId));
             setStatus('picked_up');
             showMessage({message: t('pickup.pickupConfirmed'), type: 'success'});
             // Navigate to orders/dashboard after successful pickup
@@ -156,7 +160,7 @@ const PickupDetailScreen = ({navigation, route}) => {
               navigation.navigate(routeNames.MainTabs, {screen: routeNames.MyOrders});
             }, 600);
           } catch (err) {
-            Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedConfirm'));
+            Alert.alert(t('common.error'), err.response?.data?.message || err.message || t('pickup.failedConfirm'));
           } finally {
             setActionLoading(false);
           }
@@ -172,12 +176,12 @@ const PickupDetailScreen = ({navigation, route}) => {
     }
     setActionLoading(true);
     try {
-      await failPickup(orderId, {reason: failReason.trim()});
+      await withTimeout(failPickup(orderId, {reason: failReason.trim()}));
       setStatus('failed');
       setShowFail(false);
       showMessage({message: t('pickup.pickupFailed'), type: 'warning'});
     } catch (err) {
-      Alert.alert(t('common.error'), err.response?.data?.message || t('pickup.failedReport'));
+      Alert.alert(t('common.error'), err.response?.data?.message || err.message || t('pickup.failedReport'));
     } finally {
       setActionLoading(false);
     }

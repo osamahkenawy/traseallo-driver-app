@@ -84,7 +84,6 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    gap: 8,
   },
   sectionTitle: {
     fontFamily: fontFamily.bold,
@@ -92,6 +91,7 @@ const $ = StyleSheet.create({
     color: colors.textPrimary,
   },
   countBadge: {
+    marginLeft: 8,
     minWidth: 20,
     height: 20,
     borderRadius: 10,
@@ -128,7 +128,6 @@ const $ = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    gap: 12,
   },
   notifBorder: {
     borderBottomWidth: 1,

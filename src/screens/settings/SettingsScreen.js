@@ -31,7 +31,7 @@ const SettingRow = ({iconName, iconColor, label, value, onPress, showChevron = t
     </View>
     <View style={s.rowRight}>
       {value ? <Text style={s.rowValue}>{value}</Text> : null}
-      {showChevron && <Icon name="chevron-right" size={16} color={colors.textMuted} />}
+      {showChevron && <Icon name="chevron-right" size={16} color={colors.textMuted} style={value ? {marginLeft: 6} : undefined} />}
     </View>
   </TouchableOpacity>
 );
@@ -159,7 +159,7 @@ const SettingsScreen = ({navigation}) => {
                     <Icon name={lang.icon} size={20} color={active ? colors.primary : colors.textSecondary} />
                   </View>
                   <Text style={[s.langLabel, active && s.langLabelActive]}>{lang.label}</Text>
-                  {active && <Icon name="check-circle" size={18} color={colors.primary} />}
+                  {active && <Icon name="check-circle" size={18} color={colors.primary} style={{marginLeft: 12}} />}
                 </TouchableOpacity>
               );
             })}
@@ -174,7 +174,7 @@ const s = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F5F7FA'},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52, gap: 8,
+    paddingHorizontal: 20, height: 52,
   },
   hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 40},
@@ -192,13 +192,13 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 14,
   },
-  rowLeft: {flexDirection: 'row', alignItems: 'center', gap: 12},
+  rowLeft: {flexDirection: 'row', alignItems: 'center'},
   rowIcon: {
     width: 30, height: 30, borderRadius: 15,
     justifyContent: 'center', alignItems: 'center',
   },
-  rowLabel: {fontFamily: fontFamily.medium, fontSize: 14, color: colors.textPrimary},
-  rowRight: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  rowLabel: {fontFamily: fontFamily.medium, fontSize: 14, color: colors.textPrimary, marginLeft: 12},
+  rowRight: {flexDirection: 'row', alignItems: 'center'},
   rowValue: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted},
   divider: {height: 1, backgroundColor: '#EEF1F5', marginStart: 58},
 
@@ -217,7 +217,7 @@ const s = StyleSheet.create({
   },
   sheetTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, marginBottom: 16},
   langRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row', alignItems: 'center',
     paddingVertical: 14, paddingHorizontal: 14,
     borderRadius: 12, marginBottom: 6,
   },
@@ -227,7 +227,7 @@ const s = StyleSheet.create({
     backgroundColor: '#F0F2F5',
     justifyContent: 'center', alignItems: 'center',
   },
-  langLabel: {fontFamily: fontFamily.medium, fontSize: 15, color: colors.textPrimary, flex: 1},
+  langLabel: {fontFamily: fontFamily.medium, fontSize: 15, color: colors.textPrimary, flex: 1, marginLeft: 12},
   langLabelActive: {fontFamily: fontFamily.semiBold, color: colors.primary},
 });
 

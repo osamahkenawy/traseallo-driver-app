@@ -163,14 +163,14 @@ apiClient.interceptors.response.use(
       console.log(`❌ ${error.config?.method?.toUpperCase()} ${error.config?.url} → ${status}`, message);
     }
 
-    // 429 Too Many Requests → retry after the server-specified delay
+    // 429 Too Many Requests → retry once after a short delay
     if (status === 429) {
       const retryCount = error.config._retryCount || 0;
-      if (retryCount < 2) {
+      if (retryCount < 1) {
         const retryAfter = parseInt(error.response?.headers?.['retry-after'], 10);
-        const delaySec = Number.isFinite(retryAfter) ? Math.min(retryAfter, 30) : (retryCount + 1) * 5;
+        const delaySec = Number.isFinite(retryAfter) ? Math.min(retryAfter, 5) : 3;
         if (__DEV__) {
-          console.log(`⏳ 429 rate-limited, retrying in ${delaySec}s (attempt ${retryCount + 1}/2)`);
+          console.log(`⏳ 429 rate-limited, retrying in ${delaySec}s`);
         }
         await new Promise(r => setTimeout(r, delaySec * 1000));
         error.config._retryCount = retryCount + 1;

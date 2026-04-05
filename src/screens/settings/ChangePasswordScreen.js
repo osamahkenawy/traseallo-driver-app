@@ -54,14 +54,19 @@ const ChangePasswordScreen = ({navigation}) => {
     }
     setLoading(true);
     try {
-      await authApi.changePassword(current, newPwd);
+      const res = await authApi.changePassword(current, newPwd);
+      if (__DEV__) console.log('[ChangePassword] response:', JSON.stringify(res.data));
       Alert.alert(t('changePassword.success'), t('changePassword.successDesc'), [
         {text: t('common.done'), onPress: () => navigation.goBack()},
       ]);
     } catch (e) {
+      if (__DEV__) {
+        console.log('[ChangePassword] error status:', e?.response?.status);
+        console.log('[ChangePassword] error data:', JSON.stringify(e?.response?.data));
+      }
       Alert.alert(
         t('changePassword.updateFailed'),
-        e?.response?.data?.message || t('changePassword.updateFailedDesc'),
+        e?.response?.data?.message || e?.response?.data?.error || t('changePassword.updateFailedDesc'),
       );
     } finally {
       setLoading(false);
@@ -138,40 +143,40 @@ const ChangePasswordScreen = ({navigation}) => {
 };
 
 const s = StyleSheet.create({
-  root: {flex: 1, backgroundColor: '#F5F7FA'},
+  root: {flex: 1, backgroundColor: colors.bgScreen},
   hdr: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, height: 52, gap: 8,
+    paddingHorizontal: 20, height: 52,
   },
   hdrTitle: {fontFamily: fontFamily.bold, fontSize: 16, color: colors.textPrimary, textAlign: 'auto'},
   scroll: {paddingHorizontal: 20, paddingBottom: 100},
 
   card: {
-    backgroundColor: '#FFF', borderRadius: 14,
-    borderWidth: 1, borderColor: '#EEF1F5', padding: 20, marginTop: 8,
+    backgroundColor: colors.bgCard, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.border, padding: 20, marginTop: 8,
   },
   infoRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.infoBg, borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 20,
   },
-  infoText: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.info, flex: 1},
+  infoText: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.info, flex: 1, marginLeft: 8},
 
   fieldGroup: {marginBottom: 16},
   fieldLabel: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textSecondary, marginBottom: 6},
   fieldRow: {
     flexDirection: 'row', alignItems: 'center', height: 46,
-    backgroundColor: '#F8F9FA', borderRadius: 12,
-    borderWidth: 1.5, borderColor: '#EEF1F5',
+    backgroundColor: colors.bgGray, borderRadius: 12,
+    borderWidth: 1.5, borderColor: colors.border,
   },
-  fieldRowFocused: {borderColor: colors.primary, backgroundColor: '#FFF'},
+  fieldRowFocused: {borderColor: colors.primary, backgroundColor: colors.bgCard},
   fieldInput: {flex: 1, height: '100%', fontFamily: fontFamily.regular, fontSize: 14, color: colors.textPrimary, paddingEnd: 14},
   eyeBtn: {paddingHorizontal: 14, height: '100%', justifyContent: 'center'},
 
   bottom: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: '#FFF', paddingHorizontal: 20, paddingTop: 12,
-    borderTopWidth: 1, borderTopColor: '#EEF1F5',
+    backgroundColor: colors.bgCard, paddingHorizontal: 20, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: colors.border,
   },
   btn: {
     height: 48, backgroundColor: colors.primary, borderRadius: 12,

@@ -5,6 +5,10 @@
 import {create} from 'zustand';
 import {ordersApi, packagesApi} from '../api';
 
+// Safety timeout — prevents UI from being stuck loading if API hangs
+const withTimeout = (promise, ms = 15000) =>
+  Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('Request timed out')), ms))]);
+
 const useOrderStore = create((set, get) => ({
   // ─── State ──────────────────────────────────────
   orders: [],
@@ -135,7 +139,7 @@ const useOrderStore = create((set, get) => ({
   acceptOrder: async (orderId) => {
     set({isUpdatingStatus: true});
     try {
-      const res = await ordersApi.acceptOrder(orderId);
+      const res = await withTimeout(ordersApi.acceptOrder(orderId));
       // Update selected order + list
       const selected = get().selectedOrder;
       if (selected?.id === orderId || selected?.id === Number(orderId)) {
@@ -160,7 +164,7 @@ const useOrderStore = create((set, get) => ({
   rejectOrder: async (orderId, reason) => {
     set({isUpdatingStatus: true});
     try {
-      const res = await ordersApi.rejectOrder(orderId, reason);
+      const res = await withTimeout(ordersApi.rejectOrder(orderId, reason));
       const orders = get().orders.filter(o => o.id !== orderId && o.id !== Number(orderId));
       set({orders, isUpdatingStatus: false});
       return {success: true, data: res.data};
@@ -178,7 +182,7 @@ const useOrderStore = create((set, get) => ({
   startDelivery: async (orderId, data = {}) => {
     set({isUpdatingStatus: true});
     try {
-      const res = await ordersApi.startDelivery(orderId, data);
+      const res = await withTimeout(ordersApi.startDelivery(orderId, data));
       const selected = get().selectedOrder;
       if (selected?.id === orderId || selected?.id === Number(orderId)) {
         set({selectedOrder: {...selected, status: 'in_transit'}});
@@ -202,7 +206,7 @@ const useOrderStore = create((set, get) => ({
   deliverOrder: async (orderId, data = {}) => {
     set({isUpdatingStatus: true});
     try {
-      const res = await ordersApi.deliverOrder(orderId, data);
+      const res = await withTimeout(ordersApi.deliverOrder(orderId, data));
       const selected = get().selectedOrder;
       if (selected?.id === orderId || selected?.id === Number(orderId)) {
         set({selectedOrder: {...selected, status: 'delivered'}});
@@ -226,7 +230,7 @@ const useOrderStore = create((set, get) => ({
   failOrder: async (orderId, data) => {
     set({isUpdatingStatus: true});
     try {
-      const res = await ordersApi.failOrder(orderId, data);
+      const res = await withTimeout(ordersApi.failOrder(orderId, data));
       const selected = get().selectedOrder;
       if (selected?.id === orderId || selected?.id === Number(orderId)) {
         set({selectedOrder: {...selected, status: 'failed'}});
@@ -250,7 +254,7 @@ const useOrderStore = create((set, get) => ({
   returnOrder: async (orderId, data = {}) => {
     set({isUpdatingStatus: true});
     try {
-      const res = await ordersApi.returnOrder(orderId, data);
+      const res = await withTimeout(ordersApi.returnOrder(orderId, data));
       const selected = get().selectedOrder;
       if (selected?.id === orderId || selected?.id === Number(orderId)) {
         set({selectedOrder: {...selected, status: 'returned'}});

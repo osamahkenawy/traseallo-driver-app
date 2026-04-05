@@ -51,7 +51,7 @@ const OnboardingScreen = ({navigation, onComplete}) => {
             {icon: 'chart-line', label: t('onboarding.trackEarnings')},
             {icon: 'headset', label: t('onboarding.liveSupport')},
           ].map((f, i) => (
-            <View key={i} style={s.pill}>
+            <View key={i} style={[s.pill, i > 0 && {marginLeft: 8}]}>
               <Icon name={f.icon} size={13} color={colors.primary} />
               <Text style={s.pillText}>{f.label}</Text>
             </View>
@@ -66,7 +66,7 @@ const OnboardingScreen = ({navigation, onComplete}) => {
           activeOpacity={0.8}
           onPress={handleGetStarted}>
           <Text style={s.btnText}>{t('onboarding.getStarted')}</Text>
-          <Icon name="arrow-right" size={18} color="#FFF" />
+          <Icon name="arrow-right" size={18} color="#FFF" style={{marginLeft: 8}} />
         </TouchableOpacity>
 
         {/* ─── Powered by ────────────────────── */}
@@ -91,22 +91,22 @@ const s = StyleSheet.create({
   title: {fontFamily: fontFamily.bold, fontSize: 22, color: colors.primary, textAlign: 'center'},
   subtitle: {fontFamily: fontFamily.regular, fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginTop: 10, lineHeight: 21},
 
-  pillsRow: {flexDirection: 'row', gap: 8, marginTop: 20},
+  pillsRow: {flexDirection: 'row', marginTop: 20},
   pill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.primary + '0A',
     paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: 20, borderWidth: 1, borderColor: colors.primary + '18',
   },
-  pillText: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.primary},
+  pillText: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.primary, marginLeft: 5},
 
   bottom: {paddingBottom: 20, alignItems: 'center'},
-  poweredRow: {alignItems: 'center', marginTop: 16, gap: 4},
+  poweredRow: {alignItems: 'center', marginTop: 16},
   poweredLogo: {width: 70, height: 22},
-  poweredText: {fontFamily: fontFamily.regular, fontSize: 9, color: colors.textMuted},
+  poweredText: {fontFamily: fontFamily.regular, fontSize: 9, color: colors.textMuted, marginTop: 4},
   btn: {
     height: 50, backgroundColor: colors.primary, borderRadius: 14,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     width: '100%',
   },
   btnText: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF'},

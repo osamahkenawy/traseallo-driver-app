@@ -148,7 +148,7 @@ const LoginScreen = ({navigation}) => {
               <Animated.View style={[s.errorBox, {transform: [{translateX: errorShake}]}]}>
                 <Icon name="alert-circle" size={18} color={colors.danger} />
                 <Text style={s.errorText} numberOfLines={2}>{loginError}</Text>
-                <TouchableOpacity onPress={clearLoginError} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+                <TouchableOpacity onPress={clearLoginError} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}} style={{marginLeft: 12}}>
                   <Icon name="close" size={16} color={colors.danger} />
                 </TouchableOpacity>
               </Animated.View>
@@ -253,7 +253,7 @@ const LoginScreen = ({navigation}) => {
                 ) : (
                   <>
                     <Text style={s.ctaText}>{t('auth.signIn')}</Text>
-                    <View style={{width: 8}} />
+                    <View style={{width: 8, marginLeft: 12}} />
                     <View style={s.ctaArrow}>
                       <Icon name="arrow-right" size={18} color={colors.primary} />
                     </View>
@@ -320,7 +320,7 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   tagPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.successBg,
     paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20,
     borderWidth: 1, borderColor: 'rgba(21, 199, 174, 0.2)',
@@ -364,7 +364,7 @@ const s = StyleSheet.create({
 
   // ─── Error ─────────────────────────────────────
   errorBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.dangerBg,
     borderStartWidth: 3, borderStartColor: colors.danger,
     borderRadius: 12,
@@ -373,7 +373,7 @@ const s = StyleSheet.create({
   },
   errorText: {
     fontFamily: fontFamily.medium, fontSize: 13,
-    color: colors.danger, flex: 1, lineHeight: 18,
+    color: colors.danger, flex: 1, lineHeight: 18, marginLeft: 12,
   },
 
   // ─── Labels ────────────────────────────────────
@@ -439,7 +439,6 @@ const s = StyleSheet.create({
     height: 56, borderRadius: 16,
     backgroundColor: colors.primary,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    gap: 12,
     ...Platform.select({
       ios: {
         shadowColor: colors.primary,
@@ -466,17 +465,17 @@ const s = StyleSheet.create({
   },
 
   // ─── Footer ────────────────────────────────────
-  footer: {alignItems: 'center', marginTop: 30, gap: 10},
+  footer: {alignItems: 'center', marginTop: 30},
   footerSecure: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center',
     paddingVertical: 4,
   },
   footerSecureTxt: {
-    fontFamily: fontFamily.medium, fontSize: 11, color: colors.success,
+    fontFamily: fontFamily.medium, fontSize: 11, color: colors.success, marginLeft: 6,
   },
-  footerLogo: {width: 90, height: 26, marginTop: 2},
+  footerLogo: {width: 90, height: 26, marginTop: 10},
   footerCopy: {
-    fontFamily: fontFamily.regular, fontSize: 11, color: colors.textLight,
+    fontFamily: fontFamily.regular, fontSize: 11, color: colors.textLight, marginTop: 10,
   },
 });
 

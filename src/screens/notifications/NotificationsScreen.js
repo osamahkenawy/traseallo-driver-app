@@ -202,7 +202,7 @@ const NotificationsScreen = () => {
             <Icon name="check-all" size={14} color={colors.primary} />
             <Text style={$.hdrBtnTxt}>{t('notifications.markAllRead')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[$.hdrBtn, $.hdrBtnDanger]} onPress={handleClearAll} activeOpacity={0.6}>
+          <TouchableOpacity style={[$.hdrBtn, $.hdrBtnDanger, {marginLeft: 10}]} onPress={handleClearAll} activeOpacity={0.6}>
             <Icon name="trash-can-outline" size={14} color={colors.danger} />
             <Text style={[$.hdrBtnTxt, {color: colors.danger}]}>{t('notifications.clearAll')}</Text>
           </TouchableOpacity>
@@ -342,11 +342,10 @@ const $ = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 2,
   },
-  hdrActions: {flexDirection: 'row', alignItems: 'center', gap: 10},
+  hdrActions: {flexDirection: 'row', alignItems: 'center'},
   hdrBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: colors.primary + '0D',
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -368,7 +367,6 @@ const $ = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 16,
     padding: 14,
-    gap: 12,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.04,
@@ -388,7 +386,7 @@ const $ = StyleSheet.create({
     alignItems: 'center',
     marginTop: 2,
   },
-  cardContent: {flex: 1},
+  cardContent: {flex: 1, marginLeft: 12},
   cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -423,7 +421,6 @@ const $ = StyleSheet.create({
   statusTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -433,16 +430,17 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.bold,
     fontSize: 9,
     textTransform: 'capitalize',
+    marginLeft: 4,
   },
   actionHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
   },
   actionHintTxt: {
     fontFamily: fontFamily.semiBold,
     fontSize: 11,
     color: colors.primary,
+    marginRight: 2,
   },
   unreadDot: {
     width: 8,
