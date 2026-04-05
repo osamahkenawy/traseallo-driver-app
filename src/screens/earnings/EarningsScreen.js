@@ -75,7 +75,10 @@ const DailyChart = ({data, currency, t}) => {
           const h = Math.max((val / maxVal) * BAR_MAX_H, 4);
           const dt = new Date(d.date + 'T00:00:00');
           const label = dt.toLocaleDateString(undefined, {weekday: 'short'}).slice(0, 3);
-          const isToday = d.date === new Date().toISOString().slice(0, 10);
+          const now = new Date();
+          const pad = (n) => String(n).padStart(2, '0');
+          const todayLocal = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+          const isToday = (typeof d.date === 'string' ? d.date.slice(0, 10) : '') === todayLocal;
           return (
             <View key={d.date || i} style={cs.barCol}>
               <Text style={cs.barVal}>
@@ -90,25 +93,31 @@ const DailyChart = ({data, currency, t}) => {
       </View>
       <View style={cs.chartTotals}>
         <View style={cs.totalItem}>
-          <Icon name="package-variant" size={14} color={colors.primary} />
+          <View style={[cs.totalIcon, {backgroundColor: colors.primary + '12'}]}>
+            <Icon name="package-variant" size={14} color={colors.primary} />
+          </View>
           <Text style={cs.totalVal}>
             {sorted.reduce((s, d) => s + Number(d.deliveries || 0), 0)}
           </Text>
           <Text style={cs.totalLabel}>{t('ratings.deliveries', 'Deliveries')}</Text>
         </View>
         <View style={cs.totalItem}>
-          <Icon name="cash-multiple" size={14} color={colors.success} />
+          <View style={[cs.totalIcon, {backgroundColor: colors.success + '12'}]}>
+            <Icon name="cash-multiple" size={14} color={colors.success} />
+          </View>
           <Text style={cs.totalVal}>
             {currency} {sorted.reduce((s, d) => s + Number(d.earned || 0), 0).toFixed(0)}
           </Text>
           <Text style={cs.totalLabel}>{t('earnings.title', 'Earnings')}</Text>
         </View>
         <View style={cs.totalItem}>
-          <Icon name="wallet-outline" size={14} color={colors.orange} />
+          <View style={[cs.totalIcon, {backgroundColor: colors.orange + '12'}]}>
+            <Icon name="wallet-outline" size={14} color={colors.orange} />
+          </View>
           <Text style={cs.totalVal}>
             {currency} {sorted.reduce((s, d) => s + Number(d.cod_collected || 0), 0).toFixed(0)}
           </Text>
-          <Text style={cs.totalLabel}>{t('earnings.codCollected', 'COD')}</Text>
+          <Text style={cs.totalLabel}>{t('earnings.codCollected', 'COD Collected')}</Text>
         </View>
       </View>
     </View>
@@ -167,18 +176,23 @@ const EarningsScreen = ({navigation}) => {
     const total = Number(totalSummary?.total_earned ?? earningSummary?.total_earned ?? 0);
     if (selectedPeriod === 3) return total.toFixed(2);
     const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
+    // Use local date (YYYY-MM-DD) to match backend DATE() which uses server local time
+    const pad = (n) => String(n).padStart(2, '0');
+    const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
+    const weekAgoStr = `${weekAgo.getFullYear()}-${pad(weekAgo.getMonth() + 1)}-${pad(weekAgo.getDate())}`;
     const monthAgo = new Date(now);
     monthAgo.setDate(monthAgo.getDate() - 30);
+    const monthAgoStr = `${monthAgo.getFullYear()}-${pad(monthAgo.getMonth() + 1)}-${pad(monthAgo.getDate())}`;
 
     let sum = 0;
     for (const day of dailyBreakdown) {
-      const d = day.date;
+      // Normalize date — handle both 'YYYY-MM-DD' and ISO string formats
+      const d = typeof day.date === 'string' ? day.date.slice(0, 10) : '';
       if (selectedPeriod === 0 && d === todayStr) sum += Number(day.earned || 0);
-      else if (selectedPeriod === 1 && d >= weekAgo.toISOString().slice(0, 10)) sum += Number(day.earned || 0);
-      else if (selectedPeriod === 2 && d >= monthAgo.toISOString().slice(0, 10)) sum += Number(day.earned || 0);
+      else if (selectedPeriod === 1 && d >= weekAgoStr) sum += Number(day.earned || 0);
+      else if (selectedPeriod === 2 && d >= monthAgoStr) sum += Number(day.earned || 0);
     }
     return sum.toFixed(2);
   };
@@ -424,16 +438,25 @@ const cs = StyleSheet.create({
   barLabelToday: {color: colors.primary, fontFamily: fontFamily.bold},
   todayDot: {width: 4, height: 4, borderRadius: 2, backgroundColor: colors.primary, marginTop: 3},
   chartTotals: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F0F2F5',
   },
-  totalItem: {flexDirection: 'row', alignItems: 'center'},
-  totalVal: {fontFamily: fontFamily.semiBold, fontSize: 12, color: colors.textPrimary, marginLeft: 6},
-  totalLabel: {fontFamily: fontFamily.regular, fontSize: 10, color: colors.textMuted, marginStart: 2},
+  totalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  totalIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  totalVal: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginLeft: 10, minWidth: 60},
+  totalLabel: {fontFamily: fontFamily.regular, fontSize: 12, color: colors.textMuted, marginStart: 4},
 });
 
 /* ─── Main Styles ─── */

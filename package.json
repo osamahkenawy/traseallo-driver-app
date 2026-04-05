@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "postinstall": "npx patch-package",
     "android": "react-native run-android",
     "ios": "react-native run-ios --simulator=\"iPhone 14\"",
     "rebuild": "cd ios && pod install && cd .. && react-native run-ios --simulator=\"iPhone 14\"",

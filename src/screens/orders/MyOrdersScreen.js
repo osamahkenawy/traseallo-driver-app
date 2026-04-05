@@ -341,13 +341,19 @@ const MyOrdersScreen = ({navigation}) => {
               onAction={async (action) => {
                 if (action === 'accept') {
                   const res = await acceptOrder(item.id);
-                  if (res.success) onRefresh();
+                  if (res.success) {
+                    onRefresh();
+                    goDetail(item);
+                  }
                 } else if (action === 'reject') {
                   const res = await rejectOrder(item.id, 'Rejected from orders list');
                   if (res.success) onRefresh();
                 } else if (action === 'startDelivery') {
                   const res = await startDelivery(item.id);
-                  if (res.success) onRefresh();
+                  if (res.success) {
+                    onRefresh();
+                    goDetail(item);
+                  }
                 } else {
                   goDetail(item);
                 }

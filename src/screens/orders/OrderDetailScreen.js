@@ -147,10 +147,13 @@ const OrderDetailScreen = ({navigation, route}) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderIdParam, tkn, fetchOrderDetail, clearPackages]);
 
-  // Fetch packages when order is loaded
+  // Fetch packages when order is loaded — clear stale packages first
   useEffect(() => {
-    if (order?.id) fetchPackages(order.id);
-  }, [order?.id, fetchPackages]);
+    if (order?.id) {
+      clearPackages();
+      fetchPackages(order.id);
+    }
+  }, [order?.id, fetchPackages, clearPackages]);
 
   // Re-fetch packages when screen regains focus (after deliver/fail)
   useFocusEffect(
@@ -227,7 +230,7 @@ const OrderDetailScreen = ({navigation, route}) => {
       phone && `Phone: ${phone}`,
       address && `Address: ${address}`,
       order?.payment_method && `Payment: ${order.payment_method.toUpperCase()}`,
-      order?.total_amount && `Total: ${currency} ${order.total_amount}`,
+      `Total: ${currency} ${(parseFloat(order?.total_amount || 0) || (parseFloat(order?.delivery_fee || 0) + parseFloat(order?.cod_amount || 0))).toFixed(2)}`,
     ].filter(Boolean).join('\n');
     if (info) {
       Clipboard.setString(info);
@@ -242,7 +245,7 @@ const OrderDetailScreen = ({navigation, route}) => {
       `👤 ${order?.recipient_name || '---'}`,
       `📞 ${phone || '---'}`,
       `📍 ${address || '---'}`,
-      `💰 ${order?.payment_method?.toUpperCase() || '---'} — ${currency} ${order?.total_amount || '0.00'}`,
+      `💰 ${order?.payment_method?.toUpperCase() || '---'} — ${currency} ${(parseFloat(order?.total_amount || 0) || (parseFloat(order?.delivery_fee || 0) + parseFloat(order?.cod_amount || 0))).toFixed(2)}`,
     ].join('\n');
     try {
       await Share.share({message: info, title: `Order ${order?.order_number}`});
@@ -530,7 +533,7 @@ const OrderDetailScreen = ({navigation, route}) => {
           <View style={$.finDiv} />
           <View style={$.finRow}>
             <Text style={$.finTotalLabel}>{t('orderDetail.total')}</Text>
-            <Text style={$.finTotalVal}>{currency} {parseFloat(order?.total_amount || 0).toFixed(2)}</Text>
+            <Text style={$.finTotalVal}>{currency} {(parseFloat(order?.total_amount || 0) || (parseFloat(order?.delivery_fee || 0) + parseFloat(order?.cod_amount || 0))).toFixed(2)}</Text>
           </View>
         </View>
 
@@ -1354,11 +1357,15 @@ const OrderDetailScreen = ({navigation, route}) => {
                   </View>
                   <View style={{flex: 1}}>
                     <Text style={$.ctaPrimaryTxt}>
-                      {packages.length > 0
+                      {packages.length > 0 && packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length > 0
                         ? t('orderDetail.deliverNextPkg', {count: packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length})
                         : t('orderDetail.confirmDelivery')}
                     </Text>
-                    <Text style={$.ctaSubTxt}>{t('orderDetail.navigateToRecipient')}</Text>
+                    <Text style={$.ctaSubTxt}>
+                      {packages.length > 0 && packages.filter(p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status)).length > 0
+                        ? t('orderDetail.navigateToRecipient')
+                        : t('orderDetail.allPkgsDone', 'All packages done — confirm now')}
+                    </Text>
                   </View>
                   <Icon name="arrow-right" size={22} color="#FFF" />
                 </View>
