@@ -365,7 +365,7 @@ PODS:
     - glog
   - react-native-geolocation-service (5.3.1):
     - React
-  - react-native-image-picker (8.2.1):
+  - react-native-image-picker (5.7.0):
     - React-Core
   - react-native-maps (1.7.1):
     - React-Core
@@ -377,7 +377,7 @@ PODS:
     - RCTTypeSafety
     - React-Core
     - ReactCommon/turbomodule/core
-  - react-native-webview (13.16.1):
+  - react-native-webview (11.26.1):
     - React-Core
   - React-perflogger (0.70.6)
   - React-RCTActionSheet (0.70.6):
@@ -711,11 +711,11 @@ SPEC CHECKSUMS:
   React-jsinspector: 60769e5a0a6d4b32294a2456077f59d0266f9a8b
   React-logger: 28e721a44e671acf52ac6588f8624eb23245cb27
   react-native-geolocation-service: 32b2c2a3b91e70ce2a8d0c684801aaeb0a07e0ec
-  react-native-image-picker: 34310725cfe02f1d90e8f6088f8d5746f3e60c4b
+  react-native-image-picker: b981b88b807605540b2de3245c76e9729f418b37
   react-native-maps: 38394e3f4258d7fe8f1241c2624b91acf35e2dd5
   react-native-restart: 0bc732f4461709022a742bb29bcccf6bbc5b4863
   react-native-safe-area-context: 41ffdebd233eddeef75576749f0cf153e83a0681
-  react-native-webview: 84c90102e00cedaee5a6e131aa3097353d487a8b
+  react-native-webview: ec195db71ebf55705d7b46a7da5f1b1746bb7efd
   React-perflogger: 8c79399b0500a30ee8152d0f9f11beae7fc36595
   React-RCTActionSheet: 7316773acabb374642b926c19aef1c115df5c466
   React-RCTAnimation: 5341e288375451297057391227f691d9b2326c3d

@@ -108,7 +108,7 @@ const IncomingOrdersSection = ({
       {orders.length > 0
         ? orders.map((item, index) => (
             <OrderCard
-              key={`order-${item?.id || item?.order_id || index}`}
+              key={`order-${item?.id || item?.order_id || 'x'}-${index}`}
               order={item}
               currency={currency}
               onAccept={onAccept}

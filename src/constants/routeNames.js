@@ -26,6 +26,7 @@ export const routeNames = {
   // ─── Pickup ───────────────────────────────────────
   MyPickups: 'MyPickups',
   PickupDetail: 'PickupDetail',
+  PickupProof: 'PickupProof',
 
   // ─── Scanner ──────────────────────────────────────
   Scanner: 'Scanner',

@@ -131,7 +131,8 @@ const processAction = async (action) => {
           status: 'delivered',
           note: action.notes || undefined,
           proof_photo: proofUrl || undefined,
-          signature: signatureUrl || undefined,
+          signature_url: signatureUrl || undefined,
+          signature: !signatureUrl && action.signatureDataUrl ? action.signatureDataUrl : undefined,
           lat: action.lat || undefined,
           lng: action.lng || undefined,
         };

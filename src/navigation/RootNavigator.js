@@ -39,6 +39,7 @@ import ScannerScreen from '../screens/scanner/ScannerScreen';
 import LoadVerifyScreen from '../screens/scanner/LoadVerifyScreen';
 import MyPickupsScreen from '../screens/pickup/MyPickupsScreen';
 import PickupDetailScreen from '../screens/pickup/PickupDetailScreen';
+import PickupProofScreen from '../screens/pickup/PickupProofScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import ChangePasswordScreen from '../screens/settings/ChangePasswordScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
@@ -209,6 +210,10 @@ const RootNavigator = () => {
             <Stack.Screen
               name={routeNames.PickupDetail}
               component={PickupDetailScreen}
+            />
+            <Stack.Screen
+              name={routeNames.PickupProof}
+              component={PickupProofScreen}
             />
 
             {/* ─── Settings & Profile ────────────── */}

@@ -144,29 +144,12 @@ const PickupDetailScreen = ({navigation, route}) => {
     }
   };
 
-  const handleConfirm = async () => {
-    Alert.alert(t('pickup.confirmPickup'), t('pickup.confirmPickupMsg'), [
-      {text: t('common.cancel'), style: 'cancel'},
-      {
-        text: t('common.confirm'),
-        onPress: async () => {
-          setActionLoading(true);
-          try {
-            await withTimeout(confirmPickup(orderId));
-            setStatus('picked_up');
-            showMessage({message: t('pickup.pickupConfirmed'), type: 'success'});
-            // Navigate to orders/dashboard after successful pickup
-            setTimeout(() => {
-              navigation.navigate(routeNames.MainTabs, {screen: routeNames.MyOrders});
-            }, 600);
-          } catch (err) {
-            Alert.alert(t('common.error'), err.response?.data?.message || err.message || t('pickup.failedConfirm'));
-          } finally {
-            setActionLoading(false);
-          }
-        },
-      },
-    ]);
+  const handleConfirm = () => {
+    navigation.navigate(routeNames.PickupProof, {
+      orderId,
+      merchantName,
+      packageCount,
+    });
   };
 
   const handleFail = async () => {
