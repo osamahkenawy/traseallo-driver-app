@@ -11,7 +11,7 @@ const useOrderStore = create((set, get) => ({
   selectedOrder: null,
   stats: null,
   allTimeStats: null,
-  tabCounts: {all: 0, assigned: 0, picked_up: 0, in_transit: 0, delivered: 0, failed: 0, returned: 0},
+  tabCounts: {all: 0, assigned: 0, accepted: 0, picked_up: 0, in_transit: 0, delivered: 0, failed: 0, returned: 0},
   isLoading: false,
   isRefreshing: false,
   isUpdatingStatus: false,

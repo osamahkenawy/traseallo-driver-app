@@ -281,6 +281,7 @@ const ICON_MAP = {
   'eye-off-outline': EyeOff,
 
   // Lock
+  'lock': Lock,
   'lock-outline': Lock,
   'lock-reset': KeyRound,
   'lock-plus-outline': Lock,
@@ -303,6 +304,7 @@ const ICON_MAP = {
 
   // Clipboard
   'clipboard-text-clock-outline': ClipboardList,
+  'clipboard-check-outline': ClipboardList,
 
   // Return
   'keyboard-return': CornerDownLeft,
@@ -390,6 +392,7 @@ const ICON_MAP = {
 
   // Messages
   'whatsapp': MessageCircle,
+  'message-circle': MessageCircle,
   'message-text-outline': MessageSquare,
 
   // Keyboard

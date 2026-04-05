@@ -55,6 +55,8 @@ const uploadsApi = {
     }
     const formData = createFormData(uri, 'file', meta);
     return apiClient.post(`/driver-app/orders/${orderId}/proof-photo`, formData, {
+      timeout: 60000, // 60s for uploads on slow mobile connections
+      headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
@@ -73,7 +75,7 @@ const uploadsApi = {
    * @param {number|string} photoId
    */
   deletePhoto: (photoId) =>
-    apiClient.delete(`/uploads/photos/${photoId}`),
+    apiClient.delete(`/driver-app/photos/${photoId}`),
 
   /**
    * Upload recipient signature for an order
@@ -87,6 +89,8 @@ const uploadsApi = {
       signature: base64DataUrl,
       photo_type: 'signature',
       filename: `signature_${orderId}_${Date.now()}.png`,
+    }, {
+      timeout: 60000,
     });
   },
 
@@ -106,6 +110,8 @@ const uploadsApi = {
     }
     const formData = createFormData(uri, 'file', meta);
     return apiClient.post(`/driver-app/stops/${stopId}/proof-photo`, formData, {
+      timeout: 60000,
+      headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,
@@ -130,6 +136,8 @@ const uploadsApi = {
       signature: base64DataUrl,
       photo_type: 'signature',
       filename: `signature_stop_${stopId}_${Date.now()}.png`,
+    }, {
+      timeout: 60000,
     });
   },
 
@@ -142,7 +150,9 @@ const uploadsApi = {
    */
   uploadAvatar: (uri, onProgress) => {
     const formData = createFormData(uri);
-    return apiClient.post('/uploads/drivers/avatar', formData, {
+    return apiClient.post('/driver-app/profile/avatar', formData, {
+      timeout: 60000,
+      headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
         ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
         : undefined,

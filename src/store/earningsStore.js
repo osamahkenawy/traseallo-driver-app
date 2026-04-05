@@ -9,6 +9,7 @@ const useEarningsStore = create((set, get) => ({
   // ─── State ──────────────────────────────────────
   earnings: [],
   summary: null, // { total_earned, total_paid, total_pending }
+  totalSummary: null, // all-time { total_earned, total_paid, total_pending }
   dailyBreakdown: [], // [{ date, deliveries, earned, cod_collected }]
   pagination: {page: 1, limit: 30, total: 0, hasMore: true},
   isLoading: false,
@@ -77,6 +78,22 @@ const useEarningsStore = create((set, get) => ({
   loadMore: async (params = {}) => {
     if (get().isLoading || !get().pagination.hasMore) return;
     return get().fetchEarnings({...params, page: get().pagination.page});
+  },
+
+  /** Fetch all-time earnings summary */
+  fetchTotalEarnings: async () => {
+    try {
+      const res = await walletApi.getTotalEarnings();
+      const body = res.data;
+      const summary = body?.summary || body?.data?.summary || null;
+      if (summary) {
+        set({totalSummary: summary});
+      }
+      return summary;
+    } catch (error) {
+      if (__DEV__) console.warn('[EarningsStore] fetchTotalEarnings error:', error?.message);
+      return null;
+    }
   },
 
   /** Clear error */

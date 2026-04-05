@@ -163,7 +163,6 @@ const $ = StyleSheet.create({
   earningsTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     marginBottom: 16,
   },
   earningsIconWrap: {
@@ -173,6 +172,7 @@ const $ = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
   earningsLabel: {
     fontFamily: fontFamily.medium,
@@ -231,7 +231,6 @@ const $ = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
-    gap: 8,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.04,

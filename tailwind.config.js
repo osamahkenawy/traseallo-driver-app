@@ -1,0 +1,71 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./App.{js,jsx}', './src/**/*.{js,jsx}'],
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          primary: '#244066',
+          'primary-light': '#4E7AB5',
+          secondary: '#f94c29',
+          accent: '#f94c29',
+          success: '#15C7AE',
+          info: '#10A6BA',
+          warning: '#F9AD28',
+          danger: '#EB466D',
+          orange: '#D88D0D',
+          purple: '#9261C6',
+        },
+        txt: {
+          primary: '#022334',
+          secondary: '#495057',
+          muted: '#787A7D',
+          light: '#89A2B5',
+          disabled: '#ADB5BD',
+        },
+        bg: {
+          screen: '#F8FBFF',
+          card: '#FFFFFF',
+          input: '#EFEFEF',
+          'soft-blue': '#E6EFFE',
+          gray: '#F8F9FA',
+          body: '#F5F5F5',
+          muted: '#F1F3F5',
+        },
+        bd: {
+          DEFAULT: '#E9ECEF',
+          light: '#EFEFEF',
+          dark: '#D0D5DD',
+        },
+      },
+      fontFamily: {
+        poppins: ['Poppins-Regular'],
+        'poppins-medium': ['Poppins-Medium'],
+        'poppins-semibold': ['Poppins-SemiBold'],
+        'poppins-bold': ['Poppins-Bold'],
+        'poppins-light': ['Poppins-Light'],
+      },
+      fontSize: {
+        '2xs': 10,
+        xs: 12,
+        sm: 14,
+        base: 16,
+        lg: 18,
+        xl: 20,
+        '2xl': 24,
+        '3xl': 28,
+        '4xl': 32,
+      },
+      borderRadius: {
+        xs: 4,
+        sm: 8,
+        DEFAULT: 12,
+        lg: 16,
+        xl: 20,
+        '2xl': 24,
+        pill: 9999,
+      },
+    },
+  },
+  plugins: [],
+};

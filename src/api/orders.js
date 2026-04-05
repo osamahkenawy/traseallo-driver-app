@@ -7,9 +7,8 @@ import apiClient from './client';
 
 const ordersApi = {
   /**
-   * List driver's assigned orders (paginated, filterable)
-   * @param {object} [params] - { status, page, limit }
-   * status: 'all' | 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | 'failed' | 'returned'
+   * List driver's assigned orders (paginated, filterable, searchable, sortable)
+   * @param {object} [params] - { status, page, limit, search, sort, has_cod, payment_method, priority }
    */
   getOrders: (params = {}) =>
     apiClient.get('/driver-app/orders', {params: {status: 'all', page: 1, limit: 20, ...params}}),

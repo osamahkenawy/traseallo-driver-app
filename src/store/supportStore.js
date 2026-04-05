@@ -10,7 +10,7 @@ const useSupportStore = create((set, get) => ({
   tickets: [],
   ticketsPagination: {page: 1, limit: 20, total: 0, hasMore: true},
   currentTicket: null,
-  help: null, // FAQ / help content
+  help: null,
   isLoading: false,
   isLoadingTickets: false,
   isLoadingDetail: false,
@@ -27,14 +27,13 @@ const useSupportStore = create((set, get) => ({
     set({isSubmitting: true, error: null});
     try {
       const res = await supportApi.createTicket(data);
-      const ticket = res.data?.data || res.data;
-
-      // Add to top of local list
+      const body = res.data;
+      const ticket = body?.data || body?.ticket || (body?.id ? body : null);
+      if (__DEV__) console.log('[SupportStore] createTicket raw:', JSON.stringify(body)?.substring(0, 300));
       set(state => ({
         tickets: [ticket, ...state.tickets],
         isSubmitting: false,
       }));
-
       return ticket;
     } catch (error) {
       set({
@@ -46,7 +45,7 @@ const useSupportStore = create((set, get) => ({
   },
 
   /**
-   * Report an issue (quick report, may or may not create a ticket)
+   * Report an issue (quick report)
    */
   reportIssue: async data => {
     set({isSubmitting: true, error: null});
@@ -80,15 +79,9 @@ const useSupportStore = create((set, get) => ({
 
       set(state => ({
         tickets: page === 1 ? items : [...state.tickets, ...items],
-        ticketsPagination: {
-          page,
-          limit,
-          total,
-          hasMore: items.length === limit,
-        },
+        ticketsPagination: {page, limit, total, hasMore: items.length === limit},
         isLoadingTickets: false,
       }));
-
       return items;
     } catch (error) {
       set({isLoadingTickets: false});
@@ -114,13 +107,7 @@ const useSupportStore = create((set, get) => ({
     try {
       const res = await supportApi.getHelp();
       const data = res.data?.data || res.data;
-
-      set({
-        help: data || null,
-        isLoading: false,
-        error: null,
-      });
-
+      set({help: data || null, isLoading: false, error: null});
       return data;
     } catch (error) {
       set({
@@ -135,13 +122,17 @@ const useSupportStore = create((set, get) => ({
    * Fetch single ticket detail with replies
    */
   fetchTicketDetail: async (id) => {
-    set({isLoadingDetail: true, error: null});
+    set({isLoadingDetail: true, error: null, currentTicket: null});
     try {
       const res = await supportApi.getTicketDetail(id);
-      const ticket = res.data?.data || res.data;
+      const body = res.data;
+      // Try multiple extraction paths
+      const ticket = body?.data || body?.ticket || (body?.id ? body : null);
+      if (__DEV__) console.log('[SupportStore] ticketDetail raw:', JSON.stringify(body)?.substring(0, 300));
       set({currentTicket: ticket, isLoadingDetail: false});
       return ticket;
     } catch (error) {
+      if (__DEV__) console.warn('[SupportStore] fetchTicketDetail error:', error?.message);
       set({isLoadingDetail: false, error: error.response?.data?.message || 'Failed to load ticket'});
       return null;
     }
@@ -155,8 +146,6 @@ const useSupportStore = create((set, get) => ({
     try {
       const res = await supportApi.replyToTicket(id, {message});
       const reply = res.data?.data || res.data;
-
-      // Append reply to current ticket
       set(state => {
         const ct = state.currentTicket;
         if (ct && ct.id === id) {
@@ -165,7 +154,6 @@ const useSupportStore = create((set, get) => ({
         }
         return {isReplying: false};
       });
-
       return reply;
     } catch (error) {
       set({isReplying: false, error: error.response?.data?.message || 'Failed to send reply'});

@@ -61,48 +61,39 @@ const PAY_ICONS = {
   prepaid: 'check-decagram',
 };
 
-const fmtDate = (d) => {
+const fmtDate = (d, lang) => {
   if (!d) return '---';
   const dt = new Date(d.replace(' ', 'T'));
   if (isNaN(dt)) return d;
-  const day = dt.getDate().toString().padStart(2, '0');
-  const mon = dt.toLocaleString('en', {month: 'short'});
-  const yr = dt.getFullYear();
-  const h = dt.getHours();
-  const m = dt.getMinutes().toString().padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  return `${day} ${mon} ${yr}, ${h12}:${m} ${ampm}`;
+  const locale = lang === 'ar' ? 'ar-AE' : 'en-AE';
+  return dt.toLocaleDateString(locale, {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
 };
 
 const fmtTime = (d) => {
   if (!d) return '';
   const dt = new Date(d.replace(' ', 'T'));
   if (isNaN(dt)) return d;
-  const h = dt.getHours();
-  const m = dt.getMinutes().toString().padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  return `${h % 12 || 12}:${m} ${ampm}`;
+  return dt.toLocaleTimeString('en-AE', {hour: '2-digit', minute: '2-digit'});
 };
 
-const fmtDateTime = (d) => {
+const fmtDateTime = (d, lang) => {
   if (!d) return '';
   const dt = new Date(d.replace(' ', 'T'));
   if (isNaN(dt)) return d;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const day = dt.getDate();
-  const mon = months[dt.getMonth()];
-  const h = dt.getHours();
-  const m = dt.getMinutes().toString().padStart(2, '0');
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  return `${mon} ${day}, ${h % 12 || 12}:${m} ${ampm}`;
+  const locale = lang === 'ar' ? 'ar-AE' : 'en-AE';
+  return dt.toLocaleDateString(locale, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
 };
 
 const cleanPhone = (p) => (p || '').replace(/[\s\-()]/g, '');
 
 /* ── Main Component ───────────────────────────────────────── */
 const OrderDetailScreen = ({navigation, route}) => {
-  const {t} = useTranslation();
+  const {t, i18n} = useTranslation();
   const ins = useSafeAreaInsets();
   const currency = useSettingsStore(s => s.currency);
   const {token, trackingToken, orderId: paramOrderId} = route.params || {};
@@ -323,7 +314,18 @@ const OrderDetailScreen = ({navigation, route}) => {
     navigation.navigate(routeNames.FailureReport, {token: tkn, orderId: order?.id});
   }, [navigation, order, tkn, packages, status]);
 
-  const handleConfirmDelivery = useCallback(() => {
+  const handleConfirmDelivery = useCallback(async () => {
+    // Auto-transition picked_up → in_transit silently before delivery flow
+    if (status === 'picked_up') {
+      try {
+        await startDeliveryAction(order?.id, {
+          lat: undefined, lng: undefined,
+        });
+      } catch (_) {
+        // Continue even if transition fails — backend /deliver also accepts picked_up
+      }
+    }
+
     if (packages.length > 0) {
       const undelivered = packages.find(
         p => !['delivered', 'failed', 'returned', 'cancelled'].includes(p.status),
@@ -340,14 +342,18 @@ const OrderDetailScreen = ({navigation, route}) => {
         });
         return;
       }
+      // All packages already in terminal state — order may already be delivered
+      showMessage({message: t('orderDetail.allPackagesComplete', 'All packages have been processed'), type: 'success'});
+      fetchOrderDetail(order?.id);
+      return;
     }
     navigation.navigate(routeNames.DeliveryConfirm, {
       token: tkn,
       orderId: order?.id,
       codAmount: order?.cod_amount || 0,
-      orderStatus: status,
+      orderStatus: 'in_transit', // Always pass in_transit since we auto-transitioned
     });
-  }, [navigation, order, tkn, packages, status]);
+  }, [navigation, order, tkn, packages, status, startDeliveryAction, fetchOrderDetail, t]);
 
   const handlePickupOrder = useCallback(async () => {
     // Navigate to the proper pickup workflow screen
@@ -366,11 +372,13 @@ const OrderDetailScreen = ({navigation, route}) => {
         recipient_address: order?.recipient_address,
         pickup_notes: order?.pickup_notes,
         pickup_scheduled_at: order?.pickup_scheduled_at,
+        scheduled_at: order?.scheduled_at || order?.pickup_scheduled_at,
         client_name: order?.client_name,
         category: order?.category,
         total_packages: order?.total_packages,
         weight_kg: order?.weight_kg,
         description: order?.description,
+        payment_method: order?.payment_method,
       },
     });
   }, [order, resolvedOrderId, navigation]);
@@ -479,7 +487,7 @@ const OrderDetailScreen = ({navigation, route}) => {
 
           {/* Quick info row */}
           <View style={$.heroRow}>
-            <HeroPill icon="calendar-clock" text={fmtDate(order?.created_at)} />
+            <HeroPill icon="calendar-clock" text={fmtDate(order?.created_at, i18n.language)} />
             <HeroPill
               icon={PAY_ICONS[order?.payment_method] || 'help-circle-outline'}
               text={(order?.payment_method || '---').toUpperCase()}
@@ -1203,7 +1211,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                       <Text style={[$.tlStatus, {color: logColor}]}>
                         {displayLabel}
                       </Text>
-                      <Text style={$.tlTime}>{fmtDateTime(log.created_at)}</Text>
+                      <Text style={$.tlTime}>{fmtDateTime(log.created_at, i18n.language)}</Text>
                     </View>
                     {log.note && !override && <Text style={$.tlNote}>{log.note}</Text>}
                     {log.changed_by_name && (
@@ -1288,7 +1296,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                   </View>
                   <Text style={$.ctaSecTxt}>{t('orderDetail.navigate')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={$.ctaSecondary} onPress={handleReportFailure} activeOpacity={0.7}>
+                <TouchableOpacity style={[$.ctaSecondary, {marginLeft: 10}]} onPress={handleReportFailure} activeOpacity={0.7}>
                   <View style={[$.ctaSecIcon, {backgroundColor: colors.danger + '12'}]}>
                     <Icon name="alert-circle-outline" size={16} color={colors.danger} />
                   </View>
@@ -1323,7 +1331,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                   </View>
                   <Text style={$.ctaSecTxt}>{t('orderDetail.navigate')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={$.ctaSecondary} onPress={handleReportFailure} activeOpacity={0.7}>
+                <TouchableOpacity style={[$.ctaSecondary, {marginLeft: 10}]} onPress={handleReportFailure} activeOpacity={0.7}>
                   <View style={[$.ctaSecIcon, {backgroundColor: colors.danger + '12'}]}>
                     <Icon name="alert-circle-outline" size={16} color={colors.danger} />
                   </View>
@@ -1333,76 +1341,8 @@ const OrderDetailScreen = ({navigation, route}) => {
             </>
           )}
 
-          {/* ── STATUS: picked_up ── */}
-          {status === 'picked_up' && (
-            <>
-              <TouchableOpacity
-                style={[$.ctaPrimary, {backgroundColor: '#0D7C66'}]}
-                onPress={handleStartDelivery}
-                disabled={isUpdatingStatus}
-                activeOpacity={0.85}>
-                {isUpdatingStatus ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <View style={$.ctaInner}>
-                    <View style={[$.ctaIconCircle, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
-                      <Icon name="truck-fast-outline" size={20} color="#FFF" />
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={$.ctaPrimaryTxt}>{t('orderDetail.startDelivery')}</Text>
-                      <Text style={$.ctaSubTxt}>{t('orderDetail.navigateToRecipient')}</Text>
-                    </View>
-                    <Icon name="arrow-right" size={22} color="#FFF" />
-                  </View>
-                )}
-              </TouchableOpacity>
-              <View style={$.ctaQuickActions}>
-                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleNavigate} activeOpacity={0.7}>
-                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F4FD'}]}>
-                    <Icon name="navigation-variant" size={18} color="#1976D2" />
-                  </View>
-                  <Text style={[$.ctaQuickLabel, {color: '#1976D2'}]}>{t('orderDetail.navigate')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleCall} activeOpacity={0.7}>
-                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F5E9'}]}>
-                    <Icon name="phone-outline" size={18} color="#2E7D32" />
-                  </View>
-                  <Text style={[$.ctaQuickLabel, {color: '#2E7D32'}]}>{t('orderDetail.call')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleWhatsApp} activeOpacity={0.7}>
-                  <View style={[$.ctaQuickIcon, {backgroundColor: '#E8F5E9'}]}>
-                    <Icon name="whatsapp" size={18} color="#25D366" />
-                  </View>
-                  <Text style={[$.ctaQuickLabel, {color: '#25D366'}]}>{t('orderDetail.whatsapp')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={$.ctaQuickBtn} onPress={handleSMS} activeOpacity={0.7}>
-                  <View style={[$.ctaQuickIcon, {backgroundColor: '#FFF3E0'}]}>
-                    <Icon name="message-text-outline" size={18} color="#E65100" />
-                  </View>
-                  <Text style={[$.ctaQuickLabel, {color: '#E65100'}]}>{t('orderDetail.sms')}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{flexDirection: 'row', gap: 10}}>
-                <TouchableOpacity
-                  style={[$.ctaOutline, {flex: 1, borderColor: colors.danger + '40'}]}
-                  onPress={handleReportFailure}
-                  activeOpacity={0.7}>
-                  <Icon name="close-circle-outline" size={16} color={colors.danger} />
-                  <Text style={[$.ctaOutlineTxt, {color: colors.danger}]}>{t('orderDetail.reportFailure')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[$.ctaOutline, {flex: 1, borderColor: colors.warning + '40'}]}
-                  onPress={handleReturnOrder}
-                  activeOpacity={0.7}>
-                  <Icon name="keyboard-return" size={16} color={colors.warning} />
-                  <Text style={[$.ctaOutlineTxt, {color: colors.warning}]}>{t('orderDetail.returnOrder')}</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-
-          {/* ── STATUS: in_transit ── */}
-          {status === 'in_transit' && (
+          {/* ── STATUS: picked_up OR in_transit — unified "Confirm Delivery" ── */}
+          {(status === 'picked_up' || status === 'in_transit') && (
             <>
               <TouchableOpacity
                 style={[$.ctaPrimary, {backgroundColor: '#15C7AE'}]}
@@ -1449,7 +1389,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                   <Text style={[$.ctaQuickLabel, {color: '#E65100'}]}>{t('orderDetail.sms')}</Text>
                 </TouchableOpacity>
               </View>
-              <View style={{flexDirection: 'row', gap: 10}}>
+              <View style={{flexDirection: 'row'}}>
                 <TouchableOpacity
                   style={[$.ctaOutline, {flex: 1, borderColor: colors.danger + '40'}]}
                   onPress={handleReportFailure}
@@ -1458,7 +1398,7 @@ const OrderDetailScreen = ({navigation, route}) => {
                   <Text style={[$.ctaOutlineTxt, {color: colors.danger}]}>{t('orderDetail.reportFailure')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[$.ctaOutline, {flex: 1, borderColor: colors.warning + '40'}]}
+                  style={[$.ctaOutline, {flex: 1, borderColor: colors.warning + '40', marginLeft: 10}]}
                   onPress={handleReturnOrder}
                   activeOpacity={0.7}>
                   <Icon name="keyboard-return" size={16} color={colors.warning} />
@@ -1663,10 +1603,10 @@ const $ = StyleSheet.create({
     marginBottom: 6, marginTop: 4,
   },
   pkgDetailHeaderLeft: {
-    flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8,
+    flexDirection: 'row', alignItems: 'center', flex: 1,
   },
   pkgDetailTitle: {
-    fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary,
+    fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.textPrimary, marginLeft: 8,
   },
   pkgStatusChip: {
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10,
@@ -1748,7 +1688,7 @@ const $ = StyleSheet.create({
   ctaPrimaryTxt: {fontFamily: fontFamily.bold, fontSize: 15, color: '#FFF', letterSpacing: 0.2},
   ctaSubTxt: {fontFamily: fontFamily.regular, fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 1},
   ctaSecondaryRow: {
-    flexDirection: 'row', gap: 10, marginBottom: 8,
+    flexDirection: 'row', marginBottom: 8,
   },
   ctaSecondary: {
     flex: 1, height: 48, borderRadius: 14,
@@ -1761,7 +1701,7 @@ const $ = StyleSheet.create({
   },
   ctaSecTxt: {fontFamily: fontFamily.semiBold, fontSize: 13, color: colors.primary},
   ctaQuickActions: {
-    flexDirection: 'row', gap: 8, marginBottom: 10,
+    flexDirection: 'row', marginBottom: 10,
   },
   ctaQuickBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 8,
@@ -1774,9 +1714,9 @@ const $ = StyleSheet.create({
   ctaOutline: {
     height: 42, borderRadius: 12,
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, marginBottom: 6, backgroundColor: '#FFF', gap: 6,
+    borderWidth: 1.5, marginBottom: 6, backgroundColor: '#FFF',
   },
-  ctaOutlineTxt: {fontFamily: fontFamily.semiBold, fontSize: 12},
+  ctaOutlineTxt: {fontFamily: fontFamily.semiBold, fontSize: 12, marginLeft: 6},
 });
 
 export default OrderDetailScreen;

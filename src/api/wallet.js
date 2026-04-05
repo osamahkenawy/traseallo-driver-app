@@ -43,6 +43,13 @@ const walletApi = {
    */
   getDailyEarnings: (days = 7) =>
     apiClient.get('/driver-app/earnings/daily', {params: {days}}),
+
+  /**
+   * Get all-time earnings summary (total_earned, total_paid, total_pending)
+   * Uses a wide date range to capture everything.
+   */
+  getTotalEarnings: () =>
+    apiClient.get('/driver-app/earnings', {params: {date_from: '2020-01-01', date_to: '2030-12-31'}}),
 };
 
 export default walletApi;

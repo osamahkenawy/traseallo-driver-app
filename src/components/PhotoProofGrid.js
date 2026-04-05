@@ -156,9 +156,20 @@ const PhotoProofGrid = ({
       setLimit(serverLimit);
       onPhotosChange?.(updatedPhotos);
     } catch (e) {
-      const msg = e?.response?.data?.message || t('photoProof.uploadFailed');
+      const status = e?.response?.status;
+      const serverMsg = e?.response?.data?.message;
+      const msg = serverMsg || e?.message || t('photoProof.uploadFailed');
+      if (__DEV__) {
+        console.warn('[PhotoProofGrid] Upload failed:', {
+          status,
+          serverMsg,
+          errorMsg: e?.message,
+          url: e?.config?.url,
+          responseData: JSON.stringify(e?.response?.data)?.substring(0, 300),
+        });
+      }
       // Handle limit reached from server
-      if (e?.response?.status === 403) {
+      if (status === 403) {
         Alert.alert(t('photoProof.limitReached'), msg);
       } else {
         Alert.alert(t('common.error'), msg);

@@ -63,7 +63,7 @@ const CustomTabBar = ({state, descriptors, navigation}) => {
                 onPress={onPress}
                 activeOpacity={0.8}>
                 <View style={$.centerCircle}>
-                  <Navigation size={26} color="#FFF" strokeWidth={2.5} />
+                  <Navigation size={22} color="#FFF" strokeWidth={2.5} />
                 </View>
               </TouchableOpacity>
             );
@@ -76,7 +76,7 @@ const CustomTabBar = ({state, descriptors, navigation}) => {
               onPress={onPress}
               activeOpacity={0.7}>
               <IconComp
-                size={22}
+                size={20}
                 color={focused ? colors.primary : '#A8B0BC'}
                 strokeWidth={focused ? 2.2 : 1.8}
               />
@@ -122,49 +122,49 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    marginHorizontal: 20,
-    marginBottom: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginBottom: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: -4},
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 10,
-    width: '90%',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 8,
+    width: '92%',
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   activeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: colors.primary,
-    marginTop: 4,
+    marginTop: 3,
   },
   centerBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -20,
+    marginTop: -14,
   },
   centerCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: '#f94c29',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#f94c29',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
   badge: {
     position: 'absolute',

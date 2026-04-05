@@ -1,9 +1,9 @@
 /**
  * My Orders Screen — Trasealla Driver App
- * Modern card-based order list with chip filters, counts, search & rich cards
+ * Premium card-based order list with 7 tabs, search, sort, quick filters & rich cards
  */
 
-import React, {useState, useCallback, useMemo} from 'react';
+import React, {useState, useCallback, useMemo, useRef} from 'react';
 import {
   View,
   StyleSheet,
@@ -14,7 +14,9 @@ import {
   RefreshControl,
   TextInput,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
+import Animated, {FadeInDown, FadeIn} from 'react-native-reanimated';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTranslation} from 'react-i18next';
 import Icon from '../../utils/LucideIcon';
@@ -25,14 +27,35 @@ import useSettingsStore from '../../store/settingsStore';
 import useOrders from '../../hooks/useOrders';
 
 const HP = 20;
+const {width: SCREEN_W} = Dimensions.get('window');
 
+const AnimTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+/* ── Tab Definitions (7 tabs) ── */
 const TABS = [
-  {key: 'all', labelKey: 'orders.all', icon: 'view-grid-outline'},
-  {key: 'assigned', labelKey: 'orders.assigned', icon: 'clipboard-text-clock-outline'},
-  {key: 'picked_up', labelKey: 'orders.pickedUp', icon: 'package-variant'},
-  {key: 'in_transit', labelKey: 'orders.inTransit', icon: 'truck-fast-outline'},
-  {key: 'delivered', labelKey: 'orders.completed', icon: 'check-decagram'},
-  {key: 'failed', labelKey: 'orders.failed', icon: 'close-circle-outline'},
+  {key: 'all',        labelKey: 'orders.all',       icon: 'view-grid-outline',              color: colors.primary},
+  {key: 'assigned',   labelKey: 'orders.assigned',   icon: 'clipboard-text-clock-outline',   color: colors.statusAssigned},
+  {key: 'accepted',   labelKey: 'orders.accepted',   icon: 'clipboard-check-outline',        color: '#1565C0'},
+  {key: 'picked_up',  labelKey: 'orders.pickedUp',   icon: 'package-variant',                color: colors.statusPickedUp},
+  {key: 'in_transit',  labelKey: 'orders.inTransit',  icon: 'truck-fast-outline',             color: colors.statusInTransit},
+  {key: 'delivered',  labelKey: 'orders.completed',  icon: 'check-decagram',                 color: colors.statusDelivered},
+  {key: 'failed',     labelKey: 'orders.failed',     icon: 'close-circle-outline',           color: colors.statusFailed},
+];
+
+/* ── Sort Options ── */
+const SORT_OPTIONS = [
+  {key: 'newest',   icon: 'sort-clock-descending-outline', labelKey: 'orders.newest'},
+  {key: 'oldest',   icon: 'sort-clock-descending-outline', labelKey: 'orders.oldest'},
+  {key: 'status',   icon: 'sort-variant',                  labelKey: 'orders.priority'},
+  {key: 'distance', icon: 'map-marker-distance',           labelKey: 'orders.nearest'},
+];
+
+/* ── Quick Filters ── */
+const QUICK_FILTERS = [
+  {key: 'cod',      label: 'COD Only',      icon: 'cash',           color: '#D88D0D'},
+  {key: 'high_value', label: 'High Value',  icon: 'star',           color: '#9261C6'},
+  {key: 'priority', label: 'Priority',      icon: 'flash-outline',   color: '#EB466D'},
+  {key: 'recent',   label: 'Recent',        icon: 'clock-outline',   color: '#10A6BA'},
 ];
 
 /* ── Helpers ── */
@@ -50,13 +73,24 @@ const timeAgo = (dateStr, t) => {
 
 const getStatusIcon = (st) => {
   switch (st) {
-    case 'assigned': return 'clipboard-text-clock-outline';
+    case 'assigned':  return 'clipboard-text-clock-outline';
+    case 'accepted':  return 'clipboard-check-outline';
     case 'picked_up': return 'package-variant';
     case 'in_transit': return 'truck-fast-outline';
     case 'delivered': return 'check-decagram';
-    case 'failed': return 'close-circle-outline';
+    case 'failed':    return 'close-circle-outline';
     case 'cancelled': return 'cancel';
-    default: return 'package-variant-closed';
+    default:          return 'package-variant-closed';
+  }
+};
+
+const getActionForStatus = (status) => {
+  switch (status) {
+    case 'assigned':  return {labelKey: 'orderDetail.acceptOrder', fallback: 'Accept', icon: 'check', color: colors.success, action: 'accept'};
+    case 'accepted':  return {labelKey: 'orderDetail.pickUpFromClient', fallback: 'Start Pickup', icon: 'package-variant', color: '#1565C0', action: 'viewDetail'};
+    case 'picked_up': return {labelKey: 'orders.startDelivery', fallback: 'Start Delivery', icon: 'truck-fast-outline', color: colors.statusInTransit, action: 'startDelivery'};
+    case 'in_transit': return {labelKey: 'orderDetail.confirmDelivery', fallback: 'Deliver', icon: 'check-decagram', color: colors.success, action: 'viewDetail'};
+    default: return null;
   }
 };
 
@@ -67,8 +101,14 @@ const MyOrdersScreen = ({navigation}) => {
   const currency = useSettingsStore(s => s.currency);
   const [tab, setTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('newest'); // newest | status | distance
-  const {orders, isLoading, isRefreshing, onRefresh} = useOrders();
+  const [sortBy, setSortBy] = useState('newest');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [activeFilters, setActiveFilters] = useState([]);
+  const {orders, isLoading, isRefreshing, onRefresh, acceptOrder, rejectOrder, startDelivery, isUpdatingStatus} = useOrders();
+
+  const toggleFilter = useCallback((key) => {
+    setActiveFilters(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  }, []);
 
   /* ── Client-side filter by tab ── */
   const tabFiltered = useMemo(() => {
@@ -77,23 +117,46 @@ const MyOrdersScreen = ({navigation}) => {
     return orders.filter(o => o.status === tab);
   }, [orders, tab]);
 
+  /* ── Quick filters ── */
+  const quickFiltered = useMemo(() => {
+    if (activeFilters.length === 0) return tabFiltered;
+    let arr = tabFiltered;
+    if (activeFilters.includes('cod')) {
+      arr = arr.filter(o => o.payment_method === 'cod' && parseFloat(o.cod_amount) > 0);
+    }
+    if (activeFilters.includes('high_value')) {
+      arr = arr.filter(o => parseFloat(o.cod_amount || 0) >= 500 || parseFloat(o.delivery_fee || 0) >= 50);
+    }
+    if (activeFilters.includes('priority')) {
+      arr = arr.filter(o => o.priority === 'high' || o.priority === 'urgent');
+    }
+    if (activeFilters.includes('recent')) {
+      const oneHourAgo = Date.now() - 3600000;
+      arr = arr.filter(o => new Date(o.created_at).getTime() > oneHourAgo);
+    }
+    return arr;
+  }, [tabFiltered, activeFilters]);
+
   /* ── Search filter ── */
   const searchFiltered = useMemo(() => {
-    if (!searchQuery.trim()) return tabFiltered;
+    if (!searchQuery.trim()) return quickFiltered;
     const q = searchQuery.trim().toLowerCase();
-    return tabFiltered.filter(o =>
+    return quickFiltered.filter(o =>
       (o.order_number || '').toLowerCase().includes(q) ||
       (o.recipient_name || '').toLowerCase().includes(q) ||
       (o.tracking_token || '').toLowerCase().includes(q) ||
-      (o.recipient_emirate || '').toLowerCase().includes(q),
+      (o.recipient_emirate || '').toLowerCase().includes(q) ||
+      (o.sender_name || '').toLowerCase().includes(q),
     );
-  }, [tabFiltered, searchQuery]);
+  }, [quickFiltered, searchQuery]);
 
   /* ── Sort ── */
   const sortedOrders = useMemo(() => {
     const arr = [...searchFiltered];
     if (sortBy === 'newest') {
       arr.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    } else if (sortBy === 'oldest') {
+      arr.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
     } else if (sortBy === 'distance') {
       arr.sort((a, b) => {
         const da = parseFloat(a.route_distance_km) || Infinity;
@@ -101,8 +164,8 @@ const MyOrdersScreen = ({navigation}) => {
         return da - db;
       });
     } else {
-      const priority = {in_transit: 0, picked_up: 1, assigned: 2, delivered: 3, failed: 4};
-      arr.sort((a, b) => (priority[a.status] ?? 5) - (priority[b.status] ?? 5));
+      const priority = {in_transit: 0, picked_up: 1, accepted: 2, assigned: 3, delivered: 4, failed: 5};
+      arr.sort((a, b) => (priority[a.status] ?? 6) - (priority[b.status] ?? 6));
     }
     return arr;
   }, [searchFiltered, sortBy]);
@@ -123,34 +186,37 @@ const MyOrdersScreen = ({navigation}) => {
     [navigation],
   );
 
+  const cycleSortBy = useCallback(() => {
+    const keys = SORT_OPTIONS.map(s => s.key);
+    const idx = keys.indexOf(sortBy);
+    setSortBy(keys[(idx + 1) % keys.length]);
+  }, [sortBy]);
+
+  const currentSort = SORT_OPTIONS.find(s => s.key === sortBy) || SORT_OPTIONS[0];
+
   return (
     <View style={[$.root, {paddingTop: ins.top}]}>
       {/* ── Header ── */}
-      <View style={$.hdr}>
+      <Animated.View entering={FadeIn.duration(300)} style={$.hdr}>
         <View>
           <Text style={$.title}>{t('orders.title')}</Text>
           <Text style={$.subtitle}>
-            {t('orders.subtitle', {count: sortedOrders.length})}
+            {sortedOrders.length} {t('orders.ordersLabel', 'orders')}
             {tab !== 'all' ? ` · ${t('status.' + tab, tab)}` : ''}
           </Text>
         </View>
         <TouchableOpacity
           style={$.sortBtn}
           activeOpacity={0.6}
-          onPress={() => setSortBy(p => p === 'newest' ? 'status' : p === 'status' ? 'distance' : 'newest')}>
-          <Icon
-            name={sortBy === 'newest' ? 'sort-clock-descending-outline' : sortBy === 'distance' ? 'map-marker-distance' : 'sort-variant'}
-            size={18}
-            color={colors.primary}
-          />
-          <Text style={$.sortTxt}>
-            {sortBy === 'newest' ? t('orders.newest') : sortBy === 'distance' ? t('orders.nearest', 'Nearest') : t('orders.priority')}
-          </Text>
+          onPress={cycleSortBy}>
+          <Icon name={currentSort.icon} size={16} color={colors.primary} />
+          <Text style={$.sortTxt}>{t(currentSort.labelKey)}</Text>
+          <Icon name="chevron-down" size={12} color={colors.primary} style={{marginLeft: 2}} />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
       {/* ── Search ── */}
-      <View style={$.searchWrap}>
+      <Animated.View entering={FadeInDown.delay(80).duration(300)} style={$.searchWrap}>
         <View style={$.searchRow}>
           <Icon name="magnify" size={18} color={colors.textMuted} />
           <TextInput
@@ -171,33 +237,37 @@ const MyOrdersScreen = ({navigation}) => {
             </TouchableOpacity>
           )}
         </View>
-      </View>
+      </Animated.View>
 
-      {/* ── Chip Tabs with Counts ── */}
-      <View style={$.tabOuter}>
+      {/* ── Filter Tabs (7 tabs) ── */}
+      <Animated.View entering={FadeInDown.delay(120).duration(300)} style={$.tabOuter}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={$.tabWrap}
-          style={$.tabScroll}>
-          {TABS.map(item => {
+          contentContainerStyle={$.tabWrap}>
+          {TABS.map((item, idx) => {
             const on = tab === item.key;
             const count = getTabCount(item.key);
             return (
               <TouchableOpacity
                 key={item.key}
-                style={[$.chip, on && $.chipOn]}
+                style={[
+                  $.chip,
+                  on && {backgroundColor: item.color, shadowColor: item.color, shadowOpacity: 0.25},
+                  idx > 0 && {marginLeft: 8},
+                ]}
                 onPress={() => setTab(item.key)}
                 activeOpacity={0.6}>
                 <Icon
                   name={item.icon}
-                  size={14}
+                  size={13}
                   color={on ? '#FFF' : colors.textMuted}
-                  style={{marginEnd: 4}}
                 />
-                <Text style={[$.chipTxt, on && $.chipTxtOn]}>{t(item.labelKey)}</Text>
+                <Text style={[$.chipTxt, on && $.chipTxtOn, {marginLeft: 5}]}>
+                  {t(item.labelKey)}
+                </Text>
                 {count > 0 && (
-                  <View style={[$.chipCount, on && $.chipCountOn]}>
+                  <View style={[$.chipCount, on && $.chipCountOn, {marginLeft: 6}]}>
                     <Text style={[$.chipCountTxt, on && $.chipCountTxtOn]}>
                       {count}
                     </Text>
@@ -207,12 +277,42 @@ const MyOrdersScreen = ({navigation}) => {
             );
           })}
         </ScrollView>
-      </View>
+      </Animated.View>
+
+      {/* ── Quick Filters ── */}
+      <Animated.View entering={FadeInDown.delay(160).duration(300)}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={$.quickWrap}>
+          {QUICK_FILTERS.map((f, idx) => {
+            const on = activeFilters.includes(f.key);
+            return (
+              <TouchableOpacity
+                key={f.key}
+                style={[
+                  $.quickChip,
+                  on && {backgroundColor: f.color + '18', borderColor: f.color},
+                  idx > 0 && {marginLeft: 8},
+                ]}
+                onPress={() => toggleFilter(f.key)}
+                activeOpacity={0.6}>
+                <Icon name={f.icon} size={12} color={on ? f.color : colors.textMuted} />
+                <Text style={[$.quickTxt, on && {color: f.color}, {marginLeft: 5}]}>
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </Animated.View>
 
       {/* ── List ── */}
       {isLoading && !isRefreshing ? (
         <View style={$.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <View style={$.loadingCircle}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
           <Text style={$.loadingTxt}>{t('orders.loadingOrders')}</Text>
         </View>
       ) : (
@@ -224,11 +324,26 @@ const MyOrdersScreen = ({navigation}) => {
               order={item}
               index={index}
               onPress={() => goDetail(item)}
+              onAction={async (action) => {
+                if (action === 'accept') {
+                  const res = await acceptOrder(item.id);
+                  if (res.success) onRefresh();
+                } else if (action === 'reject') {
+                  const res = await rejectOrder(item.id, 'Rejected from orders list');
+                  if (res.success) onRefresh();
+                } else if (action === 'startDelivery') {
+                  const res = await startDelivery(item.id);
+                  if (res.success) onRefresh();
+                } else {
+                  goDetail(item);
+                }
+              }}
               t={t}
               currency={currency}
+              isUpdatingStatus={isUpdatingStatus}
             />
           )}
-          ListEmptyComponent={<Empty tab={tab} onRefresh={onRefresh} t={t} />}
+          ListEmptyComponent={<Empty tab={tab} onRefresh={onRefresh} t={t} searchQuery={searchQuery} />}
           contentContainerStyle={$.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -246,8 +361,8 @@ const MyOrdersScreen = ({navigation}) => {
   );
 };
 
-/* ─── Order Card ─────────────────────────────────────────── */
-const OrderCard = ({order, onPress, t, currency}) => {
+/* ─── Order Card (Premium) ───────────────────────────────── */
+const OrderCard = ({order, index, onPress, onAction, t, currency, isUpdatingStatus}) => {
   const st = order?.status || 'assigned';
   const stClr = getStatusColor(st);
   const stBg = getStatusBgColor(st);
@@ -255,47 +370,54 @@ const OrderCard = ({order, onPress, t, currency}) => {
   const time = timeAgo(order?.created_at || order?.scheduled_date, t);
   const routeDistKm = order?.route_distance_km ? parseFloat(order.route_distance_km) : null;
   const routeDurMin = order?.route_duration_min ? Math.round(parseFloat(order.route_duration_min)) : null;
+  const actionConfig = getActionForStatus(st);
 
   return (
-    <TouchableOpacity style={$.card} onPress={onPress} activeOpacity={0.55}>
-      {/* Status accent stripe */}
+    <AnimTouchable
+      entering={FadeInDown.delay(60 * Math.min(index, 8)).duration(350).springify()}
+      style={$.card}
+      onPress={onPress}
+      activeOpacity={0.55}>
+      {/* Left accent strip */}
       <View style={[$.cardAccent, {backgroundColor: stClr}]} />
 
       <View style={$.cardInner}>
-        {/* Top row: status + time */}
+        {/* Row 1: Status + COD + Time */}
         <View style={$.cardTopRow}>
           <View style={[$.statusBadge, {backgroundColor: stBg}]}>
             <Icon name={getStatusIcon(st)} size={11} color={stClr} />
-            <Text style={[$.statusTxt, {color: stClr}]}>
+            <Text style={[$.statusTxt, {color: stClr, marginLeft: 4}]}>
               {t('status.' + st, st)}
             </Text>
           </View>
           <View style={$.cardTopRight}>
             {isCOD && (
               <View style={$.codTag}>
-                <Icon name="cash" size={10} color="#F9AD28" />
-                <Text style={$.codTxt}>
-                COD {order?.cod_amount ? `${currency} ${order.cod_amount}` : ''}
+                <Icon name="cash" size={10} color="#D88D0D" />
+                <Text style={[$.codTxt, {marginLeft: 4}]}>
+                  COD {order?.cod_amount ? `${currency} ${order.cod_amount}` : ''}
                 </Text>
               </View>
             )}
-            {!!time && (
-              <Text style={$.timeTxt}>{time}</Text>
-            )}
+            {!!time && <Text style={[$.timeTxt, isCOD && {marginLeft: 8}]}>{time}</Text>}
           </View>
         </View>
 
-        {/* Order number + customer */}
+        {/* Row 2: Icon + Order # + Customer + Arrow */}
         <View style={$.cardMid}>
           <View style={[$.cardIcon, {backgroundColor: stBg}]}>
-            <Icon name={st === 'assigned' ? 'store-outline' : 'package-variant'} size={18} color={stClr} />
+            <Icon
+              name={st === 'assigned' ? 'store-outline' : st === 'accepted' ? 'clipboard-check-outline' : 'package-variant'}
+              size={20}
+              color={stClr}
+            />
           </View>
-          <View style={$.cardMidText}>
+          <View style={[$.cardMidText, {marginLeft: 12}]}>
             <Text style={$.orderNum} numberOfLines={1}>
               #{order?.order_number || order?.tracking_token || '---'}
             </Text>
             <Text style={$.custName} numberOfLines={1}>
-              {st === 'assigned'
+              {st === 'assigned' || st === 'accepted'
                 ? `${t('orders.pickup')} ${order?.sender_name || order?.client_name || t('orders.client')}`
                 : order?.recipient_name || t('orders.customer')}
             </Text>
@@ -305,12 +427,12 @@ const OrderCard = ({order, onPress, t, currency}) => {
           </View>
         </View>
 
-        {/* Bottom row: location + emirate + packages + stops + distance/ETA */}
+        {/* Row 3: Meta chips */}
         <View style={$.cardBottom}>
           {(routeDistKm != null || routeDurMin != null) && (
             <View style={[$.infoChip, {backgroundColor: '#E6F4EA'}]}>
-              <Icon name="map-marker-distance" size={12} color={colors.success} />
-              <Text style={[$.infoChipTxt, {color: colors.success}]}>
+              <Icon name="map-marker-distance" size={11} color={colors.success} />
+              <Text style={[$.infoChipTxt, {color: colors.success, marginLeft: 4}]}>
                 {routeDistKm != null ? `${routeDistKm.toFixed(1)} km` : ''}
                 {routeDistKm != null && routeDurMin != null ? ' · ' : ''}
                 {routeDurMin != null ? `${routeDurMin} min` : ''}
@@ -318,69 +440,110 @@ const OrderCard = ({order, onPress, t, currency}) => {
             </View>
           )}
           {!!(order?.recipient_emirate || order?.recipient_address) && (
-            <View style={$.infoChip}>
-              <Icon name="map-marker-outline" size={12} color={colors.textMuted} />
-              <Text style={$.infoChipTxt} numberOfLines={1}>
+            <View style={[$.infoChip, {marginLeft: 6}]}>
+              <Icon name="map-marker-outline" size={11} color={colors.textMuted} />
+              <Text style={[$.infoChipTxt, {marginLeft: 4}]} numberOfLines={1}>
                 {order?.recipient_emirate || order?.recipient_address || '---'}
               </Text>
             </View>
           )}
           {Array.isArray(order?.packages) && order.packages.length > 0 && (
-            <View style={$.infoChip}>
-              <Icon name="package-variant" size={12} color={colors.textMuted} />
-              <Text style={$.infoChipTxt}>
+            <View style={[$.infoChip, {marginLeft: 6}]}>
+              <Icon name="package-variant" size={11} color={colors.textMuted} />
+              <Text style={[$.infoChipTxt, {marginLeft: 4}]}>
                 {order.packages.filter(p => p.status === 'delivered').length}/{order.packages.length} {t('orders.pkgs')}
               </Text>
             </View>
           )}
           {Array.isArray(order?.stops) && order.stops.length > 0 && (
-            <View style={$.infoChip}>
-              <Icon name="map-marker-path" size={12} color={colors.textMuted} />
-              <Text style={$.infoChipTxt}>
+            <View style={[$.infoChip, {marginLeft: 6}]}>
+              <Icon name="map-marker-path" size={11} color={colors.textMuted} />
+              <Text style={[$.infoChipTxt, {marginLeft: 4}]}>
                 {order.stops.filter(s => s.status === 'completed').length}/{order.stops.length} {t('orders.stops')}
               </Text>
             </View>
           )}
           {!!order?.scheduled_date && (
-            <View style={$.infoChip}>
-              <Icon name="calendar-outline" size={12} color={colors.textMuted} />
-              <Text style={$.infoChipTxt} numberOfLines={1}>
+            <View style={[$.infoChip, {marginLeft: 6}]}>
+              <Icon name="calendar-outline" size={11} color={colors.textMuted} />
+              <Text style={[$.infoChipTxt, {marginLeft: 4}]} numberOfLines={1}>
                 {new Date(order.scheduled_date).toLocaleDateString('en-GB', {day: '2-digit', month: 'short'})}
               </Text>
             </View>
           )}
           {!!order?.items_count && (
-            <View style={$.infoChip}>
-              <Icon name="cube-outline" size={12} color={colors.textMuted} />
-              <Text style={$.infoChipTxt}>{order.items_count} {t('orders.items')}</Text>
+            <View style={[$.infoChip, {marginLeft: 6}]}>
+              <Icon name="cube-outline" size={11} color={colors.textMuted} />
+              <Text style={[$.infoChipTxt, {marginLeft: 4}]}>{order.items_count} {t('orders.items')}</Text>
             </View>
           )}
         </View>
+
+        {/* Row 4: Action button (for actionable statuses) */}
+        {actionConfig && (
+          <View style={$.actionRow}>
+            <TouchableOpacity
+              style={[$.actionBtn, {backgroundColor: actionConfig.color}]}
+              activeOpacity={0.7}
+              disabled={isUpdatingStatus}
+              onPress={() => onAction(actionConfig.action)}>
+              {isUpdatingStatus ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <>
+                  <Icon name={actionConfig.icon} size={14} color="#FFF" />
+                  <Text style={[$.actionBtnTxt, {marginLeft: 6}]}>{t(actionConfig.labelKey, actionConfig.fallback)}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            {st === 'assigned' && (
+              <TouchableOpacity
+                style={$.rejectBtn}
+                activeOpacity={0.6}
+                onPress={() => onAction('reject')}>
+                <Icon name="close" size={14} color={colors.danger} />
+                <Text style={[$.rejectBtnTxt, {marginLeft: 4}]}>Reject</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
-    </TouchableOpacity>
+    </AnimTouchable>
   );
 };
 
 /* ─── Empty State ────────────────────────────────────────── */
-const Empty = ({tab, onRefresh, t}) => (
+const Empty = ({tab, onRefresh, t, searchQuery}) => (
   <View style={$.empty}>
-    <View style={$.emptyIcWrap}>
-      <View style={$.emptyIcInner}>
-        <Icon name="package-variant-closed" size={36} color={colors.textLight} />
+    <Animated.View entering={FadeInDown.duration(400).springify()} style={$.emptyContent}>
+      <View style={$.emptyIcWrap}>
+        <View style={$.emptyIcRing}>
+          <Icon
+            name={searchQuery ? 'magnify' : 'package-variant-closed'}
+            size={32}
+            color={colors.textLight}
+          />
+        </View>
       </View>
-    </View>
-    <Text style={$.emptyH}>
-      {tab === 'all' ? t('orders.noOrdersYet') : t('orders.noFilteredOrders', {tab: t('status.' + tab, tab)})}
-    </Text>
-    <Text style={$.emptyP}>
-      {tab === 'all'
-        ? t('orders.emptyMessage')
-        : t('orders.emptyFilteredMessage', {tab: t('status.' + tab, tab)})}
-    </Text>
-    <TouchableOpacity style={$.emptyBtn} activeOpacity={0.6} onPress={onRefresh}>
-      <Icon name="refresh" size={15} color={colors.primary} />
-      <Text style={$.emptyBtnTxt}>{t('orders.refresh')}</Text>
-    </TouchableOpacity>
+      <Text style={$.emptyH}>
+        {searchQuery
+          ? t('orders.noSearchResults', 'No results found')
+          : tab === 'all'
+            ? t('orders.noOrdersYet')
+            : t('orders.noFilteredOrders', {tab: t('status.' + tab, tab)})}
+      </Text>
+      <Text style={$.emptyP}>
+        {searchQuery
+          ? t('orders.tryDifferentSearch', 'Try a different search term or clear filters')
+          : tab === 'all'
+            ? t('orders.emptyMessage')
+            : t('orders.emptyFilteredMessage', {tab: t('status.' + tab, tab)})}
+      </Text>
+      <TouchableOpacity style={$.emptyBtn} activeOpacity={0.6} onPress={onRefresh}>
+        <Icon name="refresh" size={15} color={colors.primary} />
+        <Text style={[$.emptyBtnTxt, {marginLeft: 6}]}>{t('orders.refresh')}</Text>
+      </TouchableOpacity>
+    </Animated.View>
   </View>
 );
 
@@ -392,7 +555,7 @@ export default MyOrdersScreen;
 const $ = StyleSheet.create({
   root: {flex: 1, backgroundColor: '#F3F5F9'},
 
-  /* Header */
+  /* ── Header ── */
   hdr: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,9 +566,9 @@ const $ = StyleSheet.create({
   },
   title: {
     fontFamily: fontFamily.bold,
-    fontSize: 22,
+    fontSize: 24,
     color: colors.textPrimary,
-    textAlign: 'auto',
+    letterSpacing: -0.3,
   },
   subtitle: {
     fontFamily: fontFamily.medium,
@@ -416,7 +579,6 @@ const $ = StyleSheet.create({
   sortBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
     backgroundColor: colors.primary + '0D',
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -426,18 +588,20 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     fontSize: 11,
     color: colors.primary,
+    marginLeft: 5,
   },
 
-  /* Search */
+  /* ── Search ── */
   searchWrap: {paddingHorizontal: HP, marginBottom: 10},
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     backgroundColor: '#FFF',
     borderRadius: 14,
     paddingHorizontal: 14,
     height: 44,
+    borderWidth: 1,
+    borderColor: '#EEF0F4',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.04,
@@ -450,16 +614,15 @@ const $ = StyleSheet.create({
     fontSize: 13,
     color: colors.textPrimary,
     paddingVertical: 0,
+    marginLeft: 10,
   },
 
-  /* Chip Tabs */
+  /* ── Filter Tabs ── */
   tabOuter: {marginBottom: 4, paddingVertical: 4},
-  tabScroll: {},
-  tabWrap: {paddingHorizontal: HP, paddingVertical: 4, gap: 8},
+  tabWrap: {paddingHorizontal: HP, paddingVertical: 4},
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 22,
@@ -470,11 +633,6 @@ const $ = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  chipOn: {
-    backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.25,
-  },
   chipTxt: {
     fontFamily: fontFamily.semiBold,
     fontSize: 12,
@@ -482,7 +640,6 @@ const $ = StyleSheet.create({
   },
   chipTxtOn: {color: '#FFF'},
   chipCount: {
-    marginStart: 5,
     backgroundColor: '#E8ECF0',
     borderRadius: 10,
     minWidth: 20,
@@ -499,12 +656,38 @@ const $ = StyleSheet.create({
   },
   chipCountTxtOn: {color: '#FFF'},
 
-  /* Loading */
+  /* ── Quick Filters ── */
+  quickWrap: {paddingHorizontal: HP, paddingTop: 2, paddingBottom: 8},
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#EEF0F4',
+  },
+  quickTxt: {
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+
+  /* ── Loading ── */
   loadingWrap: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+  },
+  loadingCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary + '0A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   loadingTxt: {
     fontFamily: fontFamily.medium,
@@ -512,22 +695,23 @@ const $ = StyleSheet.create({
     color: colors.textMuted,
   },
 
-  /* List */
-  list: {paddingHorizontal: HP, paddingTop: 4, paddingBottom: 110, flexGrow: 1},
+  /* ── List ── */
+  list: {paddingHorizontal: HP, paddingTop: 4, paddingBottom: 120, flexGrow: 1},
 
-  /* Order Card */
+  /* ── Order Card ── */
   card: {
+    flexDirection: 'row',
     backgroundColor: '#FFF',
     borderRadius: 18,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowColor: '#1B2838',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
     elevation: 3,
   },
-  cardAccent: {height: 3},
-  cardInner: {paddingHorizontal: 16, paddingVertical: 14},
+  cardAccent: {width: 4},
+  cardInner: {flex: 1, paddingHorizontal: 16, paddingVertical: 14},
 
   /* Card top row */
   cardTopRow: {
@@ -539,7 +723,6 @@ const $ = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
@@ -553,12 +736,10 @@ const $ = StyleSheet.create({
   cardTopRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   codTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
@@ -580,24 +761,21 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
-    gap: 12,
   },
   cardIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cardMidText: {
-    flex: 1,
-    marginStart: 12,
-  },
+  cardMidText: {flex: 1},
   orderNum: {
     fontFamily: fontFamily.bold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textPrimary,
     marginBottom: 2,
+    letterSpacing: -0.2,
   },
   custName: {
     fontFamily: fontFamily.medium,
@@ -605,12 +783,13 @@ const $ = StyleSheet.create({
     color: colors.textSecondary,
   },
   arrowCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.primary + '0D',
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 8,
   },
 
   /* Card bottom */
@@ -618,7 +797,6 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F0F2F5',
@@ -626,11 +804,11 @@ const $ = StyleSheet.create({
   infoChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: '#F5F7FA',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    marginBottom: 4,
   },
   infoChipTxt: {
     fontFamily: fontFamily.medium,
@@ -639,7 +817,45 @@ const $ = StyleSheet.create({
     maxWidth: 120,
   },
 
-  /* Empty */
+  /* ── Action Row ── */
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F2F5',
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  actionBtnTxt: {
+    fontFamily: fontFamily.bold,
+    fontSize: 13,
+    color: '#FFF',
+  },
+  rejectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: colors.danger + '10',
+    marginLeft: 10,
+  },
+  rejectBtnTxt: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: 13,
+    color: colors.danger,
+  },
+
+  /* ── Empty ── */
   empty: {
     flex: 1,
     justifyContent: 'center',
@@ -647,19 +863,20 @@ const $ = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 40,
   },
+  emptyContent: {alignItems: 'center'},
   emptyIcWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: '#F0F2F5',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
-  emptyIcInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  emptyIcRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#E8ECF0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -669,6 +886,7 @@ const $ = StyleSheet.create({
     fontSize: 17,
     color: colors.textPrimary,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptyP: {
     fontFamily: fontFamily.regular,
@@ -680,7 +898,6 @@ const $ = StyleSheet.create({
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     marginTop: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,

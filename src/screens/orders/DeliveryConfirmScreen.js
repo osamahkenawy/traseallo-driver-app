@@ -37,7 +37,17 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
   const [invalidStatus, setInvalidStatus] = useState(false);
 
   // Guard: only allow delivery if order is picked_up or in_transit
+  // Also handle already-delivered orders gracefully
   React.useEffect(() => {
+    if (orderStatus === 'delivered') {
+      setInvalidStatus(true);
+      Alert.alert(
+        t('deliveryConfirm.deliverySuccess', 'Success'),
+        t('deliveryConfirm.alreadyDelivered', 'This order has already been delivered.'),
+        [{text: t('common.ok'), onPress: () => navigation.goBack()}],
+      );
+      return;
+    }
     if (orderStatus && !['picked_up', 'in_transit'].includes(orderStatus)) {
       setInvalidStatus(true);
       Alert.alert(
@@ -94,6 +104,18 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
             recipientAddress: undelivered.recipient_address,
             barcode: undelivered.barcode,
           });
+          return;
+        }
+        // All packages are in terminal state — order is likely already delivered
+        if (pkgs.length > 0) {
+          if (!cancelled) {
+            setInvalidStatus(true);
+            Alert.alert(
+              t('deliveryConfirm.deliverySuccess', 'Success'),
+              t('deliveryConfirm.allPackagesDelivered', 'All packages have been delivered for this order.'),
+              [{text: t('common.ok'), onPress: () => navigation.goBack()}],
+            );
+          }
           return;
         }
       } catch {
