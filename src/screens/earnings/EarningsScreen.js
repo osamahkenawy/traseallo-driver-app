@@ -160,7 +160,7 @@ const EarningsScreen = ({navigation}) => {
         safe(() => fetchTotalEarnings()),
         safe(() => fetchSummary()),
         safe(() => fetchEarnings({}, isRefresh)),
-        safe(() => fetchDailyBreakdown(30)),
+        safe(() => fetchDailyBreakdown(7)),
         safe(() => fetchPending(isRefresh)),
       ]);
     } catch (e) {
@@ -175,6 +175,8 @@ const EarningsScreen = ({navigation}) => {
   const getEarningsForPeriod = () => {
     const total = Number(totalSummary?.total_earned ?? earningSummary?.total_earned ?? 0);
     if (selectedPeriod === 3) return total.toFixed(2);
+    // "This Month" — use total since daily data only covers 7 days
+    if (selectedPeriod === 2) return total.toFixed(2);
     const now = new Date();
     // Use local date (YYYY-MM-DD) to match backend DATE() which uses server local time
     const pad = (n) => String(n).padStart(2, '0');
@@ -182,9 +184,6 @@ const EarningsScreen = ({navigation}) => {
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
     const weekAgoStr = `${weekAgo.getFullYear()}-${pad(weekAgo.getMonth() + 1)}-${pad(weekAgo.getDate())}`;
-    const monthAgo = new Date(now);
-    monthAgo.setDate(monthAgo.getDate() - 30);
-    const monthAgoStr = `${monthAgo.getFullYear()}-${pad(monthAgo.getMonth() + 1)}-${pad(monthAgo.getDate())}`;
 
     let sum = 0;
     for (const day of dailyBreakdown) {
@@ -192,7 +191,6 @@ const EarningsScreen = ({navigation}) => {
       const d = typeof day.date === 'string' ? day.date.slice(0, 10) : '';
       if (selectedPeriod === 0 && d === todayStr) sum += Number(day.earned || 0);
       else if (selectedPeriod === 1 && d >= weekAgoStr) sum += Number(day.earned || 0);
-      else if (selectedPeriod === 2 && d >= monthAgoStr) sum += Number(day.earned || 0);
     }
     return sum.toFixed(2);
   };

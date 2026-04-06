@@ -449,8 +449,9 @@
     "noTransactions": "No transactions yet",
     "noTransactionsDesc": "Your earnings history will appear here.",
     "last7Days": "Last 7 days",
-    "paid": "paid",
-    "pendingLabel": "pending"
+    "paid": "Paid",
+    "pendingLabel": "Pending",
+    "totalEarned": "Total Earned"
   },
   "ratings": {
     "title": "Ratings",

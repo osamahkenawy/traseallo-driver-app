@@ -442,7 +442,8 @@
     "noTransactionsDesc": "سيظهر سجل أرباحك هنا.",
     "last7Days": "آخر 7 أيام",
     "paid": "مدفوع",
-    "pendingLabel": "معلّق"
+    "pendingLabel": "معلّق",
+    "totalEarned": "إجمالي الأرباح"
   },
   "ratings": {
     "title": "التقييمات",
