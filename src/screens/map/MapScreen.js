@@ -52,6 +52,7 @@ import useRouteStore from '../../store/routeStore';
 import useStopsStore from '../../store/stopsStore';
 import {fetchRoadRouteChunked, fetchOptimizedRoute, fetchNavigationRoute} from '../../utils/routing';
 import {settingsApi} from '../../api';
+import useSettingsStore from '../../store/settingsStore';
 
 import {DriverMarker, StopMarker, MapTopBar, OrderSheet, TripPreview, NavigationOverlay} from './components';
 
@@ -103,6 +104,7 @@ const STATUS_LABELS = {
 const MapScreen = ({navigation}) => {
   const {t} = useTranslation();
   const ins = useSafeAreaInsets();
+  const currency = useSettingsStore(s => s.currency);
   const mapRef = useRef(null);
 
   // ── Stores ──────────────────────────────────
@@ -953,7 +955,7 @@ const MapScreen = ({navigation}) => {
               <Text style={[$.summaryNum, {color: colors.warning}]}>
                 {parseFloat(summary.pending_cod || 0).toFixed(0)}
               </Text>
-              <Text style={$.summaryLabel}>{t('map.codAed')}</Text>
+              <Text style={$.summaryLabel}>{t('map.codAed', {currency})}</Text>
             </View>
           </View>
         </View>

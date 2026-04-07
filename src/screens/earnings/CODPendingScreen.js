@@ -50,7 +50,7 @@ const CODPendingScreen = () => {
     (orderId, orderNumber, amount) => {
       Alert.alert(
         t('codPending.collectCod'),
-        t('codPending.confirmCollect', {amount, orderNumber}),
+        t('codPending.confirmCollect', {amount, orderNumber, currency}),
         [
           {text: t('common.cancel'), style: 'cancel'},
           {
@@ -59,7 +59,7 @@ const CODPendingScreen = () => {
               setCollectingId(orderId);
               try {
                 await collectCod(orderId, {amount_collected: amount});
-                Alert.alert(t('codPending.success'), t('codPending.collected', {amount}));
+                Alert.alert(t('codPending.success'), t('codPending.collected', {amount, currency}));
               } catch (error) {
                 Alert.alert(
                   t('common.error'),

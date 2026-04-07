@@ -12,6 +12,7 @@ import {routeNames} from '../constants/routeNames';
 import {colors} from '../theme/colors';
 
 import useAuthStore from '../store/authStore';
+import useSettingsStore from '../store/settingsStore';
 import useSocket from '../hooks/useSocket';
 import useLocation from '../hooks/useLocation';
 import usePushNotifications from '../hooks/usePushNotifications';
@@ -60,12 +61,20 @@ const Stack = createNativeStackNavigator();
  */
 const ServiceConnector = () => {
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  const fetchSettings = useSettingsStore(s => s.fetchSettings);
 
   // Socket auto-connects/disconnects based on auth state internally
   useSocket();
 
   // GPS tracking — server identifies driver from auth token
   useLocation(isAuthenticated);
+
+  // Fetch tenant settings (currency, delivery options, etc.) on auth
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchSettings();
+    }
+  }, [isAuthenticated, fetchSettings]);
 
   // FCM push notifications — registers token, handles foreground messages
   usePushNotifications(navigationRef);

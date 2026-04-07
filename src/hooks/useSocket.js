@@ -11,6 +11,7 @@ import useNotificationStore from '../store/notificationStore';
 import useDashboardStore from '../store/dashboardStore';
 import useLocationStore from '../store/locationStore';
 import useRouteStore from '../store/routeStore';
+import useSettingsStore from '../store/settingsStore';
 import i18n from '../i18n';
 
 const SOCKET_URL = 'https://dispatch.traseallo.com';
@@ -18,6 +19,7 @@ const SOCKET_URL = 'https://dispatch.traseallo.com';
 const useSocket = () => {
   const socketRef = useRef(null);
   const connectingRef = useRef(false);
+  const currency = useSettingsStore(s => s.currency);
   const pollRef = useRef(null);
   const refreshTimerRef = useRef(null);
   const token = useAuthStore((s) => s.token);
@@ -138,7 +140,7 @@ const useSocket = () => {
       addNotification({
         id: `socket-cod-${Date.now()}`,
         title: i18n.t('notifications.codCollected', 'COD Collected'),
-        body: i18n.t('notifications.codCollectedBody', {amount: data?.amount || '', orderNumber: data?.order_number || '', defaultValue: `AED ${data?.amount || ''} collected for Order #${data?.order_number || ''}`}),
+        body: i18n.t('notifications.codCollectedBody', {currency, amount: data?.amount || '', orderNumber: data?.order_number || '', defaultValue: `${currency} ${data?.amount || ''} collected for Order #${data?.order_number || ''}`}),
         created_at: new Date().toISOString(),
         read_at: null,
         is_read: false,

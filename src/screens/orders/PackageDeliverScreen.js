@@ -312,7 +312,7 @@ const PackageDeliverScreen = ({navigation, route}) => {
             <View style={s.codCard}>
               <View style={s.codRow}>
                 <Icon name="cash" size={18} color={colors.orange} />
-                <Text style={s.codLabel}>{t('packageDeliver.codAmount', {amount: Number(codAmount).toFixed(2)})}</Text>
+                <Text style={s.codLabel}>{t('packageDeliver.codAmount', {amount: Number(codAmount).toFixed(2), currency})}</Text>
                 <Text style={s.codExpected}>{currency} {Number(codAmount).toFixed(2)}</Text>
               </View>
               <View style={s.codInputRow}>

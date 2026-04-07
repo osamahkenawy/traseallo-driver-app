@@ -26,6 +26,7 @@ import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
 import {fontFamily, fontSize} from '../../../theme/fonts';
 import {routeApi, stopsApi} from '../../../api';
+import useSettingsStore from '../../../store/settingsStore';
 
 const toNum = (v) => {
   const n = typeof v === 'string' ? parseFloat(v) : v;
@@ -85,6 +86,7 @@ const TripPreview = ({
   t,
 }) => {
   const ins = useSafeAreaInsets();
+  const currency = useSettingsStore(s => s.currency);
   const [startingId, setStartingId] = useState(null);
   const [startingAll, setStartingAll] = useState(false);
   const [localOrder, setLocalOrder] = useState(null);
@@ -373,7 +375,7 @@ const TripPreview = ({
             <View style={$.summaryCard}>
               <Icon name="cash" size={14} color={colors.success} />
               <Text style={$.summaryValue}>{tripSummary.totalCod}</Text>
-              <Text style={$.summaryLabel}>{t ? t('map.codAed') : 'COD (AED)'}</Text>
+              <Text style={$.summaryLabel}>{t ? t('map.codAed', {currency}) : `COD (${currency})`}</Text>
             </View>
             <View style={[$.summaryCard, {marginEnd: 0}]}>
               <Icon name="package-variant" size={14} color={colors.info} />
@@ -467,7 +469,7 @@ const TripPreview = ({
                           {isCod && (
                             <View style={$.codBadge}>
                               <Text style={$.codText}>
-                              {t ? t('map.codAmount', {amount: parseFloat(order.cod_amount).toFixed(0)}) : `COD ${parseFloat(order.cod_amount).toFixed(0)}`}
+                              {t ? t('map.codAmount', {amount: parseFloat(order.cod_amount).toFixed(0), currency}) : `COD ${parseFloat(order.cod_amount).toFixed(0)}`}
                               </Text>
                             </View>
                           )}
