@@ -39,6 +39,10 @@
 	<string>Traseallo needs access to your camera to take proof-of-delivery photos.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Traseallo needs your location to track deliveries and share your position with dispatchers.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Traseallo needs your location in the background to continue tracking deliveries while the app is minimized.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Traseallo needs your location in the background to continue tracking deliveries while the app is minimized.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Traseallo needs access to your photo library to select proof-of-delivery photos.</string>
 	<key>UIAppFonts</key>
@@ -67,6 +71,7 @@
 	<array>
 		<string>remote-notification</string>
 		<string>fetch</string>
+		<string>location</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

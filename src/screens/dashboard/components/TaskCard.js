@@ -37,8 +37,8 @@ const TaskCard = ({order, onPress}) => {
     ? `${Math.round(parseFloat(order.route_duration_min))} min`
     : order?.estimated_time || order?.eta || '';
 
-  const dateStr = order?.created_at
-    ? formatDate(order.created_at, t, i18n.language)
+  const dateStr = (order?.assigned_at || order?.created_at)
+    ? formatDate(order.assigned_at || order.created_at, t, i18n.language)
     : order?.scheduled_date || t('dashboard.today');
 
   return (

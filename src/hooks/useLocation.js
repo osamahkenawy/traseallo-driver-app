@@ -133,15 +133,11 @@ const useLocation = (enabled = true) => {
     });
   }, [setPosition]);
 
-  // Start/stop tracking based on enabled + driverStatus
+  // Request permission + get initial GPS fix on mount (regardless of driverStatus)
   useEffect(() => {
-    if (!enabled || driverStatus === 'offline') {
-      stopTracking();
-      stopWatching();
-      return;
-    }
+    if (!enabled) return;
 
-    const init = async () => {
+    const getInitialPosition = async () => {
       const hasPermission = await requestPermission();
       if (!hasPermission) {
         Alert.alert(
@@ -152,17 +148,33 @@ const useLocation = (enabled = true) => {
         return;
       }
 
-      startWatching();
-      startTracking();
+      // Get a single GPS fix so currentPosition is available immediately
+      try {
+        await getCurrentPosition();
+      } catch (e) {
+        if (__DEV__) console.log('📍 Initial GPS fix failed:', e.message);
+      }
     };
 
-    init().catch(() => {});
+    getInitialPosition().catch(() => {});
+  }, [enabled, requestPermission, getCurrentPosition]);
+
+  // Start/stop continuous tracking based on driverStatus
+  useEffect(() => {
+    if (!enabled || driverStatus === 'offline') {
+      stopTracking();
+      stopWatching();
+      return;
+    }
+
+    startWatching();
+    startTracking();
 
     return () => {
       stopTracking();
       stopWatching();
     };
-  }, [enabled, driverStatus, requestPermission, startWatching, startTracking, stopTracking, stopWatching]);
+  }, [enabled, driverStatus, startWatching, startTracking, stopTracking, stopWatching]);
 
   // Handle app state changes (foreground/background)
   useEffect(() => {

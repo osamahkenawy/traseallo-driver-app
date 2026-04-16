@@ -38,6 +38,45 @@ const createFormData = (uri, fieldName = 'file', meta) => {
 };
 
 const uploadsApi = {
+  // ─── Pickup-Level Proof ─────────────────────────
+
+  /**
+   * Upload pickup proof photo (saves to pickup_proof_url, NOT proof_of_delivery_url)
+   * @param {number|string} orderId
+   * @param {string} uri - Local image file URI
+   * @param {Object} [meta] - {caption, lat, lng}
+   * @param {function} [onProgress]
+   */
+  uploadPickupProofPhoto: (orderId, uri, meta, onProgress) => {
+    if (typeof meta === 'function') {
+      onProgress = meta;
+      meta = undefined;
+    }
+    const formData = createFormData(uri, 'file', meta);
+    return apiClient.post(`/driver-app/pickups/${orderId}/proof-photo`, formData, {
+      timeout: 60000,
+      headers: {'Content-Type': 'multipart/form-data'},
+      onUploadProgress: onProgress
+        ? (e) => onProgress(Math.round((e.loaded * 100) / e.total))
+        : undefined,
+    });
+  },
+
+  /**
+   * Upload pickup/merchant signature (saves to pickup_signature_url, NOT signature_url)
+   * @param {number|string} orderId
+   * @param {string} base64DataUrl
+   */
+  uploadPickupSignature: async (orderId, base64DataUrl) => {
+    return apiClient.post(`/driver-app/pickups/${orderId}/signature`, {
+      signature: base64DataUrl,
+      photo_type: 'signature',
+      filename: `pickup_signature_${orderId}_${Date.now()}.png`,
+    }, {
+      timeout: 60000,
+    });
+  },
+
   // ─── Order-Level POD ───────────────────────────
 
   /**

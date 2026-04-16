@@ -10,6 +10,7 @@ import {routeNames} from '../constants/routeNames';
 // ─── Screen Imports ──────────────────────────────────
 import LoginScreen from '../screens/auth/LoginScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import VerifyOtpScreen from '../screens/auth/VerifyOtpScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 
 const Stack = createNativeStackNavigator();
@@ -27,6 +28,10 @@ const AuthStack = () => {
       <Stack.Screen
         name={routeNames.ForgotPassword}
         component={ForgotPasswordScreen}
+      />
+      <Stack.Screen
+        name={routeNames.VerifyOtp}
+        component={VerifyOtpScreen}
       />
       <Stack.Screen
         name={routeNames.ResetPassword}

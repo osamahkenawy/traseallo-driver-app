@@ -94,10 +94,17 @@ const TripPreview = ({
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizeSummary, setOptimizeSummary] = useState(null);
 
-  // Assigned orders with distance from driver
+  // Active orders with distance from driver (deduplicated by id)
   const assignedWithDist = useMemo(() => {
+    const activeStatuses = ['assigned', 'accepted', 'picked_up', 'in_transit'];
+    const seen = new Set();
     return orders
-      .filter((o) => o.status === 'assigned')
+      .filter((o) => {
+        if (!activeStatuses.includes(o.status)) return false;
+        if (seen.has(o.id)) return false;
+        seen.add(o.id);
+        return true;
+      })
       .map((o) => {
         const lat = toNum(o.recipient_lat);
         const lng = toNum(o.recipient_lng);
@@ -550,13 +557,17 @@ const TripPreview = ({
                         />
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={$.startOneBtn}
+                        style={[$.startOneBtn, order.status === 'assigned' && {backgroundColor: colors.success}, order.status === 'accepted' && {backgroundColor: '#1565C0'}]}
                         onPress={() => handleStartOne(order)}
                         disabled={isStarting || startingAll}>
                         {isStarting ? (
                           <ActivityIndicator size="small" color={colors.white} />
                         ) : (
-                          <Icon name="play" size={12} color={colors.white} />
+                          <Icon
+                            name={order.status === 'assigned' ? 'check' : order.status === 'accepted' ? 'eye-outline' : 'play'}
+                            size={12}
+                            color={colors.white}
+                          />
                         )}
                       </TouchableOpacity>
                     </View>

@@ -21,48 +21,52 @@ const OrderRouteInfo = ({
   t,
 }) => (
   <View style={$.wrap}>
-    {/* Pickup */}
-    <View style={$.routeRow}>
-      <View style={$.dotCol}>
-        <View style={[$.dot, $.dotPickup]} />
-        <View style={$.line} />
-      </View>
-      <View style={$.addrCol}>
-        <Text style={$.label}>{t('dashboard.pickup', 'PICKUP')}</Text>
-        <Text numberOfLines={2} style={$.address}>
-          {pickupArea ? `${pickupArea} — ` : ''}{pickupAddress || t('dashboard.pickupAddress', 'Pickup')}
-        </Text>
-      </View>
-    </View>
-
-    {/* Distance / ETA pill */}
-    {(distance || eta) ? (
-      <View style={$.etaRow}>
-        <View style={$.etaLineStub} />
-        <View style={$.etaPill}>
-          {!!distance && <Text style={[$.etaTxt, {marginRight: 4}]}>{distance}</Text>}
-          {distance && eta ? <Text style={$.etaSep}>·</Text> : null}
-          {!!eta && (
-            <>
-              <Clock size={10} color={colors.textMuted} strokeWidth={2} style={{marginRight: 5}} />
-              <Text style={$.etaTxt}>{eta}</Text>
-            </>
-          )}
+    <View style={$.container}>
+      {/* Pickup */}
+      <View style={$.routeRow}>
+        <View style={$.dotCol}>
+          <View style={[$.dot, $.dotPickup]} />
+          <View style={$.line} />
+        </View>
+        <View style={$.addrCol}>
+          <Text style={$.label}>{t('dashboard.pickup', 'PICKUP')}</Text>
+          <Text numberOfLines={2} style={$.address}>
+            {pickupArea ? `${pickupArea} — ` : ''}{pickupAddress || t('dashboard.pickupAddress', 'Pickup')}
+          </Text>
         </View>
       </View>
-    ) : null}
 
-    {/* Destination */}
-    <View style={$.routeRow}>
-      <View style={$.dotCol}>
-        <View style={[$.dot, $.dotDest]} />
-      </View>
-      <View style={$.addrCol}>
-        <Text style={$.label}>{t('dashboard.delivery', 'DELIVERY')}</Text>
-        <Text numberOfLines={2} style={$.address}>
-          {destArea ? `${destArea} — ` : ''}{destAddress || t('dashboard.deliveryAddress', 'Delivery')}
-        </Text>
-        {!!recipientName && <Text style={$.recipient}>{recipientName}</Text>}
+      {/* Distance / ETA pill */}
+      {(distance || eta) ? (
+        <View style={$.etaRow}>
+          <View style={$.etaLineCol}>
+            <View style={$.etaLineSeg} />
+          </View>
+          <View style={$.etaPill}>
+            {!!distance && <Text style={$.etaTxt}>{distance}</Text>}
+            {distance && eta ? <Text style={$.etaSep}> · </Text> : null}
+            {!!eta && (
+              <>
+                <Clock size={10} color={colors.textMuted} strokeWidth={2} style={{marginRight: 3}} />
+                <Text style={$.etaTxt}>{eta}</Text>
+              </>
+            )}
+          </View>
+        </View>
+      ) : null}
+
+      {/* Destination */}
+      <View style={[$.routeRow, {marginTop: 2}]}>
+        <View style={$.dotCol}>
+          <View style={[$.dot, $.dotDest]} />
+        </View>
+        <View style={$.addrCol}>
+          <Text style={$.label}>{t('dashboard.delivery', 'DELIVERY')}</Text>
+          <Text numberOfLines={2} style={$.address}>
+            {destArea ? `${destArea} — ` : ''}{destAddress || t('dashboard.deliveryAddress', 'Delivery')}
+          </Text>
+          {!!recipientName && <Text style={$.recipient}>{recipientName}</Text>}
+        </View>
       </View>
     </View>
   </View>
@@ -70,90 +74,103 @@ const OrderRouteInfo = ({
 
 const $ = StyleSheet.create({
   wrap: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  container: {
+    backgroundColor: '#F8FAFB',
+    borderRadius: 14,
+    paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xs,
   },
   routeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   dotCol: {
-    width: 18,
+    width: 20,
     alignItems: 'center',
     paddingTop: 3,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: colors.white,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
   dotPickup: {
     backgroundColor: colors.primary,
     shadowColor: colors.primary,
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 2,
   },
   dotDest: {
     backgroundColor: colors.success,
     shadowColor: colors.success,
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 2,
   },
   line: {
-    width: 1,
-    height: 18,
+    width: 1.5,
+    flex: 1,
+    minHeight: 20,
     backgroundColor: colors.borderLight,
-    marginVertical: 2,
-    borderRadius: 0.5,
+    marginVertical: 3,
+    borderRadius: 1,
   },
   addrCol: {
     flex: 1,
-    marginLeft: spacing.lg,
+    marginLeft: spacing.md,
   },
   label: {
     fontFamily: fontFamily.semiBold,
     fontSize: 9,
-    color: colors.textMuted,
+    color: colors.textLight,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
+    marginBottom: 2,
   },
   address: {
     fontFamily: fontFamily.medium,
     fontSize: 12,
     color: colors.textPrimary,
-    lineHeight: 16,
-    marginTop: 1,
+    lineHeight: 17,
   },
   recipient: {
     fontFamily: fontFamily.semiBold,
     fontSize: 11,
     color: colors.success,
-    marginTop: 2,
+    marginTop: 3,
   },
   // ETA pill
   etaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 7,
+    marginVertical: 2,
   },
-  etaLineStub: {
-    width: 1,
-    height: 8,
+  etaLineCol: {
+    width: 20,
+    alignItems: 'center',
+  },
+  etaLineSeg: {
+    width: 1.5,
+    height: 10,
     backgroundColor: colors.borderLight,
-    borderRadius: 0.5,
+    borderRadius: 1,
   },
   etaPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgGray,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: spacing.sm,
+    backgroundColor: '#EEF1F4',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginLeft: spacing.md,
   },
   etaTxt: {
     fontFamily: fontFamily.medium,

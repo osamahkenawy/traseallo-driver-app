@@ -44,8 +44,9 @@ const AssignedOrderCard = ({order, onAccept, onReject, onPress, currency = 'AED'
   const totalPkgs = order?.total_packages || 0;
 
   const timeLabel = (() => {
-    if (!order?.created_at) return '';
-    const diff = Date.now() - new Date(order.created_at).getTime();
+    const timestamp = order?.assigned_at || order?.created_at;
+    if (!timestamp) return '';
+    const diff = Date.now() - new Date(timestamp).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return t('notifications.justNow', 'Just now');
     if (mins < 60) return t('notifications.minutesAgo', '{{count}} min ago', {count: mins});
@@ -281,16 +282,16 @@ const $ = StyleSheet.create({
   chipTxt: {fontFamily: fontFamily.medium, fontSize: 11, color: colors.textMuted, marginLeft: 4},
 
   // Actions
-  actions: {flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 16},
+  actions: {flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 16, gap: 16},
   rejectBtn: {
     flex: 1, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderRadius: 12, borderWidth: 2, backgroundColor: colors.danger + '10', borderColor: colors.danger + '30', marginRight: 12,
+    borderRadius: 12, borderWidth: 2, backgroundColor: colors.danger + '10', borderColor: colors.danger + '30',
   },
   rejectTxt: {fontFamily: fontFamily.bold, fontSize: 14, color: colors.danger, marginLeft: 8},
   acceptBtn: {
     flex: 1.5, height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderRadius: 12, backgroundColor: colors.success,
-    shadowColor: colors.success, shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    borderRadius: 12, backgroundColor: '#244066',
+    shadowColor: '#244066', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   acceptTxt: {fontFamily: fontFamily.bold, fontSize: 14, color: '#FFF', marginLeft: 8},
 });

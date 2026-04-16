@@ -178,6 +178,7 @@ const $ = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
     fontSize: 14,
     color: colors.textPrimary,
+    textAlign: 'center',
     marginBottom: 3,
   },
   emptyDesc: {

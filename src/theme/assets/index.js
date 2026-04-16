@@ -24,6 +24,9 @@ export const images = {
   // ─── Onboarding ───────────────────────────────────
   onboarding1: require('./onboarding-1.png'),
 
+  // ─── Login ─────────────────────────────────────────
+  loginHero: require('./new-login-screen/login-hero.png'),
+
   // ─── Placeholders ─────────────────────────────────
   avatarPlaceholder: require('./avatar-placeholder.png'),
 };

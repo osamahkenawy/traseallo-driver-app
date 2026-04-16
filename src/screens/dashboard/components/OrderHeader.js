@@ -22,31 +22,32 @@ const OrderHeader = ({
 }) => (
   <TouchableOpacity style={$.wrap} onPress={onPress} activeOpacity={0.6}>
     <View style={$.iconWrap}>
-      <Package size={16} color={colors.primary} strokeWidth={2} />
+      <Package size={18} color={colors.primary} strokeWidth={2} />
     </View>
 
     <View style={{flex: 1}}>
       <View style={$.row}>
         <Text style={$.orderNum}>#{orderNumber}</Text>
+        {!!timeLabel && <Text style={$.time}>{timeLabel}</Text>}
+      </View>
+      <View style={$.badgeRow}>
+        {!!senderName && (
+          <Text numberOfLines={1} style={$.sender}>{senderName}</Text>
+        )}
         {!!isExpress && (
           <View style={$.expressBadge}>
-            <Truck size={10} color="#FFF" strokeWidth={2.5} style={{marginRight: 6}} />
+            <Truck size={10} color="#FFF" strokeWidth={2.5} style={{marginRight: 4}} />
             <Text style={$.expressTxt}>{t('dashboard.express', 'EXPRESS')}</Text>
           </View>
         )}
         {!!isCOD && (
           <View style={$.codBadge}>
-            <Banknote size={10} color={colors.warning} strokeWidth={2} style={{marginRight: 6}} />
+            <Banknote size={10} color={colors.warning} strokeWidth={2} style={{marginRight: 4}} />
             <Text style={$.codTxt}>COD</Text>
           </View>
         )}
       </View>
-      {!!senderName && (
-        <Text numberOfLines={1} style={$.sender}>{senderName}</Text>
-      )}
     </View>
-
-    {!!timeLabel && <Text style={$.time}>{timeLabel}</Text>}
   </TouchableOpacity>
 );
 
@@ -54,29 +55,34 @@ const $ = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: colors.primary + '0C',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.lg,
+    marginRight: spacing.md,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 6,
   },
   orderNum: {
     fontFamily: fontFamily.bold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textPrimary,
-    marginRight: 8,
   },
   expressBadge: {
     flexDirection: 'row',
@@ -107,14 +113,14 @@ const $ = StyleSheet.create({
     letterSpacing: 0.3,
   },
   sender: {
-    fontFamily: fontFamily.regular,
+    fontFamily: fontFamily.medium,
     fontSize: 12,
     color: colors.textMuted,
-    marginTop: 2,
+    flexShrink: 1,
   },
   time: {
-    fontFamily: fontFamily.regular,
-    fontSize: 10,
+    fontFamily: fontFamily.medium,
+    fontSize: 11,
     color: colors.textLight,
   },
 });

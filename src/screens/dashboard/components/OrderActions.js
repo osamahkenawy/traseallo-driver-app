@@ -37,88 +37,94 @@ const OrderActions = ({onAccept, onReject, t}) => {
   }, [busy, onReject]);
 
   return (
-    <View style={$.row}>
-      {/* Reject */}
-      <TouchableOpacity
-        style={[$.rejectBtn, busy && $.disabled]}
-        onPress={handleReject}
-        disabled={busy}
-        activeOpacity={0.7}>
-        {rejecting ? (
-          <ActivityIndicator size="small" color={colors.danger} />
-        ) : (
-          <>
-            <XCircle size={16} color={colors.danger} strokeWidth={2} style={{marginRight: 10}} />
-            <Text style={$.rejectTxt}>{t('dashboard.reject', 'Reject')}</Text>
-          </>
-        )}
-      </TouchableOpacity>
+    <View>
+      <View style={$.separator} />
+      <View style={$.row}>
+        {/* Reject */}
+        <TouchableOpacity
+          style={[$.rejectBtn, busy && $.disabled]}
+          onPress={handleReject}
+          disabled={busy}
+          activeOpacity={0.7}>
+          {rejecting ? (
+            <ActivityIndicator size="small" color={colors.danger} />
+          ) : (
+            <>
+              <XCircle size={16} color={colors.danger} strokeWidth={2} style={{marginRight: 8}} />
+              <Text style={$.rejectTxt}>{t('dashboard.reject', 'Reject')}</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
-      {/* Accept */}
-      <TouchableOpacity
-        style={[$.acceptBtn, busy && $.disabled]}
-        onPress={handleAccept}
-        disabled={busy}
-        activeOpacity={0.7}>
-        {accepting ? (
-          <ActivityIndicator size="small" color="#FFF" />
-        ) : (
-          <>
-            <CheckCircle size={16} color="#FFF" strokeWidth={2} style={{marginRight: 10}} />
-            <Text style={$.acceptTxt}>{t('dashboard.accept', 'Accept')}</Text>
-          </>
-        )}
-      </TouchableOpacity>
+        {/* Accept */}
+        <TouchableOpacity
+          style={[$.acceptBtn, busy && $.disabled]}
+          onPress={handleAccept}
+          disabled={busy}
+          activeOpacity={0.7}>
+          {accepting ? (
+            <ActivityIndicator size="small" color="#FFF" />
+          ) : (
+            <>
+              <CheckCircle size={16} color="#FFF" strokeWidth={2} style={{marginRight: 8}} />
+              <Text style={$.acceptTxt}>{t('dashboard.accept', 'Accept')}</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
 const $ = StyleSheet.create({
+  separator: {
+    height: 1,
+    backgroundColor: '#F0F2F5',
+    marginHorizontal: spacing.lg,
+  },
   row: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    marginHorizontal: -6,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
   disabled: {
     opacity: 0.5,
   },
   rejectBtn: {
     flex: 1,
-    height: 42,
+    height: 46,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     borderWidth: 1.5,
-    backgroundColor: colors.danger + '08',
-    borderColor: colors.danger + '25',
-    marginHorizontal: 6,
+    backgroundColor: colors.danger + '06',
+    borderColor: colors.danger + '20',
+    marginRight: 12,
   },
   rejectTxt: {
     fontFamily: fontFamily.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.danger,
   },
   acceptBtn: {
     flex: 1.4,
-    height: 42,
+    height: 46,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.success,
-    marginHorizontal: 6,
-    shadowColor: colors.success,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
+    borderRadius: borderRadius.md,
+    backgroundColor: '#244066',
+    shadowColor: '#244066',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
   acceptTxt: {
     fontFamily: fontFamily.semiBold,
-    fontSize: 13,
+    fontSize: 14,
     color: '#FFF',
   },
 });

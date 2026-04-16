@@ -110,6 +110,7 @@ const MapScreen = ({navigation}) => {
   // ── Stores ──────────────────────────────────
   const orders = useOrderStore((s) => s.orders);
   const fetchOrders = useOrderStore((s) => s.fetchOrders);
+  const acceptOrder = useOrderStore((s) => s.acceptOrder);
   const startDelivery = useOrderStore((s) => s.startDelivery);
   const isUpdatingStatus = useOrderStore((s) => s.isUpdatingStatus);
 
@@ -573,41 +574,79 @@ const MapScreen = ({navigation}) => {
 
   const handleStartOneOrder = useCallback(
     async (order) => {
-      if (!currentPosition) return;
-      if (!['picked_up'].includes(order.status)) {
-        Alert.alert(t('common.error'), t('map.pickupRequiredFirst', 'Pickup must be completed before starting delivery.'));
+      const status = order.status;
+
+      if (status === 'assigned') {
+        const result = await acceptOrder(order.id);
+        if (result?.success) {
+          loadAll(true);
+        } else {
+          Alert.alert(t('common.error'), result?.error || t('map.failedAcceptOrder', 'Failed to accept order'));
+        }
         return;
       }
-      const result = await startDelivery(order.id, {
-        lat: currentPosition.latitude,
-        lng: currentPosition.longitude,
-      });
-      if (result?.success) {
-        loadAll(true);
-      } else {
-        Alert.alert(t('common.error'), result?.error || t('map.failedStartDelivery'));
+
+      if (status === 'accepted') {
+        navigation.navigate(routeNames.OrderDetail, {
+          orderId: order.id,
+          token: order.tracking_token,
+          orderNumber: order.order_number,
+        });
+        return;
       }
+
+      if (status === 'picked_up') {
+        if (!currentPosition) {
+          Alert.alert(t('common.error'), t('map.locationRequired', 'Location is required to start delivery. Please enable GPS.'));
+          return;
+        }
+        const result = await startDelivery(order.id, {
+          lat: currentPosition.latitude,
+          lng: currentPosition.longitude,
+        });
+        if (result?.success) {
+          loadAll(true);
+        } else {
+          Alert.alert(t('common.error'), result?.error || t('map.failedStartDelivery'));
+        }
+        return;
+      }
+
+      // Fallback: go to order detail
+      navigation.navigate(routeNames.OrderDetail, {
+        orderId: order.id,
+        token: order.tracking_token,
+        orderNumber: order.order_number,
+      });
     },
-    [startDelivery, currentPosition, loadAll, t],
+    [acceptOrder, startDelivery, currentPosition, loadAll, navigation, t],
   );
 
   const handleStartAllOrders = useCallback(
     async (orderedList) => {
-      if (!currentPosition) return;
-      // Filter to only picked_up orders
-      const eligible = orderedList.filter(o => o.status === 'picked_up');
-      if (eligible.length === 0) {
-        Alert.alert(t('common.error'), t('map.pickupRequiredFirst', 'Pickup must be completed before starting delivery.'));
+      // Group by what action is needed
+      const toAccept = orderedList.filter(o => o.status === 'assigned');
+      const toStart = orderedList.filter(o => o.status === 'picked_up');
+
+      if (toAccept.length === 0 && toStart.length === 0) {
+        Alert.alert(t('common.error'), t('map.noActionableOrders', 'No orders available to process.'));
         return;
       }
-      const results = await Promise.all(
-        eligible.map((o) =>
+
+      if (toStart.length > 0 && !currentPosition) {
+        Alert.alert(t('common.error'), t('map.locationRequired', 'Location is required to start delivery. Please enable GPS.'));
+        return;
+      }
+
+      const results = await Promise.all([
+        ...toAccept.map(o => acceptOrder(o.id)),
+        ...toStart.map(o =>
           startDelivery(o.id, {
             lat: currentPosition.latitude,
             lng: currentPosition.longitude,
           }),
         ),
-      );
+      ]);
       const failed = results.filter(r => !r?.success);
       setShowTripPreview(false);
       loadAll(true);
@@ -618,7 +657,7 @@ const MapScreen = ({navigation}) => {
         );
       }
     },
-    [startDelivery, currentPosition, loadAll, t],
+    [acceptOrder, startDelivery, currentPosition, loadAll, t],
   );
 
   // ── Navigate to stop (external maps) ────────

@@ -26,7 +26,9 @@ import {useTranslation} from 'react-i18next';
 /* ── Helpers ── */
 const timeAgo = (dateStr, t) => {
   if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
+  // Server sends UTC timestamps without 'Z' suffix — append it so JS parses correctly
+  const utcStr = String(dateStr).endsWith('Z') || String(dateStr).includes('+') ? dateStr : dateStr.replace(' ', 'T') + 'Z';
+  const diff = Date.now() - new Date(utcStr).getTime();
   if (diff < 0) return t('notifications.justNow');
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return t('notifications.justNow');
@@ -35,7 +37,7 @@ const timeAgo = (dateStr, t) => {
   if (hrs < 24) return t('notifications.hoursAgo', {count: hrs});
   const days = Math.floor(hrs / 24);
   if (days < 7) return t('notifications.daysAgo', {count: days});
-  return new Date(dateStr).toLocaleDateString(undefined, {day: '2-digit', month: 'short'});
+  return new Date(utcStr).toLocaleDateString(undefined, {day: '2-digit', month: 'short'});
 };
 
 const getNotifMeta = (status, t) => {

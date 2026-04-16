@@ -17,6 +17,7 @@ const useOrderStore = create((set, get) => ({
   allTimeStats: null,
   tabCounts: {all: 0, assigned: 0, accepted: 0, picked_up: 0, in_transit: 0, delivered: 0, failed: 0, returned: 0},
   isLoading: false,
+  isLoadingDetail: false,
   isRefreshing: false,
   isUpdatingStatus: false,
   error: null,
@@ -47,9 +48,9 @@ const useOrderStore = create((set, get) => ({
       if (status === 'all') {
         // Backend does not support status=all — fetch multiple statuses in parallel
         const [activeRes, deliveredRes, failedRes] = await Promise.all([
-          ordersApi.getOrders({status: 'active', page: 1, limit: 30}),
-          ordersApi.getOrders({status: 'delivered', page: 1, limit: 30}),
-          ordersApi.getOrders({status: 'failed', page: 1, limit: 30}),
+          withTimeout(ordersApi.getOrders({status: 'active', page: 1, limit: 30})),
+          withTimeout(ordersApi.getOrders({status: 'delivered', page: 1, limit: 30})),
+          withTimeout(ordersApi.getOrders({status: 'failed', page: 1, limit: 30})),
         ]);
         const extract = (res) => {
           const d = res.data?.data || res.data;
@@ -74,7 +75,7 @@ const useOrderStore = create((set, get) => ({
           driver = firstData?.driver || null;
         }
       } else {
-        const res = await ordersApi.getOrders({status, page, limit: 20});
+        const res = await withTimeout(ordersApi.getOrders({status, page, limit: 20}));
         const responseData = res.data?.data || res.data;
         allOrders = responseData?.orders || (Array.isArray(responseData) ? responseData : []);
         stats = responseData?.stats || null;
@@ -112,11 +113,11 @@ const useOrderStore = create((set, get) => ({
    * @param {number|string} orderId
    */
   fetchOrderDetail: async (orderId) => {
-    set({isLoading: true, error: null});
+    set({isLoadingDetail: true, error: null});
     try {
-      const res = await ordersApi.getOrderDetail(orderId);
+      const res = await withTimeout(ordersApi.getOrderDetail(orderId));
       const data = res.data?.data || res.data;
-      set({selectedOrder: data, isLoading: false});
+      set({selectedOrder: data, isLoadingDetail: false});
       return data;
     } catch (error) {
       // Fallback: use order from the already-loaded list if detail API fails
@@ -125,7 +126,7 @@ const useOrderStore = create((set, get) => ({
       );
       set({
         selectedOrder: fallback || get().selectedOrder,
-        isLoading: false,
+        isLoadingDetail: false,
         error: error.response?.data?.message || 'Failed to load order',
       });
       return fallback || null;

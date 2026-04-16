@@ -63,7 +63,8 @@ const PAY_ICONS = {
 
 const fmtDate = (d, lang) => {
   if (!d) return '---';
-  const dt = new Date(d.replace(' ', 'T'));
+  const raw = d.replace(' ', 'T');
+  const dt = new Date(raw.endsWith('Z') || raw.includes('+') ? raw : raw + 'Z');
   if (isNaN(dt)) return d;
   const locale = lang === 'ar' ? 'ar-AE' : 'en-AE';
   return dt.toLocaleDateString(locale, {
@@ -74,14 +75,17 @@ const fmtDate = (d, lang) => {
 
 const fmtTime = (d) => {
   if (!d) return '';
-  const dt = new Date(d.replace(' ', 'T'));
+  const raw = d.replace(' ', 'T');
+  const dt = new Date(raw.endsWith('Z') || raw.includes('+') ? raw : raw + 'Z');
   if (isNaN(dt)) return d;
   return dt.toLocaleTimeString('en-AE', {hour: '2-digit', minute: '2-digit'});
 };
 
 const fmtDateTime = (d, lang) => {
   if (!d) return '';
-  const dt = new Date(d.replace(' ', 'T'));
+  // Append 'Z' so JS treats the timestamp as UTC, then toLocale* converts to local time
+  const raw = d.replace(' ', 'T');
+  const dt = new Date(raw.endsWith('Z') || raw.includes('+') ? raw : raw + 'Z');
   if (isNaN(dt)) return d;
   const locale = lang === 'ar' ? 'ar-AE' : 'en-AE';
   return dt.toLocaleDateString(locale, {
@@ -101,7 +105,7 @@ const OrderDetailScreen = ({navigation, route}) => {
   const orderIdParam = paramOrderId;
 
   const selectedOrder = useOrderStore(st => st.selectedOrder);
-  const isLoading = useOrderStore(st => st.isLoading);
+  const isLoading = useOrderStore(st => st.isLoadingDetail);
   const fetchOrderDetail = useOrderStore(st => st.fetchOrderDetail);
   const packages = useOrderStore(st => st.packages);
   const packagesLoading = useOrderStore(st => st.packagesLoading);

@@ -19,6 +19,7 @@ const useOrders = (params = {}, autoFetch = true) => {
   const allTimeStats = useOrderStore(s => s.allTimeStats);
   const pagination = useOrderStore(s => s.pagination);
   const isLoading = useOrderStore(s => s.isLoading);
+  const isLoadingDetail = useOrderStore(s => s.isLoadingDetail);
   const isRefreshing = useOrderStore(s => s.isRefreshing);
   const isActing = useOrderStore(s => s.isActing);
   const isUpdatingStatus = useOrderStore(s => s.isUpdatingStatus);
@@ -63,6 +64,7 @@ const useOrders = (params = {}, autoFetch = true) => {
     allTimeStats,
     pagination,
     isLoading,
+    isLoadingDetail,
     isRefreshing,
     isActing,
     isUpdatingStatus,

@@ -7,6 +7,7 @@ export const routeNames = {
   AuthStack: 'AuthStack',
   Login: 'Login',
   ForgotPassword: 'ForgotPassword',
+  VerifyOtp: 'VerifyOtp',
   ResetPassword: 'ResetPassword',
 
   // ─── Main Tab Navigator ───────────────────────────

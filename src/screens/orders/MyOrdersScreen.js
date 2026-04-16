@@ -387,7 +387,7 @@ const OrderCard = ({order, index, onPress, onAction, t, currency, isUpdatingStat
   const stClr = getStatusColor(st);
   const stBg = getStatusBgColor(st);
   const isCOD = order?.payment_method === 'cod' && parseFloat(order?.cod_amount) > 0;
-  const time = timeAgo(order?.created_at || order?.scheduled_date, t);
+  const time = timeAgo(order?.assigned_at || order?.created_at || order?.scheduled_date, t);
   const routeDistKm = order?.route_distance_km ? parseFloat(order.route_distance_km) : null;
   const routeDurMin = order?.route_duration_min ? Math.round(parseFloat(order.route_duration_min)) : null;
   const actionConfig = getActionForStatus(st);

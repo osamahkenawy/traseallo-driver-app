@@ -92,11 +92,10 @@ const PickupProofScreen = ({navigation, route}) => {
 
     setLoading(true);
     try {
-      // 1. Upload proof photo
+      // 1. Upload proof photo (pickup-specific endpoint → pickup_proof_url)
       let proofUrl = null;
       try {
-        const uploadRes = await uploadsApi.uploadOrderProofPhoto(orderId, photoUri, {
-          photo_type: 'pickup_proof',
+        const uploadRes = await uploadsApi.uploadPickupProofPhoto(orderId, photoUri, {
           lat: currentPosition?.latitude,
           lng: currentPosition?.longitude,
         });
@@ -109,10 +108,10 @@ const PickupProofScreen = ({navigation, route}) => {
         });
       }
 
-      // 2. Upload signature
+      // 2. Upload signature (pickup-specific endpoint → pickup_signature_url)
       let signatureUrl = null;
       try {
-        const sigRes = await uploadsApi.uploadOrderSignature(orderId, signatureData);
+        const sigRes = await uploadsApi.uploadPickupSignature(orderId, signatureData);
         signatureUrl = sigRes.data?.data?.url || sigRes.data?.url || null;
       } catch (sigErr) {
         showMessage({

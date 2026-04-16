@@ -40,15 +40,17 @@ const OrderCard = ({order, currency = 'AED', onAccept, onReject, onPress, index 
     : null;
 
   const timeLabel = useMemo(() => {
-    if (!order?.created_at) return '';
-    const diff = Date.now() - new Date(order.created_at).getTime();
+    // Use assigned_at (when order was assigned to driver) if available, fallback to created_at
+    const timestamp = order?.assigned_at || order?.created_at;
+    if (!timestamp) return '';
+    const diff = Date.now() - new Date(timestamp).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return t('notifications.justNow', 'Just now');
     if (mins < 60) return t('notifications.minutesAgo', '{{count}} min ago', {count: mins});
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return t('notifications.hoursAgo', '{{count}}h ago', {count: hrs});
     return '';
-  }, [order?.created_at, t]);
+  }, [order?.assigned_at, order?.created_at, t]);
 
   const handlePress = useCallback(() => onPress?.(order), [onPress, order]);
   const handleAccept = useCallback(() => onAccept?.(order), [onAccept, order]);
@@ -104,18 +106,19 @@ const OrderCard = ({order, currency = 'AED', onAccept, onReject, onPress, index 
 const $ = StyleSheet.create({
   outer: {
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   card: {
     backgroundColor: '#FFF',
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     overflow: 'hidden',
     ...shadows.card,
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: {width: 0, height: 4},
   },
   accent: {
-    height: 3,
+    height: 3.5,
     backgroundColor: colors.secondary,
   },
 });

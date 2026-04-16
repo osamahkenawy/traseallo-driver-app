@@ -59,7 +59,7 @@
     "emailOrUsername": "Email or Username",
     "emailPlaceholder": "Enter your email",
     "emailPlaceholderExample": "e.g. john@company.com",
-    "enterOtpReset": "Enter the OTP code sent to your email",
+    "enterOtpReset": "Enter OTP",
     "forgotPasswordSubtitle": "Enter your email and we'll send you a reset link",
     "identifierMissing": "Please enter your email or username",
     "letsGetMoving": "Let's get moving!",
