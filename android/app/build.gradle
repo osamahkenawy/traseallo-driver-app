@@ -134,10 +134,10 @@ android {
 
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    // 16KB page size support (required by Google Play)
+    // extractNativeLibs=true in manifest handles 16KB page alignment at install time
     packagingOptions {
         jniLibs {
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
     }
 
@@ -145,8 +145,8 @@ android {
         applicationId "com.traseallo.driver"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.2"
+        versionCode 5
+        versionName "1.3"
         buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
 
         if (isNewArchitectureEnabled()) {

@@ -25,7 +25,7 @@ const STOP_COLORS = {
   cancelled: colors.textMuted,
 };
 
-const StopMarker = ({stop, index, isSelected, onPress, isPickup}) => {
+const StopMarker = ({stop, index, isSelected, onPress, isPickup, dimmed, isNext}) => {
   const {t} = useTranslation();
   const lat = parseFloat(stop.lat || stop.recipient_lat);
   const lng = parseFloat(stop.lng || stop.recipient_lng);
@@ -46,10 +46,20 @@ const StopMarker = ({stop, index, isSelected, onPress, isPickup}) => {
       coordinate={{latitude: lat, longitude: lng}}
       onPress={() => onPress?.(stop)}
       tracksViewChanges={false}
-      anchor={{x: 0.5, y: 1}}>
+      anchor={{x: 0.5, y: 1}}
+      opacity={dimmed ? 0.4 : 1}
+      zIndex={isNext ? 999 : dimmed ? 1 : 10}>
       <View style={$.wrap}>
+        {/* Next-stop pulse ring */}
+        {isNext && <View style={$.nextRing} />}
         {/* Pin body */}
-        <View style={[$.pin, {backgroundColor: markerColor}, isSelected && $.pinSelected]}>
+        <View style={[
+          $.pin,
+          {backgroundColor: markerColor},
+          isSelected && $.pinSelected,
+          dimmed && $.pinDimmed,
+          isNext && $.pinNext,
+        ]}>
           {isCompleted ? (
             <Icon name="check" size={12} color={colors.white} />
           ) : isFailed ? (
@@ -59,14 +69,14 @@ const StopMarker = ({stop, index, isSelected, onPress, isPickup}) => {
           ) : isInTransit ? (
             <Icon name="truck-delivery-outline" size={11} color={colors.white} />
           ) : (
-            <Text style={$.seq}>{seq}</Text>
+            <Text style={[$.seq, isNext && $.seqNext]}>{seq}</Text>
           )}
         </View>
         {/* Pin tail */}
-        <View style={[$.tail, {borderTopColor: markerColor}]} />
+        <View style={[$.tail, {borderTopColor: dimmed ? (markerColor + '66') : markerColor}]} />
 
         {/* COD badge */}
-        {isCod && !isCompleted && (
+        {isCod && !isCompleted && !dimmed && (
           <View style={$.codBadge}>
             <Text style={$.codText}>$</Text>
           </View>
@@ -91,8 +101,8 @@ const StopMarker = ({stop, index, isSelected, onPress, isPickup}) => {
 const $ = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    width: 40,
-    height: 48,
+    width: 48,
+    height: 56,
   },
   pin: {
     width: 30,
@@ -114,10 +124,37 @@ const $ = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 3,
   },
+  pinDimmed: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    opacity: 0.6,
+  },
+  pinNext: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 3,
+    borderColor: '#FFA726',
+  },
+  nextRing: {
+    position: 'absolute',
+    top: -4,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: '#FFA72680',
+    backgroundColor: '#FFA72615',
+  },
   seq: {
     fontFamily: fontFamily.bold,
     fontSize: 11,
     color: colors.white,
+  },
+  seqNext: {
+    fontSize: 13,
   },
   tail: {
     width: 0,

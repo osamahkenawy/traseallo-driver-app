@@ -252,8 +252,8 @@ const MapScreen = ({navigation}) => {
   }, [route]);
 
   // Fallback: use order coordinates if route API has no stops
-  // Always re-number and enrich with latest order data
-  const mapStops = useMemo(() => {
+  // Enrich with latest order data, then split into active vs completed
+  const allStops = useMemo(() => {
     let stops;
     if (routeStops.length > 0) {
       // Enrich route stops with real order status & extra fields
@@ -290,9 +290,33 @@ const MapScreen = ({navigation}) => {
           stop_type: 'delivery',
         }));
     }
-    // Always assign fresh sequential numbers
-    return stops.map((s, idx) => ({...s, sequence_number: idx + 1}));
+    return stops;
   }, [routeStops, orders, orderById]);
+
+  // Active stops only (exclude completed/failed/delivered/cancelled)
+  const INACTIVE_STATUSES = ['completed', 'delivered', 'failed', 'returned', 'cancelled'];
+  const mapStops = useMemo(() => {
+    const active = allStops.filter(
+      (s) => !INACTIVE_STATUSES.includes(s.stop_status || s.status || 'pending'),
+    );
+    // Assign fresh sequential numbers to active stops only
+    return active.map((s, idx) => ({...s, sequence_number: idx + 1}));
+  }, [allStops]);
+
+  // Completed/failed stops (shown dimmed on map)
+  const completedStops = useMemo(() => {
+    return allStops.filter(
+      (s) => INACTIVE_STATUSES.includes(s.stop_status || s.status || 'pending'),
+    );
+  }, [allStops]);
+
+  // The very next stop to deliver (sequence #1 among active deliveries)
+  const nextStopId = useMemo(() => {
+    const next = mapStops.find(
+      (s) => s.stop_type === 'delivery' && !INACTIVE_STATUSES.includes(s.stop_status || 'pending'),
+    );
+    return next ? (next.order_id || next.id) : null;
+  }, [mapStops]);
 
   // Keep selected stop synced
   useEffect(() => {
@@ -477,6 +501,7 @@ const MapScreen = ({navigation}) => {
 
   const fitAll = useCallback(() => {
     if (!mapRef.current || mapStops.length === 0) return;
+    // Only zoom to active (remaining) stops, not completed ones
     const coords = mapStops.map((s) => ({
       latitude: toNum(s.lat) || toNum(s.recipient_lat),
       longitude: toNum(s.lng) || toNum(s.recipient_lng),
@@ -819,7 +844,23 @@ const MapScreen = ({navigation}) => {
           <DriverMarker position={currentPosition} />
         )}
 
-        {/* Delivery/Pickup stop markers */}
+        {/* Completed/failed stop markers (dimmed) */}
+        {completedStops.map((stop, idx) => (
+          <StopMarker
+            key={`done-${idx}-${stop.stop_id || stop.id}-${stop.stop_type || 'd'}`}
+            stop={stop}
+            index={idx}
+            isSelected={
+              selectedStop &&
+              (selectedStop.order_id || selectedStop.id) === (stop.order_id || stop.id)
+            }
+            onPress={onStopPress}
+            isPickup={stop.stop_type === 'pickup'}
+            dimmed
+          />
+        ))}
+
+        {/* Active delivery/pickup stop markers */}
         {mapStops.map((stop, idx) => (
           <StopMarker
             key={`stop-${idx}-${stop.stop_id || stop.id}-${stop.stop_type || 'd'}`}
@@ -831,6 +872,7 @@ const MapScreen = ({navigation}) => {
             }
             onPress={onStopPress}
             isPickup={stop.stop_type === 'pickup'}
+            isNext={(stop.order_id || stop.id) === nextStopId}
           />
         ))}
 
@@ -1028,7 +1070,7 @@ const MapScreen = ({navigation}) => {
       {navMode && (
         <>
           {/* Zoom controls during nav */}
-          <View style={[$.fabCol, {top: ins.top + 56}]}>
+          <View style={[$.fabCol, {top: ins.top + 90}]}>
             <TouchableOpacity style={$.fab} onPress={recenter} activeOpacity={0.8}>
               <Icon name="crosshairs-gps" size={18} color={colors.primary} />
             </TouchableOpacity>

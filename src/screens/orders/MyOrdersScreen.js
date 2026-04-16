@@ -332,7 +332,7 @@ const MyOrdersScreen = ({navigation}) => {
       ) : (
         <FlatList
           data={sortedOrders}
-          keyExtractor={(item, i) => `order-${item?.id || ''}-${item?.tracking_token || i}`}
+          keyExtractor={(item, i) => `order-${item?.id || ''}-${item?.tracking_token || ''}-${i}`}
           renderItem={({item, index}) => (
             <OrderCard
               order={item}

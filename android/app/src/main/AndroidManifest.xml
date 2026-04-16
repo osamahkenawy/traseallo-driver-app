@@ -17,6 +17,7 @@
       android:icon="@mipmap/ic_launcher"
       android:roundIcon="@mipmap/ic_launcher_round"
       android:allowBackup="false"
+      android:extractNativeLibs="true"
       android:theme="@style/AppTheme">
       <meta-data
         android:name="com.google.android.geo.API_KEY"
@@ -33,5 +34,11 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+
+      <!-- Foreground service for location tracking -->
+      <service
+        android:name="com.traseallo.driver.LocationForegroundService"
+        android:foregroundServiceType="location"
+        android:exported="false" />
     </application>
 </manifest>
