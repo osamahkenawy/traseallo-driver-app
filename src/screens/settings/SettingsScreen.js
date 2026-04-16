@@ -13,8 +13,8 @@ import {routeNames} from '../../constants/routeNames';
 import {changeLanguage} from '../../i18n';
 import {version as appVersion} from '../../../package.json';
 
-const TOS_URL = 'https://trasealla.com/terms';
-const PRIVACY_URL = 'https://trasealla.com/privacy';
+const TOS_URL = 'https://traseallo.com/terms';
+const PRIVACY_URL = 'https://traseallo.com/privacy-policy';
 
 const LANGUAGES = [
   {code: 'en', label: 'English', icon: 'alpha-e-circle-outline'},

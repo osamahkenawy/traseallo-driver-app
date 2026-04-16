@@ -3,7 +3,7 @@
  * Shows in-app + generated order-event notifications with rich cards
  */
 
-import React, {useEffect, useCallback, useMemo} from 'react';
+import React, {useEffect, useCallback, useMemo, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -99,6 +99,7 @@ const NotificationsScreen = () => {
 
   // Orders — generate local notifications from order events
   const {orders} = useOrders();
+  const [orderNotifsCleared, setOrderNotifsCleared] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -138,7 +139,7 @@ const NotificationsScreen = () => {
     }));
 
     // Merge, deduplicate by id, & sort by date (newest first)
-    const merged = [...serverItems, ...orderNotifs];
+    const merged = [...serverItems, ...(orderNotifsCleared ? [] : orderNotifs)];
     const seen = new Set();
     const all = merged.filter(item => {
       if (seen.has(item.id)) return false;
@@ -147,24 +148,28 @@ const NotificationsScreen = () => {
     });
     all.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     return all;
-  }, [serverNotifs, orders]);
+  }, [serverNotifs, orders, orderNotifsCleared]);
 
   const handleRefresh = useCallback(() => {
     fetchNotifications(true);
     fetchUnreadCount();
+    setOrderNotifsCleared(false);
   }, [fetchNotifications, fetchUnreadCount]);
 
   const handleClearAll = useCallback(() => {
-    if (!serverNotifs?.length) return;
+    if (!allNotifications?.length) return;
     Alert.alert(
       t('notifications.clearAll'),
       t('notifications.clearAllConfirm'),
       [
         {text: t('common.cancel'), style: 'cancel'},
-        {text: t('notifications.clearAll'), style: 'destructive', onPress: clearAllNotifications},
+        {text: t('notifications.clearAll'), style: 'destructive', onPress: () => {
+          clearAllNotifications();
+          setOrderNotifsCleared(true);
+        }},
       ],
     );
-  }, [serverNotifs, clearAllNotifications]);
+  }, [allNotifications, clearAllNotifications]);
 
   const handlePress = useCallback((item) => {
     // Mark server notifications as read

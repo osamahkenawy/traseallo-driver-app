@@ -134,8 +134,8 @@ const LoginScreen = ({navigation}) => {
         <Animated.View style={[s.formSection, {opacity: formFade, transform: [{translateY: formSlide}]}]}>
 
           {/* Heading */}
-          <Text style={s.heading}>{t('auth.nextDrive', 'Next drive?')}</Text>
-          <Text style={s.subHeading}>{t('auth.letsGetMoving', "Let's get you moving!")}</Text>
+          <Text style={s.heading}>{t('auth.deliverWithoutLimits', 'Deliver without limits')}</Text>
+          <Text style={s.subHeading}>{t('auth.signInToAccount', 'Sign in to your driver account')}</Text>
 
           {/* Error */}
           {loginError ? (
@@ -240,6 +240,12 @@ const LoginScreen = ({navigation}) => {
 
 
         </Animated.View>
+
+        {/* ═══ POWERED BY FOOTER ═══════════════════ */}
+        <View style={s.poweredBy}>
+          <Text style={s.poweredByText}>powered by</Text>
+          <Image source={images.traseallaLogo} style={s.poweredByLogo} resizeMode="contain" />
+        </View>
       </KeyboardAwareScrollView>
     </View>
   );
@@ -295,11 +301,12 @@ const s = StyleSheet.create({
     lineHeight: 28,
   },
   subHeading: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: 22,
-    color: PRIMARY,
-    lineHeight: 28,
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    color: colors.textMuted,
+    lineHeight: 20,
     marginBottom: 28,
+    marginTop: 4,
   },
 
   // ─── Error ─────────────────────────────────────
@@ -391,6 +398,24 @@ const s = StyleSheet.create({
   ctaText: {
     fontFamily: fontFamily.semiBold, fontSize: 16, color: '#FFF',
     letterSpacing: 0.3,
+  },
+
+  // ─── Powered By ────────────────────────────────
+  poweredBy: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  poweredByText: {
+    fontFamily: fontFamily.regular,
+    fontSize: 12,
+    color: colors.textLight,
+    marginRight: 6,
+  },
+  poweredByLogo: {
+    width: 80,
+    height: 22,
   },
 });
 
