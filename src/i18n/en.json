@@ -500,10 +500,17 @@
     "failedStartDelivery": "Failed to start delivery",
     "failedStartTrip": "Failed to start trip",
     "someOrdersFailed": "{{count}} order(s) failed to start",
+    "ordersAccepted": "{{count}} order(s) accepted successfully",
     "loadingMap": "Loading map...",
     "refreshing": "Refreshing...",
     "remaining": "Remaining",
-    "completed": "Completed"
+    "completed": "Completed",
+    "failedAcceptOrder": "Failed to accept order",
+    "locationRequired": "Location is required to start delivery. Please enable GPS.",
+    "noActionableOrders": "No orders available to process.",
+    "whatsappMessage": "Hi {{name}}, your order {{orderNumber}} is on its way! \ud83d\ude9a",
+    "etaMin": "{{eta}} min",
+    "etaKm": "{{km}} km"
   },
   "nav": {
     "headStraight": "Head straight",

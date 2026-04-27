@@ -12,6 +12,7 @@ export {default as OrderRouteInfo} from './OrderRouteInfo';
 export {default as OrderMetaChips} from './OrderMetaChips';
 export {default as OrderActions} from './OrderActions';
 export {default as IncomingOrdersSection} from './IncomingOrdersSection';
+export {default as NextDeliveryBanner} from './NextDeliveryBanner';
 export {default as ShiftStatusCard} from './ShiftStatusCard';
 export {default as TodayStatsRow} from './TodayStatsRow';
 export {default as NextStopCard} from './NextStopCard';

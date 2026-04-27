@@ -7,6 +7,7 @@ import {Marker, Callout} from 'react-native-maps';
 import {useTranslation} from 'react-i18next';
 import Icon from '../../../utils/LucideIcon';
 import {colors} from '../../../theme/colors';
+import useSettingsStore from '../../../store/settingsStore';
 import {fontFamily, fontSize} from '../../../theme/fonts';
 
 const STOP_COLORS = {
@@ -27,6 +28,7 @@ const STOP_COLORS = {
 
 const StopMarker = ({stop, index, isSelected, onPress, isPickup, dimmed, isNext}) => {
   const {t} = useTranslation();
+  const currency = useSettingsStore(s => s.currency);
   const lat = parseFloat(stop.lat || stop.recipient_lat);
   const lng = parseFloat(stop.lng || stop.recipient_lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
@@ -78,7 +80,7 @@ const StopMarker = ({stop, index, isSelected, onPress, isPickup, dimmed, isNext}
         {/* COD badge */}
         {isCod && !isCompleted && !dimmed && (
           <View style={$.codBadge}>
-            <Text style={$.codText}>$</Text>
+            <Text style={$.codText}>{currency || '$'}</Text>
           </View>
         )}
       </View>

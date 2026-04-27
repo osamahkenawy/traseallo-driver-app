@@ -105,6 +105,8 @@ const MapScreen = ({navigation}) => {
   const {t} = useTranslation();
   const ins = useSafeAreaInsets();
   const currency = useSettingsStore(s => s.currency);
+  const companyLat = useSettingsStore(s => s.companyLat);
+  const companyLng = useSettingsStore(s => s.companyLng);
   const mapRef = useRef(null);
 
   // ── Stores ──────────────────────────────────
@@ -211,11 +213,17 @@ const MapScreen = ({navigation}) => {
     [fetchOrders, fetchRoute, fetchProgress],
   );
 
-  // Refetch on tab focus
+  // Refetch on tab focus — pass isRefresh=true after initial load so
+  // orders reset to page 1 and the UI shows the refreshing indicator.
+  const hasLoadedOnce = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      loadAll();
-      if (initialLoad) setInitialLoad(false);
+      if (hasLoadedOnce.current) {
+        loadAll(true);
+      } else {
+        hasLoadedOnce.current = true;
+        loadAll().then(() => setInitialLoad(false));
+      }
     }, [loadAll]),
   );
 
@@ -606,7 +614,7 @@ const MapScreen = ({navigation}) => {
         if (result?.success) {
           loadAll(true);
         } else {
-          Alert.alert(t('common.error'), result?.error || t('map.failedAcceptOrder', 'Failed to accept order'));
+          Alert.alert(t('common.error'), result?.error || t('map.failedAcceptOrder'));
         }
         return;
       }
@@ -622,7 +630,7 @@ const MapScreen = ({navigation}) => {
 
       if (status === 'picked_up') {
         if (!currentPosition) {
-          Alert.alert(t('common.error'), t('map.locationRequired', 'Location is required to start delivery. Please enable GPS.'));
+          Alert.alert(t('common.error'), t('map.locationRequired'));
           return;
         }
         const result = await startDelivery(order.id, {
@@ -649,36 +657,56 @@ const MapScreen = ({navigation}) => {
 
   const handleStartAllOrders = useCallback(
     async (orderedList) => {
-      // Group by what action is needed
+      // Backend order lifecycle: assigned → accept → accepted → pickup confirm → picked_up → start-delivery → in_transit
+      // "Start All" accepts assigned orders and starts delivery for picked_up.
+      // Accepted orders need pickup first (driver must scan/collect packages).
       const toAccept = orderedList.filter(o => o.status === 'assigned');
       const toStart = orderedList.filter(o => o.status === 'picked_up');
 
       if (toAccept.length === 0 && toStart.length === 0) {
-        Alert.alert(t('common.error'), t('map.noActionableOrders', 'No orders available to process.'));
+        Alert.alert(t('common.error'), t('map.noActionableOrders'));
         return;
       }
 
       if (toStart.length > 0 && !currentPosition) {
-        Alert.alert(t('common.error'), t('map.locationRequired', 'Location is required to start delivery. Please enable GPS.'));
+        Alert.alert(t('common.error'), t('map.locationRequired'));
         return;
       }
 
-      const results = await Promise.all([
-        ...toAccept.map(o => acceptOrder(o.id)),
-        ...toStart.map(o =>
-          startDelivery(o.id, {
-            lat: currentPosition.latitude,
-            lng: currentPosition.longitude,
-          }),
-        ),
-      ]);
-      const failed = results.filter(r => !r?.success);
+      const locData = currentPosition
+        ? {lat: currentPosition.latitude, lng: currentPosition.longitude}
+        : {};
+      let failCount = 0;
+
+      // Step 1: Accept all assigned orders
+      const acceptResults = await Promise.all(
+        toAccept.map(o => acceptOrder(o.id)),
+      );
+      failCount += acceptResults.filter(r => !r?.success).length;
+
+      // Step 2: Start delivery for picked_up orders
+      if (toStart.length > 0) {
+        const startResults = await Promise.all(
+          toStart.map(o => startDelivery(o.id, locData)),
+        );
+        failCount += startResults.filter(r => !r?.success).length;
+      }
+
       setShowTripPreview(false);
-      loadAll(true);
-      if (failed.length > 0) {
+      // Small delay so Modal fully unmounts before MapView re-renders
+      setTimeout(() => loadAll(true), 300);
+
+      const acceptedCount = acceptResults.filter(r => r?.success).length;
+
+      if (failCount > 0) {
         Alert.alert(
           t('common.error'),
-          t('map.someOrdersFailed', {count: failed.length}),
+          t('map.someOrdersFailed', {count: failCount}),
+        );
+      } else if (acceptedCount > 0 && toStart.length === 0) {
+        Alert.alert(
+          t('common.success'),
+          t('map.ordersAccepted', {count: acceptedCount}),
         );
       }
     },
@@ -818,8 +846,8 @@ const MapScreen = ({navigation}) => {
         longitudeDelta: LONGITUDE_DELTA * 2,
       };
     }
-    return {latitude: 24.4539, longitude: 54.3773, latitudeDelta: 0.1, longitudeDelta: 0.1};
-  }, [currentPosition?.latitude, currentPosition?.longitude]);
+    return {latitude: companyLat || 24.4539, longitude: companyLng || 54.3773, latitudeDelta: 0.1, longitudeDelta: 0.1};
+  }, [currentPosition?.latitude, currentPosition?.longitude, companyLat, companyLng]);
 
   // ──────────────────────────────────────────────
   // RENDER
@@ -847,7 +875,7 @@ const MapScreen = ({navigation}) => {
         {/* Completed/failed stop markers (dimmed) */}
         {completedStops.map((stop, idx) => (
           <StopMarker
-            key={`done-${idx}-${stop.stop_id || stop.id}-${stop.stop_type || 'd'}`}
+            key={`done-${stop.stop_id || stop.order_id || stop.id || idx}-${stop.stop_type || 'd'}`}
             stop={stop}
             index={idx}
             isSelected={
@@ -863,7 +891,7 @@ const MapScreen = ({navigation}) => {
         {/* Active delivery/pickup stop markers */}
         {mapStops.map((stop, idx) => (
           <StopMarker
-            key={`stop-${idx}-${stop.stop_id || stop.id}-${stop.stop_type || 'd'}`}
+            key={`stop-${stop.stop_id || stop.order_id || stop.id || idx}-${stop.stop_type || 'd'}`}
             stop={stop}
             index={idx}
             isSelected={
@@ -898,29 +926,38 @@ const MapScreen = ({navigation}) => {
           />
         )}
 
-        {/* Zone polygons */}
-        {showZones && zones.map((zone) => {
-          const coords = (zone.polygon || zone.coordinates || [])
-            .map((p) => ({
-              latitude: p.lat || p[0] || p.latitude,
-              longitude: p.lng || p[1] || p.longitude,
-            }))
-            .filter((c) => isValidCoord(c.latitude, c.longitude));
-          if (coords.length < 3) return null;
-          const zoneColor = zone.color || (zone.type === 'restricted' ? '#FF000040' : '#4CAF5040');
-          const strokeColor = zone.color
-            ? zone.color.replace(/[0-9a-f]{2}$/i, 'AA')
-            : (zone.type === 'restricted' ? '#FF0000AA' : '#4CAF50AA');
-          return (
-            <Polygon
-              key={`zone-${zone.id}`}
-              coordinates={coords}
-              fillColor={zoneColor}
-              strokeColor={strokeColor}
-              strokeWidth={1.5}
-            />
-          );
-        })}
+        {/* Zone polygons — filter before map to avoid returning null inside MapView
+             (null children cause RCTUIManager removedChildren count mismatch on iOS) */}
+        {showZones && zones
+          .filter((zone) => {
+            const pts = zone.polygon || zone.coordinates || [];
+            return pts.filter((p) => {
+              const lat = p.lat || p[0] || p.latitude;
+              const lng = p.lng || p[1] || p.longitude;
+              return isValidCoord(lat, lng);
+            }).length >= 3;
+          })
+          .map((zone) => {
+            const coords = (zone.polygon || zone.coordinates || [])
+              .map((p) => ({
+                latitude: p.lat || p[0] || p.latitude,
+                longitude: p.lng || p[1] || p.longitude,
+              }))
+              .filter((c) => isValidCoord(c.latitude, c.longitude));
+            const zoneColor = zone.color || (zone.type === 'restricted' ? '#FF000040' : '#4CAF5040');
+            const strokeColor = zone.color
+              ? zone.color.replace(/[0-9a-f]{2}$/i, 'AA')
+              : (zone.type === 'restricted' ? '#FF0000AA' : '#4CAF50AA');
+            return (
+              <Polygon
+                key={`zone-${zone.id}`}
+                coordinates={coords}
+                fillColor={zoneColor}
+                strokeColor={strokeColor}
+                strokeWidth={1.5}
+              />
+            );
+          })}
       </MapView>
 
       {/* ── Normal mode overlays ── */}

@@ -17,6 +17,8 @@ const useLocationStore = create((set, get) => ({
   locationBuffer: [],
   // ETA to next stop (minutes), set by MapScreen during navigation
   etaNextStopMin: null,
+  // Socket emit callback — set by useSocket hook for real-time broadcasting
+  _socketEmitLocationFn: null,
 
   // ─── Actions ────────────────────────────────────
 
@@ -34,6 +36,11 @@ const useLocationStore = create((set, get) => ({
    * Set ETA to next stop (in minutes) — called from MapScreen nav mode
    */
   setEtaNextStop: (minutes) => set({etaNextStopMin: minutes}),
+
+  /**
+   * Register / unregister the socket emit callback for real-time location broadcasting
+   */
+  setSocketEmitLocationFn: (fn) => set({_socketEmitLocationFn: fn || null}),
 
   /**
    * Go Online — POST /driver-app/go-online
@@ -105,6 +112,12 @@ const useLocationStore = create((set, get) => ({
     try {
       await locationApi.sendLocation(payload);
       set({lastPingTime: new Date().toISOString()});
+
+      // Emit via Socket.io for real-time tracking on admin dashboard
+      const emitFn = get()._socketEmitLocationFn;
+      if (emitFn) {
+        emitFn(payload);
+      }
     } catch (error) {
       // Buffer for offline sync
       get().bufferLocation(payload);

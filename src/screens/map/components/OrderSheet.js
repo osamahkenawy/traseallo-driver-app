@@ -67,7 +67,10 @@ const OrderSheet = ({
   const handleWhatsApp = () => {
     if (!phone) return;
     const num = cleanPhone(phone).replace(/^0/, '971');
-    const msg = encodeURIComponent(`Hi ${name}, your order ${orderNum} is on its way! 🚚`);
+    const text = t
+      ? t('map.whatsappMessage', {name, orderNumber: orderNum})
+      : `Hi ${name}, your order ${orderNum} is on its way! 🚚`;
+    const msg = encodeURIComponent(text);
     Linking.openURL(`https://wa.me/${num}?text=${msg}`).catch(() => {});
   };
 
@@ -139,11 +142,11 @@ const OrderSheet = ({
             <>
               <View style={$.chip}>
                 <Icon name="clock-outline" size={12} color={colors.info} />
-                <Text style={$.chipText}>{distInfo.eta} min</Text>
+                <Text style={$.chipText}>{t ? t('map.etaMin', {eta: distInfo.eta}) : `${distInfo.eta} min`}</Text>
               </View>
               <View style={$.chip}>
                 <Icon name="map-marker-distance" size={12} color={colors.info} />
-                <Text style={$.chipText}>{distInfo.km} km</Text>
+                <Text style={$.chipText}>{t ? t('map.etaKm', {km: distInfo.km}) : `${distInfo.km} km`}</Text>
               </View>
             </>
           )}

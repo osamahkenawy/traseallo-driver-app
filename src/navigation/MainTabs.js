@@ -1,19 +1,16 @@
 /**
- * MainTabs — Floating pill-shaped bottom tab bar
- * Center tab has a prominent circular accent-colored button.
- * Matches reference design with rounded corners, minimal icons, no labels.
+ * MainTabs — Bottom tab bar matching new dashboard reference.
+ * White card with rounded top corners, labeled icons, blue active color,
+ * prominent blue circular center button (Map / Navigate), badge counts.
  */
 
 import React from 'react';
-import {View, StyleSheet, TouchableOpacity, Platform} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity, Platform} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 import {routeNames} from '../constants/routeNames';
-import {colors} from '../theme/colors';
-import {fontFamily} from '../theme/fonts';
-
-import {Home, Package, Navigation, Bell, User} from 'lucide-react-native';
+import {Home, Layers, Navigation, Bell, User} from 'lucide-react-native';
 
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import MyOrdersScreen from '../screens/orders/MyOrdersScreen';
@@ -25,28 +22,30 @@ import useNotificationStore from '../store/notificationStore';
 
 const Tab = createBottomTabNavigator();
 
+const PRIMARY = '#244066';
+const INACTIVE = '#9AA1AE';
+const TEXT_ACTIVE = '#244066';
+
 const ICON_MAP = {
-  [routeNames.Dashboard]: Home,
-  [routeNames.MyOrders]: Package,
-  [routeNames.MapScreen]: Navigation,
-  [routeNames.Notifications]: Bell,
-  [routeNames.Profile]: User,
+  [routeNames.Dashboard]: {Icon: Home, label: 'Home'},
+  [routeNames.MyOrders]: {Icon: Layers, label: 'Orders'},
+  [routeNames.MapScreen]: {Icon: Navigation, label: 'Map'},
+  [routeNames.Notifications]: {Icon: Bell, label: 'Notifications'},
+  [routeNames.Profile]: {Icon: User, label: 'Profile'},
 };
 
-/** Custom tab bar renderer */
 const CustomTabBar = ({state, descriptors, navigation}) => {
   const ins = useSafeAreaInsets();
   const unreadCount = useNotificationStore(st => st.unreadCount);
 
   return (
-    <View style={[$.barOuter, {paddingBottom: ins.bottom > 0 ? ins.bottom : 10}]}>
+    <View style={[$.barOuter, {paddingBottom: ins.bottom > 0 ? ins.bottom : 8}]}>
       <View style={$.bar}>
         {state.routes.map((route, index) => {
-          const {options} = descriptors[route.key];
           const focused = state.index === index;
-          const isCenter = index === 2; // MapScreen is center
-
-          const IconComp = ICON_MAP[route.name] || Home;
+          const isCenter = index === 2;
+          const meta = ICON_MAP[route.name] || {Icon: Home, label: ''};
+          const {Icon, label} = meta;
 
           const onPress = () => {
             const event = navigation.emit({type: 'tabPress', target: route.key, canPreventDefault: true});
@@ -61,13 +60,16 @@ const CustomTabBar = ({state, descriptors, navigation}) => {
                 key={route.key}
                 style={$.centerBtn}
                 onPress={onPress}
-                activeOpacity={0.8}>
+                activeOpacity={0.85}>
                 <View style={$.centerCircle}>
-                  <Navigation size={22} color="#FFF" strokeWidth={2.5} />
+                  <Navigation size={22} color="#FFF" strokeWidth={2.6} />
                 </View>
               </TouchableOpacity>
             );
           }
+
+          const isNotif = route.name === routeNames.Notifications;
+          const showBadge = isNotif && unreadCount > 0;
 
           return (
             <TouchableOpacity
@@ -75,17 +77,22 @@ const CustomTabBar = ({state, descriptors, navigation}) => {
               style={$.tabItem}
               onPress={onPress}
               activeOpacity={0.7}>
-              <IconComp
-                size={20}
-                color={focused ? colors.primary : '#A8B0BC'}
-                strokeWidth={focused ? 2.2 : 1.8}
-              />
-              {/* Notification badge */}
-              {route.name === routeNames.Notifications && unreadCount > 0 && (
-                <View style={$.badge} />
-              )}
-              {/* Active indicator dot */}
-              {focused && <View style={$.activeDot} />}
+              <View>
+                <Icon
+                  size={22}
+                  color={focused ? PRIMARY : INACTIVE}
+                  strokeWidth={focused ? 2.4 : 1.9}
+                />
+                {showBadge && (
+                  <View style={$.badge}>
+                    <Text style={$.badgeTxt}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[$.label, {color: focused ? TEXT_ACTIVE : INACTIVE, fontFamily: focused ? 'Poppins-SemiBold' : 'Poppins-Medium'}]}>
+                {label}
+              </Text>
+              {focused && <View style={$.activeUnderline} />}
             </TouchableOpacity>
           );
         })}
@@ -94,19 +101,17 @@ const CustomTabBar = ({state, descriptors, navigation}) => {
   );
 };
 
-const MainTabs = () => {
-  return (
-    <Tab.Navigator
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{headerShown: false}}>
-      <Tab.Screen name={routeNames.Dashboard} component={DashboardScreen} />
-      <Tab.Screen name={routeNames.MyOrders} component={MyOrdersScreen} />
-      <Tab.Screen name={routeNames.MapScreen} component={MapScreen} />
-      <Tab.Screen name={routeNames.Notifications} component={NotificationsScreen} />
-      <Tab.Screen name={routeNames.Profile} component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-};
+const MainTabs = () => (
+  <Tab.Navigator
+    tabBar={(props) => <CustomTabBar {...props} />}
+    screenOptions={{headerShown: false}}>
+    <Tab.Screen name={routeNames.Dashboard} component={DashboardScreen} />
+    <Tab.Screen name={routeNames.MyOrders} component={MyOrdersScreen} />
+    <Tab.Screen name={routeNames.MapScreen} component={MapScreen} />
+    <Tab.Screen name={routeNames.Notifications} component={NotificationsScreen} />
+    <Tab.Screen name={routeNames.Profile} component={ProfileScreen} />
+  </Tab.Navigator>
+);
 
 const $ = StyleSheet.create({
   barOuter: {
@@ -114,66 +119,78 @@ const $ = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    pointerEvents: 'box-none',
+    backgroundColor: '#FFFFFF',
   },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    marginHorizontal: 16,
-    marginBottom: 2,
-    paddingVertical: 8,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingVertical: 10,
     paddingHorizontal: 6,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: -2},
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 8,
-    width: '92%',
+    ...Platform.select({
+      ios: {shadowColor: '#0B1220', shadowOffset: {width: 0, height: -4}, shadowOpacity: 0.05, shadowRadius: 12},
+      android: {elevation: 12},
+    }),
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary,
-    marginTop: 3,
+  label: {
+    fontSize: 10,
+    marginTop: 4,
+    letterSpacing: 0.2,
+  },
+  activeUnderline: {
+    position: 'absolute',
+    bottom: -2,
+    width: 22,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: PRIMARY,
   },
   centerBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -14,
+    marginTop: -22,
   },
   centerCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#f94c29',
-    justifyContent: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: PRIMARY,
     alignItems: 'center',
-    shadowColor: '#f94c29',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    ...Platform.select({
+      ios: {shadowColor: PRIMARY, shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.35, shadowRadius: 10},
+      android: {elevation: 8},
+    }),
   },
   badge: {
     position: 'absolute',
-    top: 2,
-    end: '30%',
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#f94c29',
+    top: -5,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    backgroundColor: '#E5484D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  badgeTxt: {
+    fontFamily: 'Poppins-Bold',
+    fontSize: 9,
+    color: '#FFFFFF',
   },
 });
 

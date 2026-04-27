@@ -492,10 +492,17 @@
     "failedStartDelivery": "فشل في بدء التوصيل",
     "failedStartTrip": "فشل في بدء الرحلة",
     "someOrdersFailed": "{{count}} طلب(ات) فشل في البدء",
+    "ordersAccepted": "تم قبول {{count}} طلب(ات) بنجاح",
     "loadingMap": "جاري تحميل الخريطة...",
     "refreshing": "جاري التحديث...",
     "remaining": "المتبقي",
-    "completed": "مكتمل"
+    "completed": "مكتمل",
+    "failedAcceptOrder": "فشل في قبول الطلب",
+    "locationRequired": "الموقع مطلوب لبدء التوصيل. يرجى تفعيل نظام تحديد المواقع.",
+    "noActionableOrders": "لا توجد طلبات متاحة للمعالجة.",
+    "whatsappMessage": "مرحبًا {{name}}، طلبك {{orderNumber}} في الطريق! 🚚",
+    "etaMin": "{{eta}} دقيقة",
+    "etaKm": "{{km}} كم"
   },
   "nav": {
     "headStraight": "اتجه مباشرة",

@@ -181,14 +181,18 @@ const useSocket = () => {
 
   // Auto-connect when authenticated, disconnect on logout
   useEffect(() => {
+    const setSocketEmitLocationFn = useLocationStore.getState().setSocketEmitLocationFn;
     if (isAuthenticated && token) {
       connect();
+      // Register socket emit for real-time location broadcasting
+      setSocketEmitLocationFn(emitLocation);
       // Poll unread notification count every 60 seconds (initial fetch done by useDashboard)
       pollRef.current = setInterval(() => {
         fetchUnreadCount().catch(() => {});
       }, 60000);
     } else {
       disconnect();
+      setSocketEmitLocationFn(null);
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;
@@ -197,6 +201,7 @@ const useSocket = () => {
 
     return () => {
       disconnect();
+      setSocketEmitLocationFn(null);
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = null;

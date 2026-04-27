@@ -20,6 +20,8 @@ const useSettingsStore = create((set, get) => ({
   allowedPhotoTypes: ['jpg', 'jpeg', 'png', 'webp'],
   allowOffline: true,
   maxOfflineMinutes: 30,
+  companyLat: null,
+  companyLng: null,
   isLoading: false,
   error: null,
 
@@ -48,6 +50,8 @@ const useSettingsStore = create((set, get) => ({
         allowedPhotoTypes: data?.allowed_photo_types ?? data?.settings?.allowed_photo_types ?? ['jpg', 'jpeg', 'png', 'webp'],
         allowOffline: data?.allow_offline ?? data?.settings?.allow_offline ?? true,
         maxOfflineMinutes: data?.max_offline_minutes ?? data?.settings?.max_offline_minutes ?? 30,
+        companyLat: data?.company_lat ?? null,
+        companyLng: data?.company_lng ?? null,
         isLoading: false,
         error: null,
       });
