@@ -3,7 +3,7 @@
  * Endpoints: /driver-app/orders, /driver-app/orders/:id, etc.
  */
 
-import apiClient from './client';
+import apiClient, {requireId} from './client';
 
 const ordersApi = {
   /**
@@ -18,14 +18,14 @@ const ordersApi = {
    * @param {number|string} orderId
    */
   getOrderDetail: (orderId) =>
-    apiClient.get(`/driver-app/orders/${orderId}`),
+    apiClient.get(`/driver-app/orders/${requireId(orderId, 'orderId')}`),
 
   /**
    * Accept an assigned order
    * @param {number|string} orderId
    */
   acceptOrder: (orderId) =>
-    apiClient.post(`/driver-app/orders/${orderId}/accept`),
+    apiClient.post(`/driver-app/orders/${requireId(orderId, 'orderId')}/accept`),
 
   /**
    * Reject an assigned order
@@ -33,7 +33,7 @@ const ordersApi = {
    * @param {string} reason
    */
   rejectOrder: (orderId, reason) =>
-    apiClient.post(`/driver-app/orders/${orderId}/reject`, {reason}),
+    apiClient.post(`/driver-app/orders/${requireId(orderId, 'orderId')}/reject`, {reason}),
 
   /**
    * Start delivery — transition order to in_transit
@@ -41,7 +41,7 @@ const ordersApi = {
    * @param {object} [data] - { lat?, lng? }
    */
   startDelivery: (orderId, data = {}) =>
-    apiClient.post(`/driver-app/orders/${orderId}/start-delivery`, data),
+    apiClient.post(`/driver-app/orders/${requireId(orderId, 'orderId')}/start-delivery`, data),
 
   /**
    * Mark order as delivered (single-delivery orders)
@@ -49,7 +49,7 @@ const ordersApi = {
    * @param {object} [data] - { signature_url?, proof_photo_url?, cod_collected?, notes?, lat?, lng? }
    */
   deliverOrder: (orderId, data = {}) =>
-    apiClient.post(`/driver-app/orders/${orderId}/deliver`, data),
+    apiClient.post(`/driver-app/orders/${requireId(orderId, 'orderId')}/deliver`, data),
 
   /**
    * Mark order as failed
@@ -57,7 +57,7 @@ const ordersApi = {
    * @param {object} data - { reason, lat?, lng? }
    */
   failOrder: (orderId, data) =>
-    apiClient.post(`/driver-app/orders/${orderId}/fail`, data),
+    apiClient.post(`/driver-app/orders/${requireId(orderId, 'orderId')}/fail`, data),
 
   /**
    * Mark order for return to sender
@@ -65,14 +65,14 @@ const ordersApi = {
    * @param {object} [data] - { reason?, lat?, lng? }
    */
   returnOrder: (orderId, data = {}) =>
-    apiClient.post(`/driver-app/orders/${orderId}/return`, data),
+    apiClient.post(`/driver-app/orders/${requireId(orderId, 'orderId')}/return`, data),
 
   /**
    * Get delivery stops for a multi-stop order
    * @param {number|string} orderId
    */
   getStops: (orderId) =>
-    apiClient.get(`/driver-app/orders/${orderId}/stops`),
+    apiClient.get(`/driver-app/orders/${requireId(orderId, 'orderId')}/stops`),
 };
 
 export default ordersApi;

@@ -13,8 +13,7 @@ import useLocationStore from '../store/locationStore';
 import useRouteStore from '../store/routeStore';
 import useSettingsStore from '../store/settingsStore';
 import i18n from '../i18n';
-
-const SOCKET_URL = 'https://dispatch.traseallo.com';
+import {SOCKET_URL} from '../config';
 
 const useSocket = () => {
   const socketRef = useRef(null);
@@ -39,8 +38,12 @@ const useSocket = () => {
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = setTimeout(() => {
-      fetchOrders().catch(() => {});
-      fetchDashboard().catch(() => {});
+      fetchOrders().catch((e) => {
+        if (__DEV__) console.warn('🔌 socket refresh: fetchOrders failed:', e?.message);
+      });
+      fetchDashboard().catch((e) => {
+        if (__DEV__) console.warn('🔌 socket refresh: fetchDashboard failed:', e?.message);
+      });
       refreshTimerRef.current = null;
     }, 500);
   }, [fetchOrders, fetchDashboard]);
@@ -88,7 +91,9 @@ const useSocket = () => {
         insertNewStops(data.stops);
       } else {
         // Refresh route to pick up new order's stops
-        fetchRoute(true).catch(() => {});
+        fetchRoute(true).catch((e) => {
+          if (__DEV__) console.warn('🔌 fetchRoute failed:', e?.message);
+        });
       }
 
       addNotification({
@@ -188,7 +193,9 @@ const useSocket = () => {
       setSocketEmitLocationFn(emitLocation);
       // Poll unread notification count every 60 seconds (initial fetch done by useDashboard)
       pollRef.current = setInterval(() => {
-        fetchUnreadCount().catch(() => {});
+        fetchUnreadCount().catch((e) => {
+          if (__DEV__) console.warn('🔔 fetchUnreadCount failed:', e?.message);
+        });
       }, 60000);
     } else {
       disconnect();

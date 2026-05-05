@@ -178,6 +178,20 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // 502/503/504 transient gateway errors → retry once after 1.5s
+    // (covers the dispatch.traseallo.com gateway briefly recycling)
+    if ((status === 502 || status === 503 || status === 504) && error.config) {
+      const retryCount = error.config._retryCount5xx || 0;
+      if (retryCount < 1) {
+        if (__DEV__) {
+          console.log(`⏳ ${status} gateway error, retrying once in 1.5s`);
+        }
+        await new Promise(r => setTimeout(r, 1500));
+        error.config._retryCount5xx = retryCount + 1;
+        return apiClient(error.config);
+      }
+    }
+
     // 401 Unauthorized → token expired → redirect to login
     // Skip for login/auth endpoints — those handle their own errors
     const isAuthEndpoint = requestUrl.includes('/login') || requestUrl.includes('/forgot-password') || requestUrl.includes('/reset-password');
@@ -207,7 +221,38 @@ export const getErrorMessage = (error) => {
   if (!error.response) {
     return 'Network error. Check your connection.';
   }
+  // Surface server-side gateway issues so the user knows it's not their fault
+  const status = error.response?.status;
+  if (status >= 500 && status <= 599) {
+    return `Server is temporarily unavailable (${status}). Please try again in a moment.`;
+  }
+  if (status === 401) return 'Your session has expired. Please log in again.';
+  if (status === 403) return 'You do not have permission to perform this action.';
+  if (status === 404) return 'Resource not found.';
+  if (status === 413) return 'File is too large. Please use a smaller image.';
+  if (status === 422) return 'Some fields are invalid. Please check and retry.';
   return 'Something went wrong. Please try again.';
+};
+
+/**
+ * Validate a path-segment ID (orderId, packageId, stopId, etc.) before
+ * embedding it in a URL. Prevents accidental requests to /orders/undefined
+ * or /orders/null which create confusing 404 / 500 errors and pollute logs.
+ *
+ * Accepts positive integers or numeric strings. Returns the value as-is
+ * for use in template literals.
+ *
+ * @throws {Error} if id is missing or invalid
+ */
+export const requireId = (id, label = 'id') => {
+  if (id === null || id === undefined || id === '') {
+    throw new Error(`Missing required ${label}`);
+  }
+  const n = Number(id);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new Error(`Invalid ${label}: ${String(id)}`);
+  }
+  return id;
 };
 
 export default apiClient;

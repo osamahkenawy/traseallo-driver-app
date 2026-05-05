@@ -62,3 +62,16 @@ buck-out/
 # Ruby / CocoaPods
 /ios/Pods/
 /vendor/bundle/
+
+# Secrets / credentials — NEVER commit
+cred.md
+credentials.md
+*.secrets
+.env
+.env.*
+src/config.local.js
+src/config.local.ts
+android/app/google-services.json
+ios/app/GoogleService-Info.plist
+src/google-services.json
+src/GoogleService-Info.plist

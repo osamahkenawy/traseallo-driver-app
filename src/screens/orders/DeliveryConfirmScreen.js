@@ -2,7 +2,7 @@
  * Delivery Confirm Screen — Proof of delivery
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -38,7 +38,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
 
   // Guard: only allow delivery if order is picked_up or in_transit
   // Also handle already-delivered orders gracefully
-  React.useEffect(() => {
+  useEffect(() => {
     if (orderStatus === 'delivered') {
       setInvalidStatus(true);
       Alert.alert(
@@ -65,7 +65,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
   const [signatureUri, setSignatureUri] = useState(null);
 
   // Pick up signature data returned from SignatureScreen
-  React.useEffect(() => {
+  useEffect(() => {
     if (sigFromRoute) setSignatureUri(sigFromRoute);
   }, [sigFromRoute]);
   const [checkingPackages, setCheckingPackages] = useState(true);
@@ -78,7 +78,7 @@ const DeliveryConfirmScreen = ({navigation, route}) => {
   const hasPhotos = photos.length > 0;
 
   // Check if order has packages — if so redirect to per-package flow
-  React.useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
     const checkAndRedirect = async () => {
       if (!orderId) {

@@ -149,6 +149,30 @@ android {
         versionName "1.3"
         buildConfigField "boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString()
 
+        // ── Google Maps API key ──────────────────────────────────────────────
+        // Resolution order:
+        //   1. -PMAPS_API_KEY=...  (CI / command-line)
+        //   2. MAPS_API_KEY env var
+        //   3. local.properties:  MAPS_API_KEY=...           (gitignored)
+        //   4. gradle.properties: MAPS_API_KEY=...           (fallback only)
+        // The build will FAIL release with no key. Debug falls back to empty
+        // string so contributors aren't blocked.
+        def mapsApiKey = project.findProperty('MAPS_API_KEY') ?: System.getenv('MAPS_API_KEY')
+        if (!mapsApiKey) {
+            def localProps = new Properties()
+            def localFile = rootProject.file('local.properties')
+            if (localFile.exists()) {
+                localProps.load(new FileInputStream(localFile))
+                mapsApiKey = localProps.getProperty('MAPS_API_KEY')
+            }
+        }
+        if (!mapsApiKey) {
+            mapsApiKey = ''
+            logger.warn('⚠️  MAPS_API_KEY is not set. Maps will not load. Set it in local.properties or pass -PMAPS_API_KEY=...')
+        }
+        manifestPlaceholders = [MAPS_API_KEY: mapsApiKey]
+        // ─────────────────────────────────────────────────────────────────────
+
         if (isNewArchitectureEnabled()) {
             // We configure the CMake build only if you decide to opt-in for the New Architecture.
             externalNativeBuild {

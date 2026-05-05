@@ -3,7 +3,7 @@
  * Endpoints: /driver-app/pickups/*
  */
 
-import apiClient from './client';
+import apiClient, {requireId} from './client';
 
 const pickupApi = {
   /**
@@ -17,7 +17,7 @@ const pickupApi = {
    * @param {object} [data] - { lat?, lng? }
    */
   enRoute: (orderId, data = {}) =>
-    apiClient.post(`/driver-app/pickups/${orderId}/en-route`, data),
+    apiClient.post(`/driver-app/pickups/${requireId(orderId, 'orderId')}/en-route`, data),
 
   /**
    * Mark arrived at pickup location
@@ -25,7 +25,7 @@ const pickupApi = {
    * @param {object} [data] - { lat?, lng? }
    */
   markArrived: (orderId, data = {}) =>
-    apiClient.post(`/driver-app/pickups/${orderId}/arrived`, data),
+    apiClient.post(`/driver-app/pickups/${requireId(orderId, 'orderId')}/arrived`, data),
 
   /**
    * Confirm pickup — packages collected
@@ -33,7 +33,7 @@ const pickupApi = {
    * @param {object} [data] - { barcode_scanned?, notes?, lat?, lng?, scanned_packages? }
    */
   confirmPickup: (orderId, data = {}) =>
-    apiClient.post(`/driver-app/pickups/${orderId}/confirm`, data),
+    apiClient.post(`/driver-app/pickups/${requireId(orderId, 'orderId')}/confirm`, data),
 
   /**
    * Report failed pickup
@@ -41,7 +41,7 @@ const pickupApi = {
    * @param {object} data - { reason, lat?, lng? }
    */
   failPickup: (orderId, data) =>
-    apiClient.post(`/driver-app/pickups/${orderId}/fail`, data),
+    apiClient.post(`/driver-app/pickups/${requireId(orderId, 'orderId')}/fail`, data),
 };
 
 export default pickupApi;

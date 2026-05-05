@@ -186,8 +186,12 @@ const useLocation = (enabled = true) => {
         driverStatus !== 'offline'
       ) {
         // App came to foreground — send immediate ping & flush offline buffer
-        sendPing().catch(() => {});
-        flushLocationBuffer().catch(() => {});
+        sendPing().catch((e) => {
+          if (__DEV__) console.warn('📍 foreground ping failed:', e?.message);
+        });
+        flushLocationBuffer().catch((e) => {
+          if (__DEV__) console.warn('📍 buffer flush failed:', e?.message);
+        });
       }
       appState.current = nextAppState;
     };

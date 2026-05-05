@@ -1,0 +1,237 @@
+================================================================================
+TRASEALLO DRIVER APP — BUG REPORT (Static Audit)
+Date: 2026-05-05
+Scope: Full functional + security audit of /traseallo-driver-app
+Audit type: Static code review (screens, hooks, stores, API, native config).
+            Runtime/UI behavior NOT exercised — observed bugs from code paths only.
+================================================================================
+
+Severity legend:
+  P0 - Critical  : Security / data loss / blocks release. Fix immediately.
+  P1 - High      : Real user-facing bug, memory leak, or EOL dependency.
+  P2 - Medium    : Race conditions, missing error handling, partial features.
+  P3 - Low       : Code quality, polish, future-proofing.
+
+================================================================================
+P0 — CRITICAL  (5)
+================================================================================
+
+[P0-1] Hard-coded Google Maps API key committed in AndroidManifest
+  File : android/app/src/main/AndroidManifest.xml  (line 23)
+  Key  : AIzaSyBTKUOAif1CyviBTqQdIHc3pp5Eh-S1P7U
+  Status: PARTIALLY FIXED — manifest now uses ${MAPS_API_KEY} placeholder,
+         injected by android/app/build.gradle from -PMAPS_API_KEY,
+         env var, or local.properties (gitignored). MAPS_API_KEY entry
+         in local.properties needs to be created on each dev/CI machine.
+  TODO  : YOU MUST STILL: (a) rotate the leaked key in Google Cloud
+         Console, (b) restrict by package + SHA-1, (c) purge the
+         old key from git history (BFG / git filter-repo).
+
+[P0-2] Test credentials committed to repo
+  File : cred.md
+  Status: FIXED in working tree — file removed via `git rm`.
+         .gitignore now blocks cred.md, *.secrets, .env*, config.local.js,
+         google-services.json, GoogleService-Info.plist.
+  TODO  : YOU MUST STILL: (a) rotate ALL passwords listed in that file,
+         (b) purge cred.md from git history (BFG / git filter-repo) —
+         removing it from HEAD does NOT remove it from history.
+
+[P0-3] Production base URL hard-coded for every build
+  File : src/config.js  (line 4)
+  Status: FIXED — src/config.js now resolves API_BASE_URL via:
+         (1) src/config.local.js override (gitignored),
+         (2) __DEV__ defaults, (3) prod defaults.
+  Note  : Dev defaults still point at prod for now; create
+         src/config.local.js to redirect dev builds elsewhere.
+
+[P0-4] Socket URL hard-coded to production
+  File : src/hooks/useSocket.js  (line 17)
+  Status: FIXED — SOCKET_URL now imported from src/config (same
+         override mechanism as API_BASE_URL).
+
+[P0-5] console.log outside __DEV__ guard leaks driver data
+  File : src/store/locationStore.js  (line 125)
+  Status: FIXED — verified all console.log/warn/error in src/**
+         are now inside `if (__DEV__)` guards (locationStore,
+         api/client, ChangePassword, TicketDetail, PhotoProofGrid).
+  Recommended: also add babel-plugin-transform-remove-console to
+         babel.config.js for release builds (defense-in-depth).
+
+================================================================================
+P1 — HIGH  (8)
+================================================================================
+
+[P1-1] Stale duplicate files left in tree
+  Files: src/navigation/MainTabs.js.new
+         src/screens/dashboard/DashboardScreen.js.new
+         src/screens/dashboard/DashboardScreen.old.js
+         src/screens/dashboard/components/OrderCard.js.new
+         src/screens/dashboard/components/StatsRow.js.new
+         src/screens/map/MapScreen.old.js (if present)
+  Risk : Already caused two prod blockers this session (empty
+         DriverSummaryCard.js.new + IncomingOrdersSection.js.new).
+  Fix  : Delete all `*.js.new` and `*.old.js`; rely on git history.
+
+[P1-2] useSocket missing useEffect cleanup
+  File : src/hooks/useSocket.js  (around lines 183–209)
+  Risk : Socket re-creates on every dependency change without
+         disconnecting; listeners stack up; duplicate order events.
+  Fix  : Return cleanup that calls `disconnect()` and
+         `clearInterval(pollRef.current)`.
+
+[P1-3] Silent .catch(() => {}) on socket-triggered refreshes
+  File : src/hooks/useSocket.js  (lines 42–43)
+  Risk : Order/dashboard refresh failures are invisible — drivers
+         see stale lists with no recovery hint.
+  Fix  : Log in __DEV__ and surface a one-shot retry/toast.
+
+[P1-4] React Native 0.70.6 is end-of-life
+  File : package.json  (line 30)  "react-native": "0.70.6"
+  Risk : ~2 years without security patches. New iOS/Android SDKs
+         break it. 52 npm vulns reported during install.
+  Fix  : Plan upgrade path (0.72 LTS minimum, ideally 0.74+).
+
+[P1-5] axios 1.6.2 outdated, has CVEs
+  File : package.json  (line 25)
+  Fix  : Bump to ^1.7.7 (or latest 1.x).
+
+[P1-6] useLocation cleanup may not run on dep change
+  File : src/hooks/useLocation.js  (~line 163)
+  Risk : Multiple AppState listeners stacked; geolocation watcher
+         leak; battery drain.
+  Fix  : Always return `() => subscription?.remove()` and
+         `stopWatching()`.
+
+[P1-7] MapScreen navRefreshTimer not cleared on unmount
+  File : src/screens/map/MapScreen.js  (~line 805)
+  Risk : Background timer fires after navigating away → setState on
+         unmounted component, stale GPS pings.
+  Fix  : Cleanup `clearInterval(navRefreshTimer.current)` in effect.
+
+[P1-8] Dashboard "New Orders" KPI was non-clickable (already fixed)
+  File : src/screens/dashboard/DashboardScreen.js
+  Status: FIXED in this session (added `onNewPress={goToMyOrders}`).
+
+================================================================================
+P2 — MEDIUM  (8)
+================================================================================
+
+[P2-1] No 401 → token refresh in axios interceptor
+  File : src/api/client.js  (~line 182)
+  Risk : Driver kicked to login screen the moment token expires
+         mid-shift (on /driver-app/profile we already saw 401 → logout).
+  Fix  : Implement refresh-token flow if backend supports; otherwise
+         queue-and-retry once per 401 before forcing logout.
+  Status: DEFERRED — needs backend refresh-token endpoint. Current
+         interceptor already single-fires onAuthExpired callback.
+
+[P2-2] orderId / packageId passed straight into URL paths
+  File : src/api/orders.js, src/api/packages.js, src/api/stops.js
+  Risk : `undefined`/`null` produces requests to `/orders/undefined`.
+  Fix  : Validate (`Number.isFinite(Number(id))`) before request.
+  Status: FIXED — added requireId(id, label) helper in client.js;
+         applied across orders.js / packages.js / stops.js.
+         scanLookup also validates non-empty barcode.
+
+[P2-3] useAuth validateSession has no error path
+  File : src/hooks/useAuth.js  (~line 28)
+  Risk : Silent rejection on cold start → user stuck on splash.
+  Fix  : try/catch; on failure show login.
+  Status: FIXED — RootNavigator.bootstrap wraps validateSession in
+         try/catch with __DEV__ warn and always sets isReady.
+
+[P2-4] ForgotPasswordScreen interval racing on rapid mount/unmount
+  File : src/screens/auth/ForgotPasswordScreen.js  (line 46)
+  Fix  : Guard with mounted ref before setState in interval cb.
+  Status: VERIFIED OK — uses functional setState + unmount
+         clearInterval cleanup; no stale-closure risk.
+
+[P2-5] LocationStore tracking interval may persist if startTracking
+        called twice without stopTracking
+  File : src/store/locationStore.js  (line 170)
+  Note : There IS a `clearInterval(existing)` guard now, but the
+         store has no teardown when app is force-quit. Consider
+         AppState 'background' handling.
+  Status: PARTIAL — useLocation already wires AppState foreground
+         ping. Force-quit teardown is OS-level (cannot guard).
+
+[P2-6] No GPS quality validation before sending pings
+  File : src/store/locationStore.js  (~line 100)
+  Risk : Negative or NaN accuracy values pollute backend tracks.
+  Fix  : Reject `accuracy <= 0` or `accuracy > 200`.
+  Status: FIXED — sendPing rejects accuracy <= 0 or > 200 m and
+         out-of-range lat/lng before POST.
+
+[P2-7] NotificationStore unread-count race
+  File : src/store/notificationStore.js  (~line 50)
+  Risk : Rapid push events → out-of-order responses → wrong badge.
+  Fix  : Debounce 300 ms or track `requestId`.
+  Status: FIXED — fetchUnreadCount uses _unreadReqId token; stale
+         responses are discarded.
+
+[P2-8] Image upload requests use default 30 s timeout
+  File : src/api/uploads.js
+  Risk : Large proof-of-delivery photos fail on weak signal.
+  Fix  : Pass per-request `timeout: 60_000` and progress handler.
+  Status: FIXED — all upload methods set timeout: 60000 and
+         expose onUploadProgress callback.
+
+================================================================================
+P3 — LOW / POLISH  (6)
+================================================================================
+
+[P3-1] Mixed `React.useEffect` vs `useEffect` style.
+  File : src/screens/orders/DeliveryConfirmScreen.js  (lines 41/68/81)
+  Fix  : Standardize on named import.
+  Status: FIXED — added useEffect to named import; replaced all
+         React.useEffect references.
+
+[P3-2] Hard-coded i18n fallback strings in code (won't translate
+       when key is missing).
+  File : src/hooks/useSocket.js  (lines 88–90), and various Alert.alert
+         calls in DashboardScreen.js.
+  Fix  : Add missing keys to ar.json / en.json and remove fallbacks.
+  Status: VERIFIED — all keys (newOrderAssigned, codCollected,
+         codCollectedBody, etc.) exist in en.json/ar.json. Inline
+         defaultValue fallbacks retained as defensive defaults.
+
+[P3-3] iOS Info.plist missing NSMicrophoneUsageDescription —
+       harmless today, but adding any audio dep will crash launch.
+  Status: FIXED — added NSMicrophoneUsageDescription to Info.plist.
+
+[P3-4] No babel-plugin-transform-remove-console for release builds.
+  File : babel.config.js
+  Fix  : Add to `env.production.plugins`.
+  Status: FIXED — installed babel-plugin-transform-remove-console;
+         configured under env.production with exclude error/warn.
+
+[P3-5] Avatar URL handling
+  File : src/screens/dashboard/components/DriverSummaryCard.js
+  Status: FIXED this session (resolves relative paths against API
+          host + onError fallback). Worth replicating in
+          ProfileScreen / Header avatar widgets.
+
+[P3-6] Boost.podspec download URL was dead (JFrog).
+  Status: FIXED — patch saved at patches/react-native+0.70.6.patch
+          (now points to https://archives.boost.io/...).
+
+================================================================================
+SUMMARY
+================================================================================
+  P0 Critical : 5
+  P1 High     : 8  (1 already fixed)
+  P2 Medium   : 8
+  P3 Low      : 6  (2 already fixed)
+
+RECOMMENDED ORDER:
+  1. Same-day :  P0-1, P0-2, P0-5  (security exposure)
+  2. This week:  P0-3, P0-4, P1-1, P1-2, P1-3, P1-6, P1-7
+  3. Next sprint: P1-4 (RN upgrade), P1-5 (axios), all P2.
+  4. Backlog  : All P3.
+
+NOTE: This report is based on static analysis. A full QA pass with
+the app running (login → accept order → pickup → delivery → COD →
+proof upload → logout) is still required to surface runtime-only
+bugs (race conditions on slow networks, push-notification deep-links,
+background-location behavior on iOS 17+, etc.).
+================================================================================

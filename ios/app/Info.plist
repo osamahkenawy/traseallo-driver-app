@@ -45,6 +45,8 @@
 	<string>Traseallo needs your location in the background to continue tracking deliveries while the app is minimized.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Traseallo needs access to your photo library to select proof-of-delivery photos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Traseallo may use the microphone for in-app voice notes attached to delivery reports.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>MaterialCommunityIcons.ttf</string>

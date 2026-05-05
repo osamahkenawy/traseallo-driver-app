@@ -20,6 +20,7 @@ import {showMessage} from 'react-native-flash-message';
 import {colors} from '../../theme/colors';
 import {fontFamily} from '../../theme/fonts';
 import {uploadsApi} from '../../api';
+import {getErrorMessage} from '../../api/client';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import useLocationStore from '../../store/locationStore';
 import usePickupStore from '../../store/pickupStore';
@@ -81,6 +82,10 @@ const PickupProofScreen = ({navigation, route}) => {
     Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('Request timed out')), ms))]);
 
   const handleConfirm = async () => {
+    if (!orderId) {
+      Alert.alert(t('common.error'), t('pickup.missingOrder', 'Missing order reference. Please re-open this pickup.'));
+      return;
+    }
     if (!photoUri) {
       Alert.alert(t('pickup.required'), t('pickup.photoRequired', 'Please take a photo as proof of pickup'));
       return;
@@ -93,6 +98,8 @@ const PickupProofScreen = ({navigation, route}) => {
     setLoading(true);
     try {
       // 1. Upload proof photo (pickup-specific endpoint → pickup_proof_url)
+      //    Backend requires this URL to confirm pickup, so we surface the
+      //    real error instead of silently continuing with proof_photo_url=undefined.
       let proofUrl = null;
       try {
         const uploadRes = await uploadsApi.uploadPickupProofPhoto(orderId, photoUri, {
@@ -101,11 +108,13 @@ const PickupProofScreen = ({navigation, route}) => {
         });
         proofUrl = uploadRes.data?.data?.url || uploadRes.data?.url || null;
       } catch (photoErr) {
-        showMessage({
-          message: t('pickup.photoUploadFailed', 'Photo upload failed, continuing...'),
-          type: 'warning',
-          duration: 2000,
-        });
+        if (__DEV__) console.warn('uploadPickupProofPhoto failed:', getErrorMessage(photoErr));
+        Alert.alert(
+          t('common.error'),
+          getErrorMessage(photoErr) || t('pickup.photoUploadFailed', 'Photo upload failed. Please try again.'),
+        );
+        setLoading(false);
+        return;
       }
 
       // 2. Upload signature (pickup-specific endpoint → pickup_signature_url)
@@ -114,11 +123,13 @@ const PickupProofScreen = ({navigation, route}) => {
         const sigRes = await uploadsApi.uploadPickupSignature(orderId, signatureData);
         signatureUrl = sigRes.data?.data?.url || sigRes.data?.url || null;
       } catch (sigErr) {
-        showMessage({
-          message: t('pickup.signatureUploadFailed', 'Signature upload failed, continuing...'),
-          type: 'warning',
-          duration: 2000,
-        });
+        if (__DEV__) console.warn('uploadPickupSignature failed:', getErrorMessage(sigErr));
+        Alert.alert(
+          t('common.error'),
+          getErrorMessage(sigErr) || t('pickup.signatureUploadFailed', 'Signature upload failed. Please try again.'),
+        );
+        setLoading(false);
+        return;
       }
 
       // 3. Confirm pickup
@@ -134,9 +145,10 @@ const PickupProofScreen = ({navigation, route}) => {
         navigation.navigate(routeNames.MainTabs, {screen: routeNames.MyOrders});
       }, 400);
     } catch (err) {
+      if (__DEV__) console.warn('confirmPickup failed:', err?.response?.status, getErrorMessage(err));
       Alert.alert(
         t('common.error'),
-        err.response?.data?.message || err.message || t('pickup.failedConfirm'),
+        getErrorMessage(err) || t('pickup.failedConfirm'),
       );
     } finally {
       setLoading(false);

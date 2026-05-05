@@ -5,7 +5,7 @@
  *            POST /uploads/drivers/:id/photo (avatar)
  */
 
-import apiClient from './client';
+import apiClient, {requireId} from './client';
 
 /**
  * Create a FormData object from a local file URI with optional metadata
@@ -53,7 +53,7 @@ const uploadsApi = {
       meta = undefined;
     }
     const formData = createFormData(uri, 'file', meta);
-    return apiClient.post(`/driver-app/pickups/${orderId}/proof-photo`, formData, {
+    return apiClient.post(`/driver-app/pickups/${requireId(orderId, 'orderId')}/proof-photo`, formData, {
       timeout: 60000,
       headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
@@ -68,7 +68,7 @@ const uploadsApi = {
    * @param {string} base64DataUrl
    */
   uploadPickupSignature: async (orderId, base64DataUrl) => {
-    return apiClient.post(`/driver-app/pickups/${orderId}/signature`, {
+    return apiClient.post(`/driver-app/pickups/${requireId(orderId, 'orderId')}/signature`, {
       signature: base64DataUrl,
       photo_type: 'signature',
       filename: `pickup_signature_${orderId}_${Date.now()}.png`,
@@ -93,7 +93,7 @@ const uploadsApi = {
       meta = undefined;
     }
     const formData = createFormData(uri, 'file', meta);
-    return apiClient.post(`/driver-app/orders/${orderId}/proof-photo`, formData, {
+    return apiClient.post(`/driver-app/orders/${requireId(orderId, 'orderId')}/proof-photo`, formData, {
       timeout: 60000, // 60s for uploads on slow mobile connections
       headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
@@ -107,14 +107,14 @@ const uploadsApi = {
    * @param {number|string} orderId
    */
   getOrderPhotos: (orderId) =>
-    apiClient.get(`/driver-app/orders/${orderId}/photos`),
+    apiClient.get(`/driver-app/orders/${requireId(orderId, 'orderId')}/photos`),
 
   /**
    * Delete a proof photo
    * @param {number|string} photoId
    */
   deletePhoto: (photoId) =>
-    apiClient.delete(`/driver-app/photos/${photoId}`),
+    apiClient.delete(`/driver-app/photos/${requireId(photoId, 'photoId')}`),
 
   /**
    * Upload recipient signature for an order
@@ -124,7 +124,7 @@ const uploadsApi = {
    */
   uploadOrderSignature: async (orderId, base64DataUrl) => {
     // Send signature as base64 JSON to the driver-app signature endpoint
-    return apiClient.post(`/driver-app/orders/${orderId}/signature`, {
+    return apiClient.post(`/driver-app/orders/${requireId(orderId, 'orderId')}/signature`, {
       signature: base64DataUrl,
       photo_type: 'signature',
       filename: `signature_${orderId}_${Date.now()}.png`,
@@ -148,7 +148,7 @@ const uploadsApi = {
       meta = undefined;
     }
     const formData = createFormData(uri, 'file', meta);
-    return apiClient.post(`/driver-app/stops/${stopId}/proof-photo`, formData, {
+    return apiClient.post(`/driver-app/stops/${requireId(stopId, 'stopId')}/proof-photo`, formData, {
       timeout: 60000,
       headers: {'Content-Type': 'multipart/form-data'},
       onUploadProgress: onProgress
@@ -162,7 +162,7 @@ const uploadsApi = {
    * @param {number|string} stopId
    */
   getStopPhotos: (stopId) =>
-    apiClient.get(`/driver-app/stops/${stopId}/photos`),
+    apiClient.get(`/driver-app/stops/${requireId(stopId, 'stopId')}/photos`),
 
   /**
    * Upload recipient signature for a specific delivery stop
@@ -171,7 +171,7 @@ const uploadsApi = {
    * @param {function} [onProgress]
    */
   uploadStopSignature: async (stopId, base64DataUrl) => {
-    return apiClient.post(`/driver-app/stops/${stopId}/signature`, {
+    return apiClient.post(`/driver-app/stops/${requireId(stopId, 'stopId')}/signature`, {
       signature: base64DataUrl,
       photo_type: 'signature',
       filename: `signature_stop_${stopId}_${Date.now()}.png`,

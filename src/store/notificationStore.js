@@ -74,11 +74,17 @@ const useNotificationStore = create((set, get) => ({
 
   /**
    * Fetch unread count from notifications endpoint
-   * We poll the notifications list and extract unread count from it
+   * We poll the notifications list and extract unread count from it.
+   * Uses a request-id token to discard out-of-order responses when
+   * called rapidly (push event burst).
    */
   fetchUnreadCount: async () => {
+    const reqId = (get()._unreadReqId || 0) + 1;
+    set({_unreadReqId: reqId});
     try {
       const res = await notificationsApi.getNotifications({page: 1, limit: 1, unread_only: true});
+      // Discard if a newer request was started while this one was in flight
+      if (get()._unreadReqId !== reqId) return;
       const body = res.data || {};
       set({unreadCount: body.unread ?? body.unread_count ?? body.total ?? 0});
     } catch (err) {

@@ -93,7 +93,21 @@ const useLocationStore = create((set, get) => ({
    */
   sendPing: async () => {
     const position = get().currentPosition;
-    if (!position || !Number.isFinite(position.latitude)) return;
+    if (!position || !Number.isFinite(position.latitude) || !Number.isFinite(position.longitude)) return;
+
+    // Reject obviously invalid fixes — backend should not store them.
+    // accuracy <= 0 means "unknown" on Android; > 200 m is unusable for tracking.
+    const acc = Number(position.accuracy);
+    if (Number.isFinite(acc) && (acc <= 0 || acc > 200)) {
+      if (__DEV__) console.log('📍 Skip ping: poor accuracy', acc, 'm');
+      return;
+    }
+
+    // Sanity check lat/lng bounds
+    if (Math.abs(position.latitude) > 90 || Math.abs(position.longitude) > 180) {
+      if (__DEV__) console.log('📍 Skip ping: out-of-range coords', position.latitude, position.longitude);
+      return;
+    }
 
     const payload = {
       lat: position.latitude,

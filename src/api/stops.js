@@ -3,7 +3,7 @@
  * Endpoints: /driver-app/stops/:stopId/*
  */
 
-import apiClient from './client';
+import apiClient, {requireId} from './client';
 
 const stopsApi = {
   /**
@@ -12,7 +12,7 @@ const stopsApi = {
    * @param {object} [data] - { lat?, lng? }
    */
   arrivedAtStop: (stopId, data = {}) =>
-    apiClient.post(`/driver-app/stops/${stopId}/arrived`, data),
+    apiClient.post(`/driver-app/stops/${requireId(stopId, 'stopId')}/arrived`, data),
 
   /**
    * Complete a delivery stop
@@ -20,7 +20,7 @@ const stopsApi = {
    * @param {object} [data] - { cod_collected?, signature_url?, proof_photo_url?, notes?, lat?, lng? }
    */
   completeStop: (stopId, data = {}) =>
-    apiClient.post(`/driver-app/stops/${stopId}/complete`, data),
+    apiClient.post(`/driver-app/stops/${requireId(stopId, 'stopId')}/complete`, data),
 
   /**
    * Fail a delivery stop
@@ -28,7 +28,7 @@ const stopsApi = {
    * @param {object} data - { reason, lat?, lng? }
    */
   failStop: (stopId, data) =>
-    apiClient.post(`/driver-app/stops/${stopId}/fail`, data),
+    apiClient.post(`/driver-app/stops/${requireId(stopId, 'stopId')}/fail`, data),
 
   /**
    * Skip a delivery stop (revisit later)
@@ -36,7 +36,7 @@ const stopsApi = {
    * @param {object} [data] - { reason? }
    */
   skipStop: (stopId, data = {}) =>
-    apiClient.post(`/driver-app/stops/${stopId}/skip`, data),
+    apiClient.post(`/driver-app/stops/${requireId(stopId, 'stopId')}/skip`, data),
 
   /**
    * Update stop sequence (reorder) for an order
@@ -44,7 +44,7 @@ const stopsApi = {
    * @param {Array<{stop_id: number|string, sequence: number}>} stopOrder
    */
   updateStopSequence: (orderId, stopOrder) =>
-    apiClient.post(`/multi-stop/orders/${orderId}/stops/optimize`, {stop_order: stopOrder}),
+    apiClient.post(`/multi-stop/orders/${requireId(orderId, 'orderId')}/stops/optimize`, {stop_order: stopOrder}),
 };
 
 export default stopsApi;
