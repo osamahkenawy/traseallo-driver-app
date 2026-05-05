@@ -75,3 +75,11 @@ android/app/google-services.json
 ios/app/GoogleService-Info.plist
 src/google-services.json
 src/GoogleService-Info.plist
+
+# Release signing — never commit
+android/keystore.properties
+*.jks
+
+# Release signing — confidential notes
+android/RELEASE_SIGNING.private.md
+*.private.md
