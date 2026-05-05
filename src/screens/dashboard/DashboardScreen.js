@@ -200,6 +200,7 @@ const DashboardScreen = ({navigation}) => {
             assigned={stats.assigned}
             inProgress={stats.inProgress}
             delivered={stats.delivered}
+            onNewPress={goToMyOrders}
             onActivePress={goToMyOrders}
             onDeliveredPress={() => nav('Earnings')}
             t={t}
